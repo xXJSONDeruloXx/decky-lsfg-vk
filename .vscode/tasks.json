@@ -1,0 +1,142 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        //PRELIMINARY SETUP TASKS
+        //Dependency setup task
+        {
+            "label": "depsetup",
+            "type": "shell",
+            "group": "none",
+            "detail": "Install depedencies for basic setup",
+            "command": "${workspaceFolder}/.vscode/setup.sh",
+            // // placeholder for windows scripts, not currently planned
+            // "windows": {
+            //     "command": "call -c ${workspaceFolder}\\.vscode\\setup.bat",
+            // },
+            "problemMatcher": []
+        },
+        //pnpm setup task to grab all needed modules
+        {
+            "label": "pnpmsetup",
+            "type": "shell",
+            "group": "none",
+            "detail": "Setup pnpm",
+            "command": "which pnpm && pnpm i",
+            "problemMatcher": []
+        },
+        //Preliminary "All-in-one" setup task
+        {
+            "label": "setup",
+            "detail": "Set up depedencies, pnpm and update Decky Frontend Library.",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "depsetup",
+                "pnpmsetup",
+                "updatefrontendlib"
+            ],
+            "problemMatcher": []
+        },
+        //Preliminary Deploy Config Setup
+        {
+            "label": "settingscheck",
+            "type": "shell",
+            "group": "none",
+            "detail": "Check that settings.json has been created",
+            "command": "${workspaceFolder}/.vscode/config.sh",
+            // // placeholder for windows scripts, not currently planned
+            // "windows": {
+            //     "command": "call ${workspaceFolder}\\.vscode\\config.bat",
+            // },
+            "problemMatcher": []
+        },
+        //BUILD TASKS
+        {
+            "label": "cli-build",
+            "group": "build",
+            "detail": "Build plugin with CLI",
+            "command": "${workspaceFolder}/.vscode/build.sh",
+            // // placeholder for windows logic, not currently planned
+            // "windows": {
+            //     "command": "call ${workspaceFolder}\\.vscode\\build.bat",
+            // },
+            "problemMatcher": []
+        }, 
+        //"All-in-one" build task
+        {
+            "label": "build",
+            "group": "build",
+            "detail": "Build decky-plugin-template",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "setup",
+                "settingscheck",
+                "cli-build",
+            ],
+            "problemMatcher": []
+        },
+        //DEPLOY TASKS
+        //Copies the zip file of the built plugin to the plugins folder
+        {
+            "label": "copyzip",
+            "detail": "Deploy plugin zip to deck",
+            "type": "shell",
+            "group": "none",
+            "dependsOn": [
+                "chmodplugins"
+            ],
+            "command": "rsync -azp --chmod=D0755,F0755 --rsh='ssh -p ${config:deckport} ${config:deckkey}' out/ ${config:deckuser}@${config:deckip}:${config:deckdir}/homebrew/plugins",
+            "problemMatcher": []
+        },
+        //
+        {
+            "label": "extractzip",
+            "detail": "",
+            "type": "shell",
+            "group": "none",
+            "command": "echo '${config:deckdir}/homebrew/plugins/${config:pluginname}.zip' && ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo ${config:deckpass} | sudo -S mkdir -m 755 -p \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S chown ${config:deckuser}:${config:deckuser} \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" && echo ${config:deckpass} | sudo -S bsdtar -xzpf \"${config:deckdir}/homebrew/plugins/${config:pluginname}.zip\" -C \"$(echo \"${config:deckdir}/homebrew/plugins/${config:pluginname}\" | sed \"s| |-|g\")\" --strip-components=1 --fflags '",
+            "problemMatcher": []
+        },
+        //"All-in-one" deploy task
+        {
+            "label": "deploy",
+            "dependsOrder": "sequence",
+            "group": "none",
+            "dependsOn": [
+                "copyzip",
+                "extractzip"
+            ],
+            "problemMatcher": []
+        },
+        //"All-in-on" build & deploy task
+        {
+            "label": "builddeploy",
+            "detail": "Builds plugin and deploys to deck",
+            "dependsOrder": "sequence",
+            "group": "none",
+            "dependsOn": [
+                "build",
+                "deploy"
+            ],
+            "problemMatcher": []
+        },
+        //GENERAL TASKS
+        //Update Decky Frontend Library, aka DFL
+        {
+            "label": "updatefrontendlib",
+            "type": "shell",
+            "group": "build",
+            "detail": "Update @decky/ui aka DFL",
+            "command": "pnpm update @decky/ui --latest",
+            "problemMatcher": []
+        },
+        //Used chmod plugins folder to allow copy-over of files
+        {
+            "label": "chmodplugins",
+            "detail": "chmods plugins folder to prevent perms issues",
+            "type": "shell",
+            "group": "none",
+            "command": "ssh ${config:deckuser}@${config:deckip} -p ${config:deckport} ${config:deckkey} 'echo '${config:deckpass}' | sudo -S chmod -R ug+rw ${config:deckdir}/homebrew/plugins/'",
+            "problemMatcher": []
+        },
+    ]
+}
