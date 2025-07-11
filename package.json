@@ -40,12 +40,11 @@
     "tslib": "^2.7.0"
   },
   "remote_binary_bundling" : true,
-  "remote_binary": 
-  [
+  "remote_binary": [
     {
-        "name": "lsfg-vk-latest.tar.gz",
-        "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/latest/lsfg-vk-latest.tar.gz",
-        "sha256hash": "913e7bba9f1b58339df0b03cd9a8c4dd8d165912224a869b9ee8dd983ab8f3f7"
+      "name": "lsfg-vk.zip",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16221076481/lsfg-vk.zip",
+      "sha256hash": "184a1782ddf0e54331fdb1c58f721e910b6fba1a8c89d00e813a3f01a2379b06"
     }
   ],
   "pnpm": {
