@@ -1,5 +1,5 @@
 import os
-import tarfile
+import zipfile
 import shutil
 import subprocess
 import tempfile
@@ -12,16 +12,16 @@ import asyncio
 
 class Plugin:
     async def install_lsfg_vk(self) -> dict:
-        """Install lsfg-vk by extracting the tar.gz file to ~/.local"""
+        """Install lsfg-vk by extracting the zip file to ~/.local"""
         try:
-            # Get the path to the lsfg-vk-latest.tar.gz file in the bin directory
+            # Get the path to the lsfg-vk.zip file in the bin directory
             plugin_dir = os.path.dirname(os.path.realpath(__file__))
-            tar_path = os.path.join(plugin_dir, "bin", "lsfg-vk-latest.tar.gz")
+            zip_path = os.path.join(plugin_dir, "bin", "lsfg-vk.zip")
             
-            # Check if the tar.gz file exists
-            if not os.path.exists(tar_path):
-                decky.logger.error(f"lsfg-vk-latest.tar.gz not found at {tar_path}")
-                return {"success": False, "error": "lsfg-vk-latest.tar.gz file not found"}
+            # Check if the zip file exists
+            if not os.path.exists(zip_path):
+                decky.logger.error(f"lsfg-vk.zip not found at {zip_path}")
+                return {"success": False, "error": "lsfg-vk.zip file not found"}
             
             # Get the user's home directory
             user_home = os.path.expanduser("~")
@@ -32,11 +32,11 @@ class Plugin:
             os.makedirs(local_lib_dir, exist_ok=True)
             os.makedirs(local_share_dir, exist_ok=True)
             
-            # Extract the tar.gz file
-            with tarfile.open(tar_path, 'r:gz') as tar_ref:
+            # Extract the zip file
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 # Use /tmp for temporary extraction since we may not have write permissions in plugin dir
                 with tempfile.TemporaryDirectory() as temp_dir:
-                    tar_ref.extractall(temp_dir)
+                    zip_ref.extractall(temp_dir)
                     
                     # Look for the extracted files and copy them to the correct locations
                     for root, dirs, files in os.walk(temp_dir):
