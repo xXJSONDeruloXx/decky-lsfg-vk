@@ -6,6 +6,6 @@
   "publish": {
     "tags": ["installer", "vulkan", "lsfg"],
     "description": "Enable Lossless Scaling on the Steam Deck using lsfg-vk compatibility layer.",
-    "image": "https://github.com/xXJSONDeruloXx/decky-lossless-scaling/blob/main/assets/lsfg-vk.png?raw=true"
+    "image": "https://steamcommunity.com/sharedfiles/filedetails/?id=3522791434"
   }
 }
