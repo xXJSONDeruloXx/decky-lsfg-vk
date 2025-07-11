@@ -185,7 +185,7 @@ class Plugin:
     # Function called after `_unload` during uninstall, utilize this to clean up processes and other remnants of your
     # plugin that may remain on the system
     async def _uninstall(self):
-        decky.logger.info("lsfg-vk Installer uninstalled")
+        decky.logger.info("lsfg-vk Installer uninstalled - starting cleanup")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
         try:
@@ -193,28 +193,47 @@ class Plugin:
             lib_file = os.path.join(user_home, ".local", "lib", "liblsfg-vk.so")
             json_file = os.path.join(user_home, ".local", "share", "vulkan", "implicit_layer.d", "VkLayer_LS_frame_generation.json")
             
+            decky.logger.info(f"Checking for lsfg-vk files to clean up:")
+            decky.logger.info(f"  Library file: {lib_file}")
+            decky.logger.info(f"  JSON file: {json_file}")
+            
             removed_files = []
             
             # Remove library file if it exists
             if os.path.exists(lib_file):
-                os.remove(lib_file)
-                removed_files.append(lib_file)
-                decky.logger.info(f"Removed {lib_file}")
+                decky.logger.info(f"Found library file, attempting to remove: {lib_file}")
+                try:
+                    os.remove(lib_file)
+                    removed_files.append(lib_file)
+                    decky.logger.info(f"Successfully removed {lib_file}")
+                except Exception as e:
+                    decky.logger.error(f"Failed to remove {lib_file}: {str(e)}")
+            else:
+                decky.logger.info(f"Library file not found: {lib_file}")
             
             # Remove JSON file if it exists
             if os.path.exists(json_file):
-                os.remove(json_file)
-                removed_files.append(json_file)
-                decky.logger.info(f"Removed {json_file}")
+                decky.logger.info(f"Found JSON file, attempting to remove: {json_file}")
+                try:
+                    os.remove(json_file)
+                    removed_files.append(json_file)
+                    decky.logger.info(f"Successfully removed {json_file}")
+                except Exception as e:
+                    decky.logger.error(f"Failed to remove {json_file}: {str(e)}")
+            else:
+                decky.logger.info(f"JSON file not found: {json_file}")
             
             if removed_files:
-                decky.logger.info(f"Cleaned up {len(removed_files)} lsfg-vk files during plugin uninstall")
+                decky.logger.info(f"Cleaned up {len(removed_files)} lsfg-vk files during plugin uninstall: {removed_files}")
             else:
                 decky.logger.info("No lsfg-vk files found to clean up during plugin uninstall")
                 
         except Exception as e:
             decky.logger.error(f"Error cleaning up lsfg-vk files during uninstall: {str(e)}")
+            import traceback
+            decky.logger.error(f"Traceback: {traceback.format_exc()}")
         
+        decky.logger.info("lsfg-vk Installer uninstall cleanup completed")
         pass
 
     # Migrations that should be performed before entering `_main()`.
