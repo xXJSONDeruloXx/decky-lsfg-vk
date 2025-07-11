@@ -130,84 +130,84 @@ function Content() {
   };
 
   return (
-    <PanelSection title="lsfg-vk Installation">
+    <PanelSection>
       <PanelSectionRow>
-        <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-          <div style={{ 
-            color: dllDetected ? "#4CAF50" : "#F44336", 
-            fontWeight: "bold", 
-            marginBottom: "4px" 
-          }}>
-            {dllDetectionStatus}
-          </div>
-          <div style={{ 
-            color: isInstalled ? "#4CAF50" : "#FF9800" 
-          }}>
-            Status: {installationStatus}
-          </div>
-        </div>
-      </PanelSectionRow>
-      
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={isInstalled ? handleUninstall : handleInstall}
-          disabled={isInstalling || isUninstalling}
-        >
-          {isInstalling ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div>Installing...</div>
-            </div>
-          ) : isUninstalling ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div>Uninstalling...</div>
-            </div>
-          ) : isInstalled ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <FaTrash />
-              <div>Uninstall lsfg-vk</div>
-            </div>
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <FaDownload />
-              <div>Install lsfg-vk</div>
-            </div>
-          )}
-        </ButtonItem>
-      </PanelSectionRow>
-      
-      <PanelSectionRow>
+      <div style={{ marginBottom: "8px", fontSize: "14px" }}>
         <div style={{ 
-          fontSize: "13px", 
-          marginTop: "12px", 
-          padding: "8px", 
-          backgroundColor: "rgba(255, 255, 255, 0.05)", 
-          borderRadius: "4px" 
+        color: dllDetected ? "#4CAF50" : "#F44336", 
+        fontWeight: "bold", 
+        marginBottom: "4px" 
         }}>
-          <div style={{ fontWeight: "bold", marginBottom: "6px" }}>
-            Usage Instructions:
-          </div>
-          <div style={{ marginBottom: "4px" }}>
-            Add to your game's launch options in Steam:
-          </div>
-          <div style={{ 
-            fontFamily: "monospace", 
-            backgroundColor: "rgba(0, 0, 0, 0.3)", 
-            padding: "4px", 
-            borderRadius: "2px",
-            fontSize: "12px",
-            marginBottom: "6px"
-          }}>
-            ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%
-          </div>
-          <div style={{ fontSize: "11px", opacity: 0.8 }}>
-            • ENABLE_LSFG=1 - Enables frame generation
-            <br />
-            • LSFG_MULTIPLIER=2-4 - FPS multiplier (start with 2)
-            <br />
-            • LSFG_FLOW_SCALE=1.0 - Flow scale (optional, for performance)
-          </div>
+        {dllDetectionStatus}
         </div>
+        <div style={{ 
+        color: isInstalled ? "#4CAF50" : "#FF9800" 
+        }}>
+        Status: {installationStatus}
+        </div>
+      </div>
+      </PanelSectionRow>
+      
+      <PanelSectionRow>
+      <ButtonItem
+        layout="below"
+        onClick={isInstalled ? handleUninstall : handleInstall}
+        disabled={isInstalling || isUninstalling}
+      >
+        {isInstalling ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div>Installing...</div>
+        </div>
+        ) : isUninstalling ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div>Uninstalling...</div>
+        </div>
+        ) : isInstalled ? (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <FaTrash />
+          <div>Uninstall lsfg-vk</div>
+        </div>
+        ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <FaDownload />
+          <div>Install lsfg-vk</div>
+        </div>
+        )}
+      </ButtonItem>
+      </PanelSectionRow>
+      
+      <PanelSectionRow>
+      <div style={{ 
+        fontSize: "13px", 
+        marginTop: "12px", 
+        padding: "8px", 
+        backgroundColor: "rgba(255, 255, 255, 0.05)", 
+        borderRadius: "4px" 
+      }}>
+        <div style={{ fontWeight: "bold", marginBottom: "6px" }}>
+        Usage Instructions:
+        </div>
+        <div style={{ marginBottom: "4px" }}>
+        Add to your game's launch options in Steam:
+        </div>
+        <div style={{ 
+        fontFamily: "monospace", 
+        backgroundColor: "rgba(0, 0, 0, 0.3)", 
+        padding: "4px", 
+        borderRadius: "2px",
+        fontSize: "12px",
+        marginBottom: "6px"
+        }}>
+        ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%
+        </div>
+        <div style={{ fontSize: "11px", opacity: 0.8 }}>
+        • ENABLE_LSFG=1 - Enables frame generation
+        <br />
+        • LSFG_MULTIPLIER=2-4 - FPS multiplier (start with 2)
+        <br />
+        • LSFG_FLOW_SCALE=1.0 - Flow scale (optional, for performance)
+        </div>
+      </div>
       </PanelSectionRow>
     </PanelSection>
   );
@@ -218,7 +218,7 @@ export default definePlugin(() => {
 
   return {
     // The name shown in various decky menus
-    name: "lsfg-vk Installer",
+    name: "Lossless Scaling",
     // The element displayed at the top of your plugin's menu
     titleView: <div className={staticClasses.Title}>lsfg-vk Installer</div>,
     // The content of your plugin's menu

@@ -5,7 +5,7 @@
   "api_version": 1,
   "publish": {
     "tags": ["installer", "vulkan", "lsfg"],
-    "description": "Install lsfg-vk Vulkan layer for frame generation.",
+    "description": "Enable Lossless Scaling on the Steam Deck using lsfg-vk compatibility layer.",
     "image": "https://github.com/xXJSONDeruloXx/decky-lossless-scaling/blob/main/assets/lsfg-vk.png?raw=true"
   }
 }
