@@ -205,7 +205,7 @@ function Content() {
         <br />
         • LSFG_MULTIPLIER=2-4 - FPS multiplier (start with 2)
         <br />
-        • LSFG_FLOW_SCALE=1.0 - Flow scale (optional, for performance)
+        • LSFG_FLOW_SCALE=0.1-1.0 - Flow scale (optional, for performance)
         </div>
       </div>
       </PanelSectionRow>
@@ -214,20 +214,20 @@ function Content() {
 };
 
 export default definePlugin(() => {
-  console.log("lsfg-vk Installer plugin initializing")
+  console.log("Lossless Scaling plugin initializing")
 
   return {
     // The name shown in various decky menus
     name: "Lossless Scaling",
     // The element displayed at the top of your plugin's menu
-    titleView: <div className={staticClasses.Title}>lsfg-vk Installer</div>,
+    titleView: <div className={staticClasses.Title}>Lossless Scaling</div>,
     // The content of your plugin's menu
     content: <Content />,
     // The icon displayed in the plugin list
     icon: <GiPlasticDuck />,
     // The function triggered when your plugin unloads
     onDismount() {
-      console.log("lsfg-vk Installer unloading")
+      console.log("Lossless Scaling unloading")
     },
   };
 });
