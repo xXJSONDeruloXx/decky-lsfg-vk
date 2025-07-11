@@ -186,6 +186,35 @@ class Plugin:
     # plugin that may remain on the system
     async def _uninstall(self):
         decky.logger.info("lsfg-vk Installer uninstalled")
+        
+        # Clean up lsfg-vk files when the plugin is uninstalled
+        try:
+            user_home = os.path.expanduser("~")
+            lib_file = os.path.join(user_home, ".local", "lib", "liblsfg-vk.so")
+            json_file = os.path.join(user_home, ".local", "share", "vulkan", "implicit_layer.d", "VkLayer_LS_frame_generation.json")
+            
+            removed_files = []
+            
+            # Remove library file if it exists
+            if os.path.exists(lib_file):
+                os.remove(lib_file)
+                removed_files.append(lib_file)
+                decky.logger.info(f"Removed {lib_file}")
+            
+            # Remove JSON file if it exists
+            if os.path.exists(json_file):
+                os.remove(json_file)
+                removed_files.append(json_file)
+                decky.logger.info(f"Removed {json_file}")
+            
+            if removed_files:
+                decky.logger.info(f"Cleaned up {len(removed_files)} lsfg-vk files during plugin uninstall")
+            else:
+                decky.logger.info("No lsfg-vk files found to clean up during plugin uninstall")
+                
+        except Exception as e:
+            decky.logger.error(f"Error cleaning up lsfg-vk files during uninstall: {str(e)}")
+        
         pass
 
     # Migrations that should be performed before entering `_main()`.
