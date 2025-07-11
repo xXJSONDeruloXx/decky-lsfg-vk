@@ -39,6 +39,15 @@
     "react-icons": "^5.3.0",
     "tslib": "^2.7.0"
   },
+  "remote_binary_bundling" : true,
+  "remote_binary": 
+  [
+    {
+        "name": "lsfg-vk-latest.tar.gz",
+        "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/latest/lsfg-vk-latest.tar.gz",
+        "sha256hash": "913e7bba9f1b58339df0b03cd9a8c4dd8d165912224a869b9ee8dd983ab8f3f7"
+    }
+  ],
   "pnpm": {
     "peerDependencyRules": {
       "ignoreMissing": [
