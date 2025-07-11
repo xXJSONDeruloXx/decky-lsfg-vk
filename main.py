@@ -174,18 +174,18 @@ class Plugin:
 
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
-        decky.logger.info("lsfg-vk Installer loaded!")
+        decky.logger.info("Lossless Scaling loaded!")
 
     # Function called first during the unload process, utilize this to handle your plugin being stopped, but not
     # completely removed
     async def _unload(self):
-        decky.logger.info("lsfg-vk Installer unloading")
+        decky.logger.info("Lossless Scaling unloading")
         pass
 
     # Function called after `_unload` during uninstall, utilize this to clean up processes and other remnants of your
     # plugin that may remain on the system
     async def _uninstall(self):
-        decky.logger.info("lsfg-vk Installer uninstalled - starting cleanup")
+        decky.logger.info("Lossless Scaling uninstalled - starting cleanup")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
         try:
@@ -233,7 +233,7 @@ class Plugin:
             import traceback
             decky.logger.error(f"Traceback: {traceback.format_exc()}")
         
-        decky.logger.info("lsfg-vk Installer uninstall cleanup completed")
+        decky.logger.info("Lossless Scaling uninstall cleanup completed")
         pass
 
     # Migrations that should be performed before entering `_main()`.
