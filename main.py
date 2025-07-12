@@ -64,6 +64,9 @@ export LSFG_MULTIPLIER=2
 export LSFG_FLOW_SCALE=1.0
 # export LSFG_HDR=1
 # export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync
+
+# Execute the passed command with the environment variables set
+exec "$@"
 """
             
             with open(lsfg_script_path, 'w') as script_file:
