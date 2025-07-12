@@ -323,6 +323,10 @@ exec "$@"
             else:
                 script_content += "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync\n"
             
+            # Add the exec line to allow the script to execute passed commands
+            script_content += "\n# Execute the passed command with the environment variables set\n"
+            script_content += "exec \"$@\"\n"
+            
             # Write the updated script
             with open(lsfg_script_path, 'w') as f:
                 f.write(script_content)
