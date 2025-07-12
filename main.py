@@ -63,6 +63,7 @@ export ENABLE_LSFG=1
 export LSFG_MULTIPLIER=2
 export LSFG_FLOW_SCALE=1.0
 # export LSFG_HDR=1
+# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync
 """
             
             with open(lsfg_script_path, 'w') as script_file:
@@ -216,7 +217,8 @@ export LSFG_FLOW_SCALE=1.0
                 "enable_lsfg": False,
                 "multiplier": 2,
                 "flow_scale": 1.0,
-                "hdr": False
+                "hdr": False,
+                "immediate_mode": False
             }
             
             lines = content.split('\n')
@@ -236,6 +238,8 @@ export LSFG_FLOW_SCALE=1.0
                         config["flow_scale"] = 1.0
                 elif line.startswith('export LSFG_HDR='):
                     config["hdr"] = line.split('=')[1] == '1'
+                elif line.startswith('export MESA_VK_WSI_PRESENT_MODE='):
+                    config["immediate_mode"] = line.split('=')[1].strip() == 'immediate'
             
             return {
                 "success": True,
@@ -249,7 +253,7 @@ export LSFG_FLOW_SCALE=1.0
                 "error": str(e)
             }
 
-    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, hdr: bool) -> dict:
+    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, hdr: bool, immediate_mode: bool) -> dict:
         """Update lsfg script configuration"""
         try:
             user_home = os.path.expanduser("~")
@@ -271,6 +275,11 @@ export LSFG_FLOW_SCALE=1.0
             else:
                 script_content += "# export LSFG_HDR=1\n"
             
+            if immediate_mode:
+                script_content += "export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync\n"
+            else:
+                script_content += "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync\n"
+            
             # Write the updated script
             with open(lsfg_script_path, 'w') as f:
                 f.write(script_content)
@@ -278,7 +287,7 @@ export LSFG_FLOW_SCALE=1.0
             # Make sure it's executable
             os.chmod(lsfg_script_path, 0o755)
             
-            decky.logger.info(f"Updated lsfg script configuration: enable={enable_lsfg}, multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}")
+            decky.logger.info(f"Updated lsfg script configuration: enable={enable_lsfg}, multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}, immediate_mode={immediate_mode}")
             
             return {
                 "success": True,
