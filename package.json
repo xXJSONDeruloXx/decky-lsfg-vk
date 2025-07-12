@@ -41,12 +41,12 @@
   },
   "remote_binary_bundling" : true,
   "remote_binary": [
-  {
-    "name": "lsfg-vk.zip",
-    "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16230043267/lsfg-vk.zip",
-    "sha256hash": "e5556bdd64a849e9418ab6665bd05b87ba26dbeda295a8fe9a069a9af6bc4232"
-  }
-],
+    {
+      "name": "lsfg-vk_archlinux.zip",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16241554722/lsfg-vk_archlinux.zip",
+      "sha256hash": "46f3ea5e8e01d0f1c52310f9f0918ee9229c89dc1e901788219662d7e7a3e99a"
+    }
+  ],
   "pnpm": {
     "peerDependencyRules": {
       "ignoreMissing": [
