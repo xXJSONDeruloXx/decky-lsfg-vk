@@ -55,6 +55,23 @@ class Plugin:
                     
                     # temp_dir will be automatically cleaned up
             
+            # Create the lsfg script in home directory
+            lsfg_script_path = os.path.join(user_home, "lsfg")
+            script_content = """#!/bin/bash
+
+export ENABLE_LSFG=1
+export LSFG_MULTIPLIER=2
+export LSFG_FLOW_SCALE=1.0
+# export LSFG_HDR=1
+"""
+            
+            with open(lsfg_script_path, 'w') as script_file:
+                script_file.write(script_content)
+            
+            # Make the script executable
+            os.chmod(lsfg_script_path, 0o755)
+            decky.logger.info(f"Created executable lsfg script at {lsfg_script_path}")
+            
             decky.logger.info("lsfg-vk installed successfully")
             return {"success": True, "message": "lsfg-vk installed successfully"}
             
@@ -90,6 +107,7 @@ class Plugin:
             user_home = os.path.expanduser("~")
             lib_file = os.path.join(user_home, ".local", "lib", "liblsfg-vk.so")
             json_file = os.path.join(user_home, ".local", "share", "vulkan", "implicit_layer.d", "VkLayer_LS_frame_generation.json")
+            lsfg_script = os.path.join(user_home, "lsfg")
             
             removed_files = []
             
@@ -104,6 +122,12 @@ class Plugin:
                 os.remove(json_file)
                 removed_files.append(json_file)
                 decky.logger.info(f"Removed {json_file}")
+            
+            # Remove lsfg script if it exists
+            if os.path.exists(lsfg_script):
+                os.remove(lsfg_script)
+                removed_files.append(lsfg_script)
+                decky.logger.info(f"Removed {lsfg_script}")
             
             if not removed_files:
                 return {"success": True, "message": "No lsfg-vk files found to remove"}
@@ -172,6 +196,102 @@ class Plugin:
                 "error": str(e)
             }
 
+    async def get_lsfg_config(self) -> dict:
+        """Read current lsfg script configuration"""
+        try:
+            user_home = os.path.expanduser("~")
+            lsfg_script_path = os.path.join(user_home, "lsfg")
+            
+            if not os.path.exists(lsfg_script_path):
+                return {
+                    "success": False,
+                    "error": "lsfg script not found"
+                }
+            
+            with open(lsfg_script_path, 'r') as f:
+                content = f.read()
+            
+            # Parse the script content to extract current values
+            config = {
+                "enable_lsfg": False,
+                "multiplier": 2,
+                "flow_scale": 1.0,
+                "hdr": False
+            }
+            
+            lines = content.split('\n')
+            for line in lines:
+                line = line.strip()
+                if line.startswith('export ENABLE_LSFG='):
+                    config["enable_lsfg"] = line.split('=')[1] == '1'
+                elif line.startswith('export LSFG_MULTIPLIER='):
+                    try:
+                        config["multiplier"] = int(line.split('=')[1])
+                    except:
+                        config["multiplier"] = 2
+                elif line.startswith('export LSFG_FLOW_SCALE='):
+                    try:
+                        config["flow_scale"] = float(line.split('=')[1])
+                    except:
+                        config["flow_scale"] = 1.0
+                elif line.startswith('export LSFG_HDR='):
+                    config["hdr"] = line.split('=')[1] == '1'
+            
+            return {
+                "success": True,
+                "config": config
+            }
+            
+        except Exception as e:
+            decky.logger.error(f"Error reading lsfg config: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, hdr: bool) -> dict:
+        """Update lsfg script configuration"""
+        try:
+            user_home = os.path.expanduser("~")
+            lsfg_script_path = os.path.join(user_home, "lsfg")
+            
+            # Create script content based on parameters
+            script_content = "#!/bin/bash\n\n"
+            
+            if enable_lsfg:
+                script_content += "export ENABLE_LSFG=1\n"
+            else:
+                script_content += "# export ENABLE_LSFG=1\n"
+            
+            script_content += f"export LSFG_MULTIPLIER={multiplier}\n"
+            script_content += f"export LSFG_FLOW_SCALE={flow_scale}\n"
+            
+            if hdr:
+                script_content += "export LSFG_HDR=1\n"
+            else:
+                script_content += "# export LSFG_HDR=1\n"
+            
+            # Write the updated script
+            with open(lsfg_script_path, 'w') as f:
+                f.write(script_content)
+            
+            # Make sure it's executable
+            os.chmod(lsfg_script_path, 0o755)
+            
+            decky.logger.info(f"Updated lsfg script configuration: enable={enable_lsfg}, multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}")
+            
+            return {
+                "success": True,
+                "message": "lsfg configuration updated successfully"
+            }
+            
+        except Exception as e:
+            decky.logger.error(f"Error updating lsfg config: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
     # Asyncio-compatible long-running code, executed in a task when the plugin is loaded
     async def _main(self):
         decky.logger.info("Lossless Scaling loaded!")
@@ -192,10 +312,12 @@ class Plugin:
             user_home = os.path.expanduser("~")
             lib_file = os.path.join(user_home, ".local", "lib", "liblsfg-vk.so")
             json_file = os.path.join(user_home, ".local", "share", "vulkan", "implicit_layer.d", "VkLayer_LS_frame_generation.json")
+            lsfg_script = os.path.join(user_home, "lsfg")
             
             decky.logger.info(f"Checking for lsfg-vk files to clean up:")
             decky.logger.info(f"  Library file: {lib_file}")
             decky.logger.info(f"  JSON file: {json_file}")
+            decky.logger.info(f"  lsfg script: {lsfg_script}")
             
             removed_files = []
             
@@ -222,6 +344,18 @@ class Plugin:
                     decky.logger.error(f"Failed to remove {json_file}: {str(e)}")
             else:
                 decky.logger.info(f"JSON file not found: {json_file}")
+            
+            # Remove lsfg script if it exists
+            if os.path.exists(lsfg_script):
+                decky.logger.info(f"Found lsfg script, attempting to remove: {lsfg_script}")
+                try:
+                    os.remove(lsfg_script)
+                    removed_files.append(lsfg_script)
+                    decky.logger.info(f"Successfully removed {lsfg_script}")
+                except Exception as e:
+                    decky.logger.error(f"Failed to remove {lsfg_script}: {str(e)}")
+            else:
+                decky.logger.info(f"lsfg script not found: {lsfg_script}")
             
             if removed_files:
                 decky.logger.info(f"Cleaned up {len(removed_files)} lsfg-vk files during plugin uninstall: {removed_files}")
