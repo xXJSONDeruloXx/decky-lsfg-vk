@@ -14,14 +14,14 @@ class Plugin:
     async def install_lsfg_vk(self) -> dict:
         """Install lsfg-vk by extracting the zip file to ~/.local"""
         try:
-            # Get the path to the lsfg-vk.zip file in the bin directory
+            # Get the path to the lsfg-vk_archlinux.zip file in the bin directory
             plugin_dir = os.path.dirname(os.path.realpath(__file__))
-            zip_path = os.path.join(plugin_dir, "bin", "lsfg-vk.zip")
+            zip_path = os.path.join(plugin_dir, "bin", "lsfg-vk_archlinux.zip")
             
             # Check if the zip file exists
             if not os.path.exists(zip_path):
-                decky.logger.error(f"lsfg-vk.zip not found at {zip_path}")
-                return {"success": False, "error": "lsfg-vk.zip file not found"}
+                decky.logger.error(f"lsfg-vk_archlinux.zip not found at {zip_path}")
+                return {"success": False, "error": "lsfg-vk_archlinux.zip file not found"}
             
             # Get the user's home directory
             user_home = os.path.expanduser("~")
