@@ -2,7 +2,9 @@ import {
   ButtonItem,
   PanelSection,
   PanelSectionRow,
-  staticClasses
+  staticClasses,
+  ToggleField,
+  SliderField
 } from "@decky/ui";
 import {
   callable,
@@ -25,6 +27,12 @@ const checkLsfgVkInstalled = callable<[], { installed: boolean; lib_exists: bool
 // Function to check if Lossless Scaling DLL is available
 const checkLosslessScalingDll = callable<[], { detected: boolean; path?: string; source?: string; message?: string; error?: string }>("check_lossless_scaling_dll");
 
+// Function to get lsfg configuration
+const getLsfgConfig = callable<[], { success: boolean; config?: { enable_lsfg: boolean; multiplier: number; flow_scale: number; hdr: boolean }; error?: string }>("get_lsfg_config");
+
+// Function to update lsfg configuration
+const updateLsfgConfig = callable<[boolean, number, number, boolean], { success: boolean; message?: string; error?: string }>("update_lsfg_config");
+
 function Content() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
@@ -32,6 +40,12 @@ function Content() {
   const [installationStatus, setInstallationStatus] = useState<string>("");
   const [dllDetected, setDllDetected] = useState<boolean>(false);
   const [dllDetectionStatus, setDllDetectionStatus] = useState<string>("");
+
+  // LSFG configuration state
+  const [enableLsfg, setEnableLsfg] = useState<boolean>(true);
+  const [multiplier, setMultiplier] = useState<number>(2);
+  const [flowScale, setFlowScale] = useState<number>(1.0);
+  const [hdr, setHdr] = useState<boolean>(false);
 
   // Check installation status on component mount
   useEffect(() => {
@@ -63,11 +77,24 @@ function Content() {
       }
     };
 
+    const loadLsfgConfig = async () => {
+      try {
+        const result = await getLsfgConfig();
+        if (result.success && result.config) {
+          setEnableLsfg(result.config.enable_lsfg);
+          setMultiplier(result.config.multiplier);
+          setFlowScale(result.config.flow_scale);
+          setHdr(result.config.hdr);
+        }
+      } catch (error) {
+        console.error("Error loading lsfg config:", error);
+      }
+    };
+
     checkInstallation();
     checkDllDetection();
-  }, []);
-
-  const handleInstall = async () => {
+    loadLsfgConfig();
+  }, []);  const handleInstall = async () => {
     setIsInstalling(true);
     setInstallationStatus("Installing lsfg-vk...");
     
@@ -80,6 +107,19 @@ function Content() {
           title: "Installation Complete",
           body: "lsfg-vk has been installed successfully"
         });
+        
+        // Reload lsfg config after installation
+        try {
+          const configResult = await getLsfgConfig();
+          if (configResult.success && configResult.config) {
+            setEnableLsfg(configResult.config.enable_lsfg);
+            setMultiplier(configResult.config.multiplier);
+            setFlowScale(configResult.config.flow_scale);
+            setHdr(configResult.config.hdr);
+          }
+        } catch (error) {
+          console.error("Error reloading config after install:", error);
+        }
       } else {
         setInstallationStatus(`Installation failed: ${result.error}`);
         toaster.toast({
@@ -101,7 +141,7 @@ function Content() {
   const handleUninstall = async () => {
     setIsUninstalling(true);
     setInstallationStatus("Uninstalling lsfg-vk...");
-    
+
     try {
       const result = await uninstallLsfgVk();
       if (result.success) {
@@ -127,6 +167,48 @@ function Content() {
     } finally {
       setIsUninstalling(false);
     }
+  };
+
+  const updateConfig = async (newEnableLsfg: boolean, newMultiplier: number, newFlowScale: number, newHdr: boolean) => {
+    try {
+      const result = await updateLsfgConfig(newEnableLsfg, newMultiplier, newFlowScale, newHdr);
+      if (result.success) {
+        toaster.toast({
+          title: "Configuration Updated",
+          body: "lsfg script configuration has been updated"
+        });
+      } else {
+        toaster.toast({
+          title: "Update Failed", 
+          body: result.error || "Failed to update configuration"
+        });
+      }
+    } catch (error) {
+      toaster.toast({
+        title: "Update Failed",
+        body: `Error: ${error}`
+      });
+    }
+  };
+
+  const handleEnableLsfgChange = async (value: boolean) => {
+    setEnableLsfg(value);
+    await updateConfig(value, multiplier, flowScale, hdr);
+  };
+
+  const handleMultiplierChange = async (value: number) => {
+    setMultiplier(value);
+    await updateConfig(enableLsfg, value, flowScale, hdr);
+  };
+
+  const handleFlowScaleChange = async (value: number) => {
+    setFlowScale(value);
+    await updateConfig(enableLsfg, multiplier, value, hdr);
+  };
+
+  const handleHdrChange = async (value: boolean) => {
+    setHdr(value);
+    await updateConfig(enableLsfg, multiplier, flowScale, value);
   };
 
   return (
@@ -175,6 +257,72 @@ function Content() {
         )}
       </ButtonItem>
       </PanelSectionRow>
+
+      {/* Configuration Section - only show if installed */}
+      {isInstalled && (
+        <>
+          <PanelSectionRow>
+            <div style={{ 
+              fontSize: "14px", 
+              fontWeight: "bold", 
+              marginTop: "16px", 
+              marginBottom: "8px",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+              paddingBottom: "4px"
+            }}>
+              LSFG Configuration
+            </div>
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Enable LSFG"
+              description="Enables the frame generation layer"
+              checked={enableLsfg}
+              onChange={handleEnableLsfgChange}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <SliderField
+              label="FPS Multiplier"
+              description="Traditional FPS multiplier value (2-4)"
+              value={multiplier}
+              min={2}
+              max={4}
+              step={1}
+              notchCount={3}
+              notchLabels={[
+                { notchIndex: 0, label: "2" },
+                { notchIndex: 1, label: "3" }, 
+                { notchIndex: 2, label: "4" }
+              ]}
+              onChange={handleMultiplierChange}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <SliderField
+              label="Flow Scale"
+              description="Lowers the flow scale for performance (0.25-1.0)"
+              value={flowScale}
+              min={0.25}
+              max={1.0}
+              step={0.01}
+              onChange={handleFlowScaleChange}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="HDR Mode"
+              description="Enable HDR mode (only if using HDR)"
+              checked={hdr}
+              onChange={handleHdrChange}
+            />
+          </PanelSectionRow>
+        </>
+      )}
       
       <PanelSectionRow>
       <div style={{ 
@@ -188,7 +336,7 @@ function Content() {
         Usage Instructions:
         </div>
         <div style={{ marginBottom: "4px" }}>
-        Add to your game's launch options in Steam:
+        Option 1: Use the lsfg script (recommended):
         </div>
         <div style={{ 
         fontFamily: "monospace", 
@@ -198,14 +346,31 @@ function Content() {
         fontSize: "12px",
         marginBottom: "6px"
         }}>
-        ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%
+        ~/lsfg && %COMMAND%
+        </div>
+        <div style={{ marginBottom: "4px" }}>
+        Option 2: Manual environment variables:
+        </div>
+        <div style={{ 
+        fontFamily: "monospace", 
+        backgroundColor: "rgba(0, 0, 0, 0.3)", 
+        padding: "4px", 
+        borderRadius: "2px",
+        fontSize: "12px",
+        marginBottom: "6px"
+        }}>
+        ENABLE_LSFG=1 LSFG_MULTIPLIER={multiplier} %COMMAND%
         </div>
         <div style={{ fontSize: "11px", opacity: 0.8 }}>
+        The lsfg script uses your current configuration settings.
+        <br />
         • ENABLE_LSFG=1 - Enables frame generation
         <br />
         • LSFG_MULTIPLIER=2-4 - FPS multiplier (start with 2)
         <br />
-        • LSFG_FLOW_SCALE=0.1-1.0 - Flow scale (optional, for performance)
+        • LSFG_FLOW_SCALE=0.25-1.0 - Flow scale (for performance)
+        <br />
+        • LSFG_HDR=1 - HDR mode (only if using HDR)
         </div>
       </div>
       </PanelSectionRow>
