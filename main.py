@@ -86,16 +86,22 @@ export LSFG_FLOW_SCALE=1.0
             user_home = os.path.expanduser("~")
             lib_file = os.path.join(user_home, ".local", "lib", "liblsfg-vk.so")
             json_file = os.path.join(user_home, ".local", "share", "vulkan", "implicit_layer.d", "VkLayer_LS_frame_generation.json")
+            lsfg_script = os.path.join(user_home, "lsfg")
             
             lib_exists = os.path.exists(lib_file)
             json_exists = os.path.exists(json_file)
+            script_exists = os.path.exists(lsfg_script)
+            
+            decky.logger.info(f"Installation check: lib={lib_exists}, json={json_exists}, script={script_exists}")
             
             return {
                 "installed": lib_exists and json_exists,
                 "lib_exists": lib_exists,
                 "json_exists": json_exists,
+                "script_exists": script_exists,
                 "lib_path": lib_file,
-                "json_path": json_file
+                "json_path": json_file,
+                "script_path": lsfg_script
             }
             
         except Exception as e:
@@ -224,22 +230,56 @@ export LSFG_FLOW_SCALE=1.0
             lines = content.split('\n')
             for line in lines:
                 line = line.strip()
+                
+                # Handle ENABLE_LSFG - check if it's commented out or not
                 if line.startswith('export ENABLE_LSFG='):
-                    config["enable_lsfg"] = line.split('=')[1] == '1'
+                    try:
+                        value = line.split('=')[1].strip()
+                        config["enable_lsfg"] = value == '1'
+                    except:
+                        pass
+                elif line.startswith('# export ENABLE_LSFG='):
+                    config["enable_lsfg"] = False
+                
+                # Handle LSFG_MULTIPLIER
                 elif line.startswith('export LSFG_MULTIPLIER='):
                     try:
-                        config["multiplier"] = int(line.split('=')[1])
+                        value = line.split('=')[1].strip()
+                        config["multiplier"] = int(value)
                     except:
-                        config["multiplier"] = 2
+                        pass
+                
+                # Handle LSFG_FLOW_SCALE
                 elif line.startswith('export LSFG_FLOW_SCALE='):
                     try:
-                        config["flow_scale"] = float(line.split('=')[1])
+                        value = line.split('=')[1].strip()
+                        config["flow_scale"] = float(value)
                     except:
-                        config["flow_scale"] = 1.0
+                        pass
+                
+                # Handle LSFG_HDR - check if it's commented out or not
                 elif line.startswith('export LSFG_HDR='):
-                    config["hdr"] = line.split('=')[1] == '1'
+                    try:
+                        value = line.split('=')[1].strip()
+                        config["hdr"] = value == '1'
+                    except:
+                        pass
+                elif line.startswith('# export LSFG_HDR='):
+                    config["hdr"] = False
+                
+                # Handle MESA_VK_WSI_PRESENT_MODE - check if it's commented out or not
                 elif line.startswith('export MESA_VK_WSI_PRESENT_MODE='):
-                    config["immediate_mode"] = line.split('=')[1].strip() == 'immediate'
+                    try:
+                        value = line.split('=')[1].strip()
+                        # Remove any comments after the value
+                        value = value.split('#')[0].strip()
+                        config["immediate_mode"] = value == 'immediate'
+                    except:
+                        pass
+                elif line.startswith('# export MESA_VK_WSI_PRESENT_MODE='):
+                    config["immediate_mode"] = False
+            
+            decky.logger.info(f"Parsed lsfg config: {config}")
             
             return {
                 "success": True,

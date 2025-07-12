@@ -22,7 +22,7 @@ const installLsfgVk = callable<[], { success: boolean; error?: string; message?:
 const uninstallLsfgVk = callable<[], { success: boolean; error?: string; message?: string; removed_files?: string[] }>("uninstall_lsfg_vk");
 
 // Function to check if lsfg-vk is installed
-const checkLsfgVkInstalled = callable<[], { installed: boolean; lib_exists: boolean; json_exists: boolean; lib_path: string; json_path: string; error?: string }>("check_lsfg_vk_installed");
+const checkLsfgVkInstalled = callable<[], { installed: boolean; lib_exists: boolean; json_exists: boolean; script_exists: boolean; lib_path: string; json_path: string; script_path: string; error?: string }>("check_lsfg_vk_installed");
 
 // Function to check if Lossless Scaling DLL is available
 const checkLosslessScalingDll = callable<[], { detected: boolean; path?: string; source?: string; message?: string; error?: string }>("check_lossless_scaling_dll");
@@ -87,6 +87,10 @@ function Content() {
           setFlowScale(result.config.flow_scale);
           setHdr(result.config.hdr);
           setImmediateMode(result.config.immediate_mode);
+          console.log("Loaded lsfg config:", result.config);
+        } else {
+          // If script doesn't exist or can't be read, keep default values
+          console.log("lsfg config not available, using defaults:", result.error);
         }
       } catch (error) {
         console.error("Error loading lsfg config:", error);
@@ -95,8 +99,34 @@ function Content() {
 
     checkInstallation();
     checkDllDetection();
+    
+    // Always try to load config, regardless of installation status
+    // This handles cases where the script exists but plugin shows as not installed
     loadLsfgConfig();
-  }, []);  const handleInstall = async () => {
+  }, []);
+
+  // Add a second useEffect to reload config when isInstalled changes
+  // This ensures UI reflects script state when plugin detects installation
+  useEffect(() => {
+    if (isInstalled) {
+      const reloadConfig = async () => {
+        try {
+          const result = await getLsfgConfig();
+          if (result.success && result.config) {
+            setEnableLsfg(result.config.enable_lsfg);
+            setMultiplier(result.config.multiplier);
+            setFlowScale(result.config.flow_scale);
+            setHdr(result.config.hdr);
+            setImmediateMode(result.config.immediate_mode);
+            console.log("Reloaded lsfg config after installation detected:", result.config);
+          }
+        } catch (error) {
+          console.error("Error reloading lsfg config:", error);
+        }
+      };
+      reloadConfig();
+    }
+  }, [isInstalled]);  const handleInstall = async () => {
     setIsInstalling(true);
     setInstallationStatus("Installing lsfg-vk...");
     
