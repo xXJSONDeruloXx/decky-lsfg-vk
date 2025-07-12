@@ -389,7 +389,7 @@ function Content() {
         fontSize: "12px",
         marginBottom: "6px"
         }}>
-        ~/lsfg && %COMMAND%
+        ~/lsfg %COMMAND%
         </div>
         <div style={{ marginBottom: "4px" }}>
         Option 2: Manual environment variables:
