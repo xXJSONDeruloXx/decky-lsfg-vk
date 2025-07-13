@@ -63,6 +63,7 @@ export ENABLE_LSFG=1
 export LSFG_MULTIPLIER=2
 export LSFG_FLOW_SCALE=1.0
 # export LSFG_HDR=1
+# export LSFG_PERF_MODE=1
 # export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync
 
 # Execute the passed command with the environment variables set
@@ -227,6 +228,7 @@ exec "$@"
                 "multiplier": 2,
                 "flow_scale": 1.0,
                 "hdr": False,
+                "perf_mode": False,
                 "immediate_mode": False
             }
             
@@ -270,6 +272,16 @@ exec "$@"
                 elif line.startswith('# export LSFG_HDR='):
                     config["hdr"] = False
                 
+                # Handle LSFG_PERF_MODE - check if it's commented out or not
+                elif line.startswith('export LSFG_PERF_MODE='):
+                    try:
+                        value = line.split('=')[1].strip()
+                        config["perf_mode"] = value == '1'
+                    except:
+                        pass
+                elif line.startswith('# export LSFG_PERF_MODE='):
+                    config["perf_mode"] = False
+                
                 # Handle MESA_VK_WSI_PRESENT_MODE - check if it's commented out or not
                 elif line.startswith('export MESA_VK_WSI_PRESENT_MODE='):
                     try:
@@ -296,7 +308,7 @@ exec "$@"
                 "error": str(e)
             }
 
-    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, hdr: bool, immediate_mode: bool) -> dict:
+    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, hdr: bool, perf_mode: bool, immediate_mode: bool) -> dict:
         """Update lsfg script configuration"""
         try:
             user_home = os.path.expanduser("~")
@@ -318,6 +330,11 @@ exec "$@"
             else:
                 script_content += "# export LSFG_HDR=1\n"
             
+            if perf_mode:
+                script_content += "export LSFG_PERF_MODE=1\n"
+            else:
+                script_content += "# export LSFG_PERF_MODE=1\n"
+            
             if immediate_mode:
                 script_content += "export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync\n"
             else:
@@ -334,7 +351,7 @@ exec "$@"
             # Make sure it's executable
             os.chmod(lsfg_script_path, 0o755)
             
-            decky.logger.info(f"Updated lsfg script configuration: enable={enable_lsfg}, multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}, immediate_mode={immediate_mode}")
+            decky.logger.info(f"Updated lsfg script configuration: enable={enable_lsfg}, multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}, perf_mode={perf_mode}, immediate_mode={immediate_mode}")
             
             return {
                 "success": True,
