@@ -28,10 +28,10 @@ const checkLsfgVkInstalled = callable<[], { installed: boolean; lib_exists: bool
 const checkLosslessScalingDll = callable<[], { detected: boolean; path?: string; source?: string; message?: string; error?: string }>("check_lossless_scaling_dll");
 
 // Function to get lsfg configuration
-const getLsfgConfig = callable<[], { success: boolean; config?: { enable_lsfg: boolean; multiplier: number; flow_scale: number; hdr: boolean; immediate_mode: boolean }; error?: string }>("get_lsfg_config");
+const getLsfgConfig = callable<[], { success: boolean; config?: { enable_lsfg: boolean; multiplier: number; flow_scale: number; hdr: boolean; perf_mode: boolean; immediate_mode: boolean }; error?: string }>("get_lsfg_config");
 
 // Function to update lsfg configuration
-const updateLsfgConfig = callable<[boolean, number, number, boolean, boolean], { success: boolean; message?: string; error?: string }>("update_lsfg_config");
+const updateLsfgConfig = callable<[boolean, number, number, boolean, boolean, boolean], { success: boolean; message?: string; error?: string }>("update_lsfg_config");
 
 function Content() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
@@ -46,6 +46,7 @@ function Content() {
   const [multiplier, setMultiplier] = useState<number>(2);
   const [flowScale, setFlowScale] = useState<number>(1.0);
   const [hdr, setHdr] = useState<boolean>(false);
+  const [perfMode, setPerfMode] = useState<boolean>(false);
   const [immediateMode, setImmediateMode] = useState<boolean>(false);
 
   // Check installation status on component mount
@@ -86,6 +87,7 @@ function Content() {
           setMultiplier(result.config.multiplier);
           setFlowScale(result.config.flow_scale);
           setHdr(result.config.hdr);
+          setPerfMode(result.config.perf_mode);
           setImmediateMode(result.config.immediate_mode);
           console.log("Loaded lsfg config:", result.config);
         } else {
@@ -117,6 +119,7 @@ function Content() {
             setMultiplier(result.config.multiplier);
             setFlowScale(result.config.flow_scale);
             setHdr(result.config.hdr);
+            setPerfMode(result.config.perf_mode);
             setImmediateMode(result.config.immediate_mode);
             console.log("Reloaded lsfg config after installation detected:", result.config);
           }
@@ -148,6 +151,7 @@ function Content() {
             setMultiplier(configResult.config.multiplier);
             setFlowScale(configResult.config.flow_scale);
             setHdr(configResult.config.hdr);
+            setPerfMode(configResult.config.perf_mode);
             setImmediateMode(configResult.config.immediate_mode);
           }
         } catch (error) {
@@ -202,9 +206,9 @@ function Content() {
     }
   };
 
-  const updateConfig = async (newEnableLsfg: boolean, newMultiplier: number, newFlowScale: number, newHdr: boolean, newImmediateMode: boolean) => {
+  const updateConfig = async (newEnableLsfg: boolean, newMultiplier: number, newFlowScale: number, newHdr: boolean, newPerfMode: boolean, newImmediateMode: boolean) => {
     try {
-      const result = await updateLsfgConfig(newEnableLsfg, newMultiplier, newFlowScale, newHdr, newImmediateMode);
+      const result = await updateLsfgConfig(newEnableLsfg, newMultiplier, newFlowScale, newHdr, newPerfMode, newImmediateMode);
       if (!result.success) {
         toaster.toast({
           title: "Update Failed", 
@@ -222,27 +226,32 @@ function Content() {
 
   const handleEnableLsfgChange = async (value: boolean) => {
     setEnableLsfg(value);
-    await updateConfig(value, multiplier, flowScale, hdr, immediateMode);
+    await updateConfig(value, multiplier, flowScale, hdr, perfMode, immediateMode);
   };
 
   const handleMultiplierChange = async (value: number) => {
     setMultiplier(value);
-    await updateConfig(enableLsfg, value, flowScale, hdr, immediateMode);
+    await updateConfig(enableLsfg, value, flowScale, hdr, perfMode, immediateMode);
   };
 
   const handleFlowScaleChange = async (value: number) => {
     setFlowScale(value);
-    await updateConfig(enableLsfg, multiplier, value, hdr, immediateMode);
+    await updateConfig(enableLsfg, multiplier, value, hdr, perfMode, immediateMode);
   };
 
   const handleHdrChange = async (value: boolean) => {
     setHdr(value);
-    await updateConfig(enableLsfg, multiplier, flowScale, value, immediateMode);
+    await updateConfig(enableLsfg, multiplier, flowScale, value, perfMode, immediateMode);
+  };
+
+  const handlePerfModeChange = async (value: boolean) => {
+    setPerfMode(value);
+    await updateConfig(enableLsfg, multiplier, flowScale, hdr, value, immediateMode);
   };
 
   const handleImmediateModeChange = async (value: boolean) => {
     setImmediateMode(value);
-    await updateConfig(enableLsfg, multiplier, flowScale, hdr, value);
+    await updateConfig(enableLsfg, multiplier, flowScale, hdr, perfMode, value);
   };
 
   return (
@@ -353,6 +362,15 @@ function Content() {
               description="Enable HDR mode (only if using HDR)"
               checked={hdr}
               onChange={handleHdrChange}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Performance Mode"
+              description="Enable performance mode (can quintuple performance)"
+              checked={perfMode}
+              onChange={handlePerfModeChange}
             />
           </PanelSectionRow>
 
