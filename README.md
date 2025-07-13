@@ -5,7 +5,8 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 
 This plugin automates the installation of lsfg-vk, a compatibility layer that allows the Windows-only [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) app to work on Linux systems like Steam Deck. Lossless Scaling provides frame generation and upscaling features for games.
 
-![Plugin Screenshot](assets/image.png)
+<img width="581" height="893" alt="image" src="https://github.com/user-attachments/assets/23931a7f-b496-4d41-bde4-3dfbb4ba7d4b" />
+
 
 ## How to Use
 
@@ -20,7 +21,7 @@ This plugin automates the installation of lsfg-vk, a compatibility layer that al
    - Toggle HDR mode
    - Toggle immediate mode (disable vsync)
 6. **Apply launch commands** to the game you want to use frame generation with:
-   - **Option 1 (Recommended)**: `~/lsfg && %COMMAND%` - Uses your plugin configuration
+   - **Option 1 (Recommended)**: `~/lsfg %COMMAND%` - Uses your plugin configuration
    - **Option 2**: Manual environment variables like `ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%`
 
 ## What it does
