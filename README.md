@@ -1,4 +1,7 @@
 # Lossless Scaling for Steam Deck
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71HZTAX)
+
 A demo & install tutorial is available here:
 
 <a href="https://www.youtube.com/watch?v=0KCXxhD-Y8s&embeds_referring_euri=https%3A%2F%2Fwww.reddit.com%2F&embeds_referring_origin=https%3A%2F%2Fwww.reddit.com&source_ve_path=MjM4NTE" target="_blank">
