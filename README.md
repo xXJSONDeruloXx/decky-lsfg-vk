@@ -1,12 +1,16 @@
 # Lossless Scaling for Steam Deck
+A demo & install tutorial is available here:
+
+<a href="https://www.youtube.com/watch?v=0KCXxhD-Y8s&embeds_referring_euri=https%3A%2F%2Fwww.reddit.com%2F&embeds_referring_origin=https%3A%2F%2Fwww.reddit.com&source_ve_path=MjM4NTE" target="_blank">
+  <img src="https://img.youtube.com/vi/0KCXxhD-Y8s/0.jpg" alt="Demo & Install Tutorial" width="400"/>
+</a>
+
+Or watch directly on <a href="https://www.youtube.com/watch?v=0KCXxhD-Y8s" target="_blank">YouTube</a>.
 A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling app on Linux.
 
 ## What is this?
 
 This plugin automates the installation of lsfg-vk, a compatibility layer that allows the Windows-only [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) app to work on Linux systems like Steam Deck. Lossless Scaling provides frame generation and upscaling features for games.
-
-<img width="581" height="893" alt="image" src="https://github.com/user-attachments/assets/23931a7f-b496-4d41-bde4-3dfbb4ba7d4b" />
-
 
 ## Installation
 
@@ -56,3 +60,5 @@ The plugin:
 ## Credits
 
 [PancakeTAS](https://github.com/PancakeTAS/lsfg-vk) for creating the lsfg-vk compatibility layer.
+  
+Special thanks to <a href="https://www.youtube.com/@DeckWizard" target="_blank">Deck Wizard</a> for the video tutorial.
