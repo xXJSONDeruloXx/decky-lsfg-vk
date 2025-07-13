@@ -5,7 +5,6 @@ A demo & install tutorial is available here:
   <img src="https://img.youtube.com/vi/0KCXxhD-Y8s/0.jpg" alt="Demo & Install Tutorial" width="400"/>
 </a>
 
-Or watch directly on <a href="https://www.youtube.com/watch?v=0KCXxhD-Y8s" target="_blank">YouTube</a>.
 A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling app on Linux.
 
 ## What is this?
