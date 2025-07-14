@@ -105,7 +105,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Immediate Mode"
-          description="Disable vsync for reduced input lag (experimental, may break some games)"
+          description="Reduce input lag (Experimental, will cause issues in many games)"
           checked={config.immediateMode}
           onChange={onImmediateModeChange}
         />
