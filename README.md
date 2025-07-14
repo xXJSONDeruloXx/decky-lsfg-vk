@@ -22,7 +22,7 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 
 1. **Purchase and install** [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam
 2. **Open the plugin** from the Decky menu
-3. **Click "Install lsfg-vk"** to automatically set up the compatibility layer
+3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
 4. **Configure settings** using the plugin's UI.
 5. **Apply launch commands** to the game you want to use frame generation with:
    - **Option 1 (Recommended)**: `~/lsfg %COMMAND%` - Uses your plugin configuration
