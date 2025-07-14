@@ -1,12 +1,6 @@
 # Lossless Scaling for Steam Deck
 
-⚠️ **Unofficial Community Plugin**: This Decky Loader plugin is an independent project and is **not officially supported** by the creators of Lossless Scaling or lsfg-vk. Support is provided separately via the [Decky Lossless Discord Channel](https://discord.gg/SFhFy2Sd).
-
-A demo & install tutorial is available here:
-
-<a href="https://www.youtube.com/watch?v=0KCXxhD-Y8s&embeds_referring_euri=https%3A%2F%2Fwww.reddit.com%2F&embeds_referring_origin=https%3A%2F%2Fwww.reddit.com&source_ve_path=MjM4NTE" target="_blank">
-  <img src="https://img.youtube.com/vi/0KCXxhD-Y8s/0.jpg" alt="Demo & Install Tutorial" width="400"/>
-</a>
+**Unofficial Community Plugin**: This Decky Loader plugin is an independent project and is **not officially supported** by the creators of Lossless Scaling or lsfg-vk. Support is provided separately via the [Decky Lossless Discord Channel](https://discord.gg/SFhFy2Sd).
 
 ## What is this?
 
