@@ -1,0 +1,62 @@
+name: Build Plugin
+
+on:
+  push:
+    branches: [ main, gh-workflow ]
+  pull_request:
+    branches: [ main, gh-workflow ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: latest
+        
+    - name: Create CLI directory
+      run: mkdir -p cli
+      
+    - name: Download Decky CLI
+      run: |
+        curl -L -o cli/decky "https://github.com/SteamDeckHomebrew/cli/releases/latest/download/decky-linux-x86_64"
+        chmod +x cli/decky
+        
+    - name: Verify Decky CLI
+      run: ./cli/decky --version
+      
+    - name: Clean node_modules (if exists)
+      run: rm -rf node_modules
+      
+    - name: Install dependencies
+      run: pnpm install
+      
+    - name: Build backend (if needed)
+      run: |
+        if [ -f "backend/Makefile" ]; then
+          cd backend && make
+        fi
+        
+    - name: Build plugin
+      run: ./cli/decky plugin build .
+      
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: lossless-scaling
+        path: out/*.zip
+        retention-days: 30
+        
+    - name: List output files
+      run: ls -la out/
