@@ -75,7 +75,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`Flow Scale ${Math.round(config.flowScale * 100)}%`}
-          description="Lowers the generated frame's resolution"
+          description="Lowers the internal motion estimation resolution"
           value={config.flowScale}
           min={0.25}
           max={1.0}
@@ -96,7 +96,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Performance Mode"
-          description="Use lighter model for FG (experimental)"
+          description="Use lighter model for FG"
           checked={config.perfMode}
           onChange={onPerfModeChange}
         />
@@ -105,7 +105,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Immediate Mode"
-          description="Disable vsync for reduced input lag"
+          description="Disable vsync for reduced input lag (experimental, may break some games)"
           checked={config.immediateMode}
           onChange={onImmediateModeChange}
         />
