@@ -43,7 +43,7 @@
   "remote_binary": [
     {
       "name": "lsfg-vk_archlinux.zip",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/latest/lsfg-vk_archlinux.zip",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16274840875/lsfg-vk_archlinux.zip",
       "sha256hash": "7409f91a717d17d77c90eec161652dcc26a6fab333b253a9e095e451ad81bbab"
     }
   ],
