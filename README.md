@@ -47,7 +47,7 @@ This plugin automates the installation of lsfg-vk, a compatibility layer that al
 
 ## Feedback and Support
 
-For per-game feedback and community support, check out the [Lossless Scaling Discord](https://discord.gg/losslessscaling).
+For per-game feedback and community support, check out the [Universal Blue Discord](https://discord.bazzite.gg/).
 
 ## What it does
 
