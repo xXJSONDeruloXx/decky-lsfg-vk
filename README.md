@@ -1,5 +1,6 @@
 # Lossless Scaling for Steam Deck
 
+⚠️ **Unofficial Community Plugin**: This Decky Loader plugin is an independent project and is **not officially supported** by the creators of Lossless Scaling or lsfg-vk. Support is provided separately via the [Plugin Support Discord](YOUR_DISCORD_LINK_HERE).
 
 A demo & install tutorial is available here:
 
@@ -7,16 +8,13 @@ A demo & install tutorial is available here:
   <img src="https://img.youtube.com/vi/0KCXxhD-Y8s/0.jpg" alt="Demo & Install Tutorial" width="400"/>
 </a>
 
-A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling app on Linux.
-
 ## What is this?
 
-This plugin automates the installation of lsfg-vk, a compatibility layer that allows the Windows-only [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) app to work on Linux systems like Steam Deck. Lossless Scaling provides frame generation and upscaling features for games.
+A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling features on Linux with a controller friendly UI in SteamOS or Bazzite. 
 
 ## Installation
 
-### Manual Installation (Current Method)
-**Note:** This plugin is not yet available on the Decky Plugin Store.
+**Note:** This plugin is not yet available on the Decky Plugin Store, it is in an experimental state, and likely to change drastically pending a full store release. 
 
 1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lossless-scaling-vk/releases/tag/Latest)
    - Download the "Lossless Scaling.zip" file to your Steam Deck
@@ -26,27 +24,20 @@ This plugin automates the installation of lsfg-vk, a compatibility layer that al
    - Go to "Developer" tab and select "Install Plugin from Zip"
    - Select the downloaded "Lossless Scaling.zip" file
 
-### Future Installation
-- This plugin will be available through the Decky Plugin Store once approved
-
 ## How to Use
 
 1. **Purchase and install** [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam
 2. **Open the plugin** from the Decky menu
 3. **Click "Install lsfg-vk"** to automatically set up the compatibility layer
-4. **Configure settings** using the plugin's UI controls:
-   - Enable/disable LSFG
-   - Set FPS multiplier (2-4)
-   - Adjust flow scale (0.25-1.0) 
-   - Toggle HDR mode
-   - Toggle immediate mode (disable vsync)
+4. **Configure settings** using the plugin's UI.
 5. **Apply launch commands** to the game you want to use frame generation with:
    - **Option 1 (Recommended)**: `~/lsfg %COMMAND%` - Uses your plugin configuration
-   - **Option 2**: Manual environment variables like `ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%`
+      - **Option 2**: Manual environment variables like `ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%`
+      - See the [LSFG-VK WIKI](https://github.com/PancakeTAS/lsfg-vk/wiki/Configuring-lsfg%E2%80%90vk) for more information on each available environment variable
 
 ## Feedback and Support
 
-For per-game feedback and community support, check out the [Universal Blue Discord](https://discord.bazzite.gg/).
+For per-game feedback and community support, check out the UPCOMING DISCORD LINK HERE
 
 ## What it does
 
