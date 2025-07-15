@@ -72,9 +72,9 @@ export function useDllDetection() {
 export function useLsfgConfig() {
   const [enableLsfg, setEnableLsfg] = useState<boolean>(true);
   const [multiplier, setMultiplier] = useState<number>(2);
-  const [flowScale, setFlowScale] = useState<number>(1.0);
+  const [flowScale, setFlowScale] = useState<number>(0.8);
   const [hdr, setHdr] = useState<boolean>(false);
-  const [perfMode, setPerfMode] = useState<boolean>(false);
+  const [perfMode, setPerfMode] = useState<boolean>(true);
   const [immediateMode, setImmediateMode] = useState<boolean>(false);
 
   const loadLsfgConfig = async () => {
