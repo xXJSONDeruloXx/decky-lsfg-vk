@@ -102,7 +102,7 @@ export function Content() {
         />
       )}
 
-      <UsageInstructions multiplier={config.multiplier} />
+      <UsageInstructions config={config} />
     </PanelSection>
   );
 }
