@@ -25,7 +25,7 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
 4. **Configure settings** using the plugin's UI.
 5. **Apply launch commands** to the game you want to use frame generation with:
-   - **Option 1 (Recommended)**: `~/lsfg %COMMAND%` - Uses your plugin configuration
+   - **Option 1 (Recommended)**: `~/lsfg %command%` - Uses your plugin configuration
       - **Option 2**: Manual environment variables like `ENABLE_LSFG=1 LSFG_MULTIPLIER=2 %COMMAND%`
       - See the [LSFG-VK WIKI](https://github.com/PancakeTAS/lsfg-vk/wiki/Configuring-lsfg%E2%80%90vk) for more information on each available environment variable
 
