@@ -30,6 +30,7 @@ LOSSLESS_DLL_NAME = "Lossless.dll"
 LSFG_SCRIPT_TEMPLATE = """#!/bin/bash
 
 {enable_lsfg}
+export DISABLE_VKBASALT=1
 export LSFG_MULTIPLIER={multiplier}
 export LSFG_FLOW_SCALE={flow_scale}
 {hdr}
