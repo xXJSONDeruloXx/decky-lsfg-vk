@@ -1,5 +1,5 @@
-import { PanelSectionRow, ButtonItem } from "@decky/ui";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { PanelSectionRow } from "@decky/ui";
+import { WikiButton } from "./WikiButton";
 
 interface ConfigType {
   enableLsfg: boolean;
@@ -42,10 +42,6 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
     }
     
     return envVars.length > 0 ? `${envVars.join(" ")} %command%` : "%command%";
-  };
-
-  const handleWikiClick = () => {
-    window.open("https://github.com/PancakeTAS/lsfg-vk/wiki", "_blank");
   };
 
   return (
@@ -96,17 +92,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
         </div>
       </PanelSectionRow>
 
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleWikiClick}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <FaExternalLinkAlt />
-            <div>LSFG-VK Wiki</div>
-          </div>
-        </ButtonItem>
-      </PanelSectionRow>
+      <WikiButton />
     </>
   );
 }
