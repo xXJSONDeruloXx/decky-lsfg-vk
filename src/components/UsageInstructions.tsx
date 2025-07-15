@@ -1,4 +1,5 @@
-import { PanelSectionRow } from "@decky/ui";
+import { PanelSectionRow, ButtonItem } from "@decky/ui";
+import { FaExternalLinkAlt } from "react-icons/fa";
 
 interface ConfigType {
   enableLsfg: boolean;
@@ -42,51 +43,70 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
     
     return envVars.length > 0 ? `${envVars.join(" ")} %command%` : "%command%";
   };
+
+  const handleWikiClick = () => {
+    window.open("https://github.com/PancakeTAS/lsfg-vk/wiki", "_blank");
+  };
+
   return (
-    <PanelSectionRow>
-      <div
-        style={{
-          fontSize: "13px",
-          marginTop: "12px",
-          padding: "8px",
-          backgroundColor: "rgba(255, 255, 255, 0.05)",
-          borderRadius: "4px"
-        }}
-      >
-        <div style={{ fontWeight: "bold", marginBottom: "6px" }}>
-          Usage Instructions:
-        </div>
-        <div style={{ marginBottom: "4px" }}>
-          Option 1: Use the lsfg script (recommended):
-        </div>
+    <>
+      <PanelSectionRow>
         <div
           style={{
-            fontFamily: "monospace",
-            backgroundColor: "rgba(0, 0, 0, 0.3)",
-            padding: "4px",
-            borderRadius: "2px",
-            fontSize: "12px",
-            marginBottom: "6px"
+            fontSize: "13px",
+            marginTop: "12px",
+            padding: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            borderRadius: "4px"
           }}
         >
-          ~/lsfg %command%
+          <div style={{ fontWeight: "bold", marginBottom: "6px" }}>
+            Usage Instructions:
+          </div>
+          <div style={{ marginBottom: "4px" }}>
+            Option 1: Use the lsfg script (recommended):
+          </div>
+          <div
+            style={{
+              fontFamily: "monospace",
+              backgroundColor: "rgba(0, 0, 0, 0.3)",
+              padding: "4px",
+              borderRadius: "2px",
+              fontSize: "12px",
+              marginBottom: "6px"
+            }}
+          >
+            ~/lsfg %command%
+          </div>
+          <div style={{ marginBottom: "4px" }}>
+            Option 2: Manual environment variables:
+          </div>
+          <div
+            style={{
+              fontFamily: "monospace",
+              backgroundColor: "rgba(0, 0, 0, 0.3)",
+              padding: "4px",
+              borderRadius: "2px",
+              fontSize: "12px",
+              marginBottom: "6px"
+            }}
+          >
+            {buildManualEnvVars()}
+          </div>
         </div>
-        <div style={{ marginBottom: "4px" }}>
-          Option 2: Manual environment variables:
-        </div>
-        <div
-          style={{
-            fontFamily: "monospace",
-            backgroundColor: "rgba(0, 0, 0, 0.3)",
-            padding: "4px",
-            borderRadius: "2px",
-            fontSize: "12px",
-            marginBottom: "6px"
-          }}
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleWikiClick}
         >
-          {buildManualEnvVars()}
-        </div>
-      </div>
-    </PanelSectionRow>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <FaExternalLinkAlt />
+            <div>LSFG-VK Wiki</div>
+          </div>
+        </ButtonItem>
+      </PanelSectionRow>
+    </>
   );
 }
