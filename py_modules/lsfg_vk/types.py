@@ -62,6 +62,7 @@ class ConfigurationData(TypedDict):
     hdr: bool
     perf_mode: bool
     immediate_mode: bool
+    disable_vkbasalt: bool
 
 
 class ConfigurationResponse(BaseResponse):

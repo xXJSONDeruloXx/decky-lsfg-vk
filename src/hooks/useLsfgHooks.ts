@@ -76,6 +76,7 @@ export function useLsfgConfig() {
   const [hdr, setHdr] = useState<boolean>(false);
   const [perfMode, setPerfMode] = useState<boolean>(true);
   const [immediateMode, setImmediateMode] = useState<boolean>(false);
+  const [disableVkbasalt, setDisableVkbasalt] = useState<boolean>(true);
 
   const loadLsfgConfig = async () => {
     try {
@@ -87,6 +88,7 @@ export function useLsfgConfig() {
         setHdr(result.config.hdr);
         setPerfMode(result.config.perf_mode);
         setImmediateMode(result.config.immediate_mode);
+        setDisableVkbasalt(result.config.disable_vkbasalt);
         console.log("Loaded lsfg config:", result.config);
       } else {
         console.log("lsfg config not available, using defaults:", result.error);
@@ -102,7 +104,8 @@ export function useLsfgConfig() {
     newFlowScale: number,
     newHdr: boolean,
     newPerfMode: boolean,
-    newImmediateMode: boolean
+    newImmediateMode: boolean,
+    newDisableVkbasalt: boolean
   ): Promise<ConfigUpdateResult> => {
     try {
       const result = await updateLsfgConfig(
@@ -111,7 +114,8 @@ export function useLsfgConfig() {
         newFlowScale,
         newHdr,
         newPerfMode,
-        newImmediateMode
+        newImmediateMode,
+        newDisableVkbasalt
       );
       if (!result.success) {
         toaster.toast({
@@ -140,7 +144,8 @@ export function useLsfgConfig() {
       flowScale,
       hdr,
       perfMode,
-      immediateMode
+      immediateMode,
+      disableVkbasalt
     },
     setters: {
       setEnableLsfg,
@@ -148,7 +153,8 @@ export function useLsfgConfig() {
       setFlowScale,
       setHdr,
       setPerfMode,
-      setImmediateMode
+      setImmediateMode,
+      setDisableVkbasalt
     },
     loadLsfgConfig,
     updateConfig
