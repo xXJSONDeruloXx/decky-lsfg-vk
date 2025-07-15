@@ -8,6 +8,7 @@ interface ConfigType {
   hdr: boolean;
   perfMode: boolean;
   immediateMode: boolean;
+  disableVkbasalt: boolean;
 }
 
 interface UsageInstructionsProps {
@@ -39,6 +40,10 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
     
     if (config.immediateMode) {
       envVars.push("MESA_VK_WSI_PRESENT_MODE=immediate");
+    }
+    
+    if (config.disableVkbasalt) {
+      envVars.push("DISABLE_VKBASALT=1");
     }
     
     return envVars.length > 0 ? `${envVars.join(" ")} %command%` : "%command%";

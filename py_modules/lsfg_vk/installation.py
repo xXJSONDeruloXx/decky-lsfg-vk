@@ -14,7 +14,7 @@ from .constants import (
     LIB_FILENAME, JSON_FILENAME, ZIP_FILENAME, BIN_DIR,
     SO_EXT, JSON_EXT, LSFG_SCRIPT_TEMPLATE,
     DEFAULT_MULTIPLIER, DEFAULT_FLOW_SCALE, DEFAULT_ENABLE_LSFG,
-    DEFAULT_HDR, DEFAULT_PERF_MODE, DEFAULT_IMMEDIATE_MODE
+    DEFAULT_HDR, DEFAULT_PERF_MODE, DEFAULT_IMMEDIATE_MODE, DEFAULT_DISABLE_VKBASALT
 )
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
 
@@ -111,7 +111,8 @@ class InstallationService(BaseService):
             flow_scale=DEFAULT_FLOW_SCALE,
             hdr="export LSFG_HDR=1" if DEFAULT_HDR else "# export LSFG_HDR=1",
             perf_mode="export LSFG_PERF_MODE=1" if DEFAULT_PERF_MODE else "# export LSFG_PERF_MODE=1",
-            immediate_mode="export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync" if DEFAULT_IMMEDIATE_MODE else "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync"
+            immediate_mode="export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync" if DEFAULT_IMMEDIATE_MODE else "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync",
+            disable_vkbasalt="export DISABLE_VKBASALT=1" if DEFAULT_DISABLE_VKBASALT else "# export DISABLE_VKBASALT=1"
         )
         
         # Use atomic write to prevent corruption
