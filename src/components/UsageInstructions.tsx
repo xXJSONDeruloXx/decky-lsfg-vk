@@ -1,5 +1,4 @@
 import { PanelSectionRow } from "@decky/ui";
-import { WikiButton } from "./WikiButton";
 
 interface ConfigType {
   enableLsfg: boolean;
@@ -96,8 +95,6 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
           </div>
         </div>
       </PanelSectionRow>
-
-      <WikiButton />
     </>
   );
 }
