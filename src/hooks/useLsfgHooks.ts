@@ -17,13 +17,13 @@ export function useInstallationStatus() {
       const status = await checkLsfgVkInstalled();
       setIsInstalled(status.installed);
       if (status.installed) {
-        setInstallationStatus("lsfg-vk is installed");
+        setInstallationStatus("lsfg-vk Installed");
       } else {
-        setInstallationStatus("lsfg-vk is not installed");
+        setInstallationStatus("lsfg-vk Not Installed");
       }
       return status.installed;
     } catch (error) {
-      setInstallationStatus("Error checking installation status");
+      setInstallationStatus("lsfg-vk Not Installed");
       return false;
     }
   };
@@ -50,12 +50,12 @@ export function useDllDetection() {
       const result = await checkLosslessScalingDll();
       setDllDetected(result.detected);
       if (result.detected) {
-        setDllDetectionStatus(`Lossless Scaling App detected (${result.source})`);
+        setDllDetectionStatus("Lossless Scaling Installed");
       } else {
-        setDllDetectionStatus(result.message || "Lossless Scaling App not detected");
+        setDllDetectionStatus("Lossless Scaling Not Installed");
       }
     } catch (error) {
-      setDllDetectionStatus("Error checking Lossless Scaling App");
+      setDllDetectionStatus("Lossless Scaling Not Installed");
     }
   };
 
