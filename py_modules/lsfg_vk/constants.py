@@ -35,6 +35,7 @@ export LSFG_FLOW_SCALE={flow_scale}
 {hdr}
 {perf_mode}
 {immediate_mode}
+{disable_vkbasalt}
 
 # Execute the passed command with the environment variables set
 exec "$@"
@@ -47,8 +48,9 @@ ENV_HOME = "HOME"
 
 # Default configuration values
 DEFAULT_MULTIPLIER = 2
-DEFAULT_FLOW_SCALE = 1.0
+DEFAULT_FLOW_SCALE = 0.8
 DEFAULT_ENABLE_LSFG = True
 DEFAULT_HDR = False
-DEFAULT_PERF_MODE = False
+DEFAULT_PERF_MODE = True
 DEFAULT_IMMEDIATE_MODE = False
+DEFAULT_DISABLE_VKBASALT = True

@@ -34,6 +34,7 @@ export interface LsfgConfig {
   hdr: boolean;
   perf_mode: boolean;
   immediate_mode: boolean;
+  disable_vkbasalt: boolean;
 }
 
 export interface ConfigResult {
@@ -55,6 +56,6 @@ export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg
 export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const updateLsfgConfig = callable<
-  [boolean, number, number, boolean, boolean, boolean],
+  [boolean, number, number, boolean, boolean, boolean, boolean],
   ConfigUpdateResult
 >("update_lsfg_config");
