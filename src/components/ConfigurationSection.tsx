@@ -120,7 +120,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`Game Frame Cap ${config.frameCap === 0 ? "(Disabled)" : `(${config.frameCap} FPS)`}`}
-          description="Limit frame rate using DXVK_FRAME_RATE (0 = disabled)"
+          description="Limit base game FPS (0 = disabled)"
           value={config.frameCap}
           min={0}
           max={60}
