@@ -84,7 +84,7 @@ class Plugin:
             perf_mode: Whether to enable performance mode
             immediate_mode: Whether to enable immediate present mode (disable vsync)
             disable_vkbasalt: Whether to disable vkbasalt layer
-            frame_cap: Frame rate cap value (10-60)
+            frame_cap: Frame rate cap value (0-60, 0 = disabled)
             
         Returns:
             ConfigurationResponse dict with success status

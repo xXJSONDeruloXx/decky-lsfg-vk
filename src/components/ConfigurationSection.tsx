@@ -124,17 +124,7 @@ export function ConfigurationSection({
           value={config.frameCap}
           min={0}
           max={60}
-          step={5}
-          notchCount={7}
-          notchLabels={[
-            { notchIndex: 0, label: "Off" },
-            { notchIndex: 1, label: "10" },
-            { notchIndex: 2, label: "20" },
-            { notchIndex: 3, label: "30" },
-            { notchIndex: 4, label: "40" },
-            { notchIndex: 5, label: "50" },
-            { notchIndex: 6, label: "60" }
-          ]}
+          step={1}
           onChange={onFrameCapChange}
         />
       </PanelSectionRow>
