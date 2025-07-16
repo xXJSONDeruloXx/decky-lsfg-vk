@@ -49,6 +49,23 @@ export interface ConfigSchemaResult {
   defaults: ConfigurationData;
 }
 
+export interface UpdateCheckResult {
+  success: boolean;
+  update_available: boolean;
+  current_version: string;
+  latest_version: string;
+  release_notes: string;
+  release_date: string;
+  download_url: string;
+  error?: string;
+}
+
+export interface UpdateDownloadResult {
+  success: boolean;
+  download_path?: string;
+  error?: string;
+}
+
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
@@ -68,3 +85,7 @@ export const updateLsfgConfigFromObject = async (config: ConfigurationData): Pro
   const args = ConfigurationManager.createArgsFromConfig(config);
   return updateLsfgConfig(...args as [boolean, number, number, boolean, boolean, boolean, boolean, number]);
 };
+
+// Self-updater API functions
+export const checkForPluginUpdate = callable<[], UpdateCheckResult>("check_for_plugin_update");
+export const downloadPluginUpdate = callable<[string], UpdateDownloadResult>("download_plugin_update");

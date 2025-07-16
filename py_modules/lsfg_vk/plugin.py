@@ -6,7 +6,12 @@ Vulkan layer for Lossless Scaling frame generation on Steam Deck.
 """
 
 import os
+import json
+import subprocess
+import urllib.request
+import ssl
 from typing import Dict, Any
+from pathlib import Path
 
 from .installation import InstallationService
 from .dll_detection import DllDetectionService
@@ -105,6 +110,200 @@ class Plugin:
         return self.configuration_service.update_config(
             enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt, frame_cap
         )
+
+    # Self-updater methods
+    async def check_for_plugin_update(self) -> Dict[str, Any]:
+        """Check for plugin updates by comparing current version with latest GitHub release
+        
+        Returns:
+            Dict containing update information:
+            {
+                "update_available": bool,
+                "current_version": str,
+                "latest_version": str,
+                "release_notes": str,
+                "release_date": str,
+                "download_url": str,
+                "error": str (if error occurred)
+            }
+        """
+        try:
+            import decky
+            
+            # Read current version from package.json
+            package_json_path = Path(decky.DECKY_PLUGIN_DIR) / "package.json"
+            current_version = "0.0.0"
+            
+            if package_json_path.exists():
+                try:
+                    with open(package_json_path, 'r', encoding='utf-8') as f:
+                        package_data = json.load(f)
+                        current_version = package_data.get('version', '0.0.0')
+                except Exception as e:
+                    decky.logger.warning(f"Failed to read package.json: {e}")
+            
+            # Fetch latest release from GitHub
+            api_url = "https://api.github.com/repos/xXJSONDeruloXx/decky-lossless-scaling-vk/releases/latest"
+            
+            try:
+                # Create SSL context that doesn't verify certificates
+                # This is needed on Steam Deck where certificate verification often fails
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                # Use urllib to fetch the latest release info
+                with urllib.request.urlopen(api_url, context=ssl_context) as response:
+                    release_data = json.loads(response.read().decode('utf-8'))
+                
+                latest_version = release_data.get('tag_name', '').lstrip('v')
+                release_notes = release_data.get('body', '')
+                release_date = release_data.get('published_at', '')
+                
+                # Find the plugin zip download URL
+                download_url = ""
+                for asset in release_data.get('assets', []):
+                    if asset.get('name', '').endswith('.zip'):
+                        download_url = asset.get('browser_download_url', '')
+                        break
+                
+                # Compare versions
+                update_available = self._compare_versions(current_version, latest_version)
+                
+                return {
+                    "success": True,
+                    "update_available": update_available,
+                    "current_version": current_version,
+                    "latest_version": latest_version,
+                    "release_notes": release_notes,
+                    "release_date": release_date,
+                    "download_url": download_url
+                }
+                
+            except Exception as e:
+                decky.logger.error(f"Failed to fetch release info: {e}")
+                return {
+                    "success": False,
+                    "error": f"Failed to check for updates: {str(e)}"
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Update check failed: {str(e)}"
+            }
+
+    async def download_plugin_update(self, download_url: str) -> Dict[str, Any]:
+        """Download the plugin update zip file to ~/Downloads
+        
+        Args:
+            download_url: URL to download the plugin zip from
+            
+        Returns:
+            Dict containing download result:
+            {
+                "success": bool,
+                "download_path": str,
+                "error": str (if error occurred)
+            }
+        """
+        try:
+            import decky
+            
+            # Create download path
+            downloads_dir = Path.home() / "Downloads"
+            downloads_dir.mkdir(exist_ok=True)
+            download_path = downloads_dir / "decky-lossless-scaling-vk.zip"
+            
+            # Remove existing file if it exists
+            if download_path.exists():
+                download_path.unlink()
+            
+            # Download the file
+            decky.logger.info(f"Downloading plugin update from {download_url}")
+            
+            try:
+                # Create SSL context that doesn't verify certificates
+                # This is needed on Steam Deck where certificate verification often fails
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                # Use urllib to download the file with SSL context
+                with urllib.request.urlopen(download_url, context=ssl_context) as response:
+                    with open(download_path, 'wb') as f:
+                        f.write(response.read())
+                
+                # Verify the file was downloaded successfully
+                if download_path.exists() and download_path.stat().st_size > 0:
+                    decky.logger.info(f"Plugin update downloaded successfully to {download_path}")
+                    return {
+                        "success": True,
+                        "download_path": str(download_path)
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Download completed but file is empty or missing"
+                    }
+                    
+            except Exception as e:
+                decky.logger.error(f"Download failed: {e}")
+                return {
+                    "success": False,
+                    "error": f"Download failed: {str(e)}"
+                }
+                
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Download preparation failed: {str(e)}"
+            }
+
+    def _compare_versions(self, current: str, latest: str) -> bool:
+        """Compare two version strings to determine if an update is available
+        
+        Args:
+            current: Current version string (e.g., "1.2.3")
+            latest: Latest version string (e.g., "1.2.4")
+            
+        Returns:
+            True if latest version is newer than current version
+        """
+        try:
+            # Remove 'v' prefix if present and split by dots
+            current_parts = current.lstrip('v').split('.')
+            latest_parts = latest.lstrip('v').split('.')
+            
+            # Pad with zeros if needed to ensure equal length
+            max_len = max(len(current_parts), len(latest_parts))
+            current_parts.extend(['0'] * (max_len - len(current_parts)))
+            latest_parts.extend(['0'] * (max_len - len(latest_parts)))
+            
+            # Compare each part numerically
+            for i in range(max_len):
+                try:
+                    current_num = int(current_parts[i])
+                    latest_num = int(latest_parts[i])
+                    
+                    if latest_num > current_num:
+                        return True
+                    elif latest_num < current_num:
+                        return False
+                    # If equal, continue to next part
+                except ValueError:
+                    # If conversion fails, do string comparison
+                    if latest_parts[i] > current_parts[i]:
+                        return True
+                    elif latest_parts[i] < current_parts[i]:
+                        return False
+            
+            # All parts are equal
+            return False
+            
+        except Exception:
+            # If comparison fails, assume no update available
+            return False
 
     # Plugin lifecycle methods
     async def _main(self):
