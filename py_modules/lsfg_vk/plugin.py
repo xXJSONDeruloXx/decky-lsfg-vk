@@ -11,6 +11,7 @@ from typing import Dict, Any
 from .installation import InstallationService
 from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
+from .config_schema import ConfigurationManager
 
 
 class Plugin:
@@ -72,14 +73,26 @@ class Plugin:
         """
         return self.configuration_service.get_config()
 
+    async def get_config_schema(self) -> Dict[str, Any]:
+        """Get configuration schema information for frontend
+        
+        Returns:
+            Dict with field names, types, and defaults
+        """
+        return {
+            "field_names": ConfigurationManager.get_field_names(),
+            "field_types": {name: field_type.value for name, field_type in ConfigurationManager.get_field_types().items()},
+            "defaults": ConfigurationManager.get_defaults()
+        }
+
     async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, 
                           hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool, frame_cap: int) -> Dict[str, Any]:
         """Update lsfg script configuration
         
         Args:
             enable_lsfg: Whether to enable LSFG
-            multiplier: LSFG multiplier value (typically 2-4)
-            flow_scale: LSFG flow scale value (typically 0.5-2.0)
+            multiplier: LSFG multiplier value
+            flow_scale: LSFG flow scale value
             hdr: Whether to enable HDR
             perf_mode: Whether to enable performance mode
             immediate_mode: Whether to enable immediate present mode (disable vsync)

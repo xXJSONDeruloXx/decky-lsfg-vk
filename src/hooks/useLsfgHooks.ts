@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toaster } from "@decky/api";
 import {
   checkLsfgVkInstalled,
   checkLosslessScalingDll,
   getLsfgConfig,
-  updateLsfgConfig,
+  updateLsfgConfigFromObject,
   type ConfigUpdateResult
 } from "../api/lsfgApi";
+import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
 
 export function useInstallationStatus() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
@@ -70,58 +71,30 @@ export function useDllDetection() {
 }
 
 export function useLsfgConfig() {
-  const [enableLsfg, setEnableLsfg] = useState<boolean>(true);
-  const [multiplier, setMultiplier] = useState<number>(2);
-  const [flowScale, setFlowScale] = useState<number>(0.8);
-  const [hdr, setHdr] = useState<boolean>(false);
-  const [perfMode, setPerfMode] = useState<boolean>(true);
-  const [immediateMode, setImmediateMode] = useState<boolean>(false);
-  const [disableVkbasalt, setDisableVkbasalt] = useState<boolean>(true);
-  const [frameCap, setFrameCap] = useState<number>(0);
+  // Use centralized configuration for initial state
+  const [config, setConfig] = useState<ConfigurationData>(() => ConfigurationManager.getDefaults());
 
-  const loadLsfgConfig = async () => {
+  const loadLsfgConfig = useCallback(async () => {
     try {
       const result = await getLsfgConfig();
       if (result.success && result.config) {
-        setEnableLsfg(result.config.enable_lsfg);
-        setMultiplier(result.config.multiplier);
-        setFlowScale(result.config.flow_scale);
-        setHdr(result.config.hdr);
-        setPerfMode(result.config.perf_mode);
-        setImmediateMode(result.config.immediate_mode);
-        setDisableVkbasalt(result.config.disable_vkbasalt);
-        setFrameCap(result.config.frame_cap);
-        console.log("Loaded lsfg config:", result.config);
+        setConfig(result.config);
       } else {
         console.log("lsfg config not available, using defaults:", result.error);
+        setConfig(ConfigurationManager.getDefaults());
       }
     } catch (error) {
       console.error("Error loading lsfg config:", error);
+      setConfig(ConfigurationManager.getDefaults());
     }
-  };
+  }, []);
 
-  const updateConfig = async (
-    newEnableLsfg: boolean,
-    newMultiplier: number,
-    newFlowScale: number,
-    newHdr: boolean,
-    newPerfMode: boolean,
-    newImmediateMode: boolean,
-    newDisableVkbasalt: boolean,
-    newFrameCap: number
-  ): Promise<ConfigUpdateResult> => {
+  const updateConfig = useCallback(async (newConfig: ConfigurationData): Promise<ConfigUpdateResult> => {
     try {
-      const result = await updateLsfgConfig(
-        newEnableLsfg,
-        newMultiplier,
-        newFlowScale,
-        newHdr,
-        newPerfMode,
-        newImmediateMode,
-        newDisableVkbasalt,
-        newFrameCap
-      );
-      if (!result.success) {
+      const result = await updateLsfgConfigFromObject(newConfig);
+      if (result.success) {
+        setConfig(newConfig);
+      } else {
         toaster.toast({
           title: "Update Failed",
           body: result.error || "Failed to update configuration"
@@ -135,34 +108,22 @@ export function useLsfgConfig() {
       });
       return { success: false, error: String(error) };
     }
-  };
+  }, []);
+
+  const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number): Promise<ConfigUpdateResult> => {
+    const newConfig = { ...config, [fieldName]: value };
+    return updateConfig(newConfig);
+  }, [config, updateConfig]);
 
   useEffect(() => {
     loadLsfgConfig();
-  }, []);
+  }, []); // Empty dependency array to prevent infinite loop
 
   return {
-    config: {
-      enableLsfg,
-      multiplier,
-      flowScale,
-      hdr,
-      perfMode,
-      immediateMode,
-      disableVkbasalt,
-      frameCap
-    },
-    setters: {
-      setEnableLsfg,
-      setMultiplier,
-      setFlowScale,
-      setHdr,
-      setPerfMode,
-      setImmediateMode,
-      setDisableVkbasalt,
-      setFrameCap
-    },
+    config,
+    setConfig,
     loadLsfgConfig,
-    updateConfig
+    updateConfig,
+    updateField
   };
 }
