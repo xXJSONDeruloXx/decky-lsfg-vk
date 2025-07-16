@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Dict, Any
 
 from .base_service import BaseService
-from .constants import LSFG_SCRIPT_TEMPLATE
-from .types import ConfigurationResponse, ConfigurationData
+from .config_schema import ConfigurationManager, ConfigurationData, CONFIG_SCHEMA
+from .types import ConfigurationResponse
 
 
 class ConfigurationService(BaseService):
@@ -31,8 +31,6 @@ class ConfigurationService(BaseService):
             
             content = self.lsfg_script_path.read_text()
             config = self._parse_script_content(content)
-            
-            self.log.info(f"Parsed lsfg config: {config}")
             
             return {
                 "success": True,
@@ -60,16 +58,8 @@ class ConfigurationService(BaseService):
         Returns:
             ConfigurationData with parsed values
         """
-        config: ConfigurationData = {
-            "enable_lsfg": False,
-            "multiplier": 2,
-            "flow_scale": 1.0,
-            "hdr": False,
-            "perf_mode": False,
-            "immediate_mode": False,
-            "disable_vkbasalt": False,
-            "frame_cap": 0
-        }
+        # Start with defaults
+        config = ConfigurationManager.get_defaults()
         
         lines = content.split('\n')
         for line in lines:
@@ -140,15 +130,18 @@ class ConfigurationService(BaseService):
             ConfigurationResponse with success status
         """
         try:
-            # Generate script content using template
-            script_content = self._generate_script_content(
+            # Create configuration from individual arguments
+            config = ConfigurationManager.create_config_from_args(
                 enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt, frame_cap
             )
+            
+            # Generate script content using centralized manager
+            script_content = ConfigurationManager.generate_script_content(config)
             
             # Write the updated script atomically
             self._atomic_write(self.lsfg_script_path, script_content, 0o755)
             
-            self.log.info(f"Updated lsfg script configuration: enable={enable_lsfg}, "
+            self.log.info(f"Updated lsfg script configuration: enable_lsfg={enable_lsfg}, "
                          f"multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}, "
                          f"perf_mode={perf_mode}, immediate_mode={immediate_mode}, "
                          f"disable_vkbasalt={disable_vkbasalt}, frame_cap={frame_cap}")
@@ -169,31 +162,12 @@ class ConfigurationService(BaseService):
                 "message": None,
                 "error": str(e)
             }
-    
-    def _generate_script_content(self, enable_lsfg: bool, multiplier: int, flow_scale: float,
-                               hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool, frame_cap: int) -> str:
-        """Generate script content from configuration parameters
-        
-        Args:
-            enable_lsfg: Whether to enable LSFG
-            multiplier: LSFG multiplier value
-            flow_scale: LSFG flow scale value
-            hdr: Whether to enable HDR
-            perf_mode: Whether to enable performance mode
-            immediate_mode: Whether to enable immediate present mode
-            disable_vkbasalt: Whether to disable vkbasalt layer
-            frame_cap: Frame rate cap value (0-60, 0 = disabled)
-            
-        Returns:
-            Generated script content
-        """
-        return LSFG_SCRIPT_TEMPLATE.format(
-            enable_lsfg="export ENABLE_LSFG=1" if enable_lsfg else "# export ENABLE_LSFG=1",
-            multiplier=multiplier,
-            flow_scale=flow_scale,
-            hdr="export LSFG_HDR=1" if hdr else "# export LSFG_HDR=1",
-            perf_mode="export LSFG_PERF_MODE=1" if perf_mode else "# export LSFG_PERF_MODE=1",
-            immediate_mode="export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync" if immediate_mode else "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync",
-            disable_vkbasalt="export DISABLE_VKBASALT=1" if disable_vkbasalt else "# export DISABLE_VKBASALT=1",
-            frame_cap=f"export DXVK_FRAME_RATE={frame_cap}" if frame_cap > 0 else "# export DXVK_FRAME_RATE=60"
-        )
+        except ValueError as e:
+            error_msg = f"Invalid configuration arguments: {str(e)}"
+            self.log.error(error_msg)
+            return {
+                "success": False,
+                "config": None,
+                "message": None,
+                "error": str(e)
+            }
