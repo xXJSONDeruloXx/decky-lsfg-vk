@@ -8,6 +8,7 @@ import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
+import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
@@ -77,6 +78,9 @@ export function Content() {
       
       <WikiButton />
       <ClipboardButton />
+      
+      {/* Plugin Update Checker */}
+      <PluginUpdateChecker />
     </PanelSection>
   );
 }
