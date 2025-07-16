@@ -3,6 +3,7 @@ Type definitions for the lsfg-vk plugin responses.
 """
 
 from typing import TypedDict, Optional, List
+from .config_schema import ConfigurationData
 
 
 class BaseResponse(TypedDict):
@@ -52,17 +53,6 @@ class DllDetectionResponse(TypedDict):
     source: Optional[str]
     message: Optional[str]
     error: Optional[str]
-
-
-class ConfigurationData(TypedDict):
-    """Configuration data structure"""
-    enable_lsfg: bool
-    multiplier: int
-    flow_scale: float
-    hdr: bool
-    perf_mode: bool
-    immediate_mode: bool
-    disable_vkbasalt: bool
 
 
 class ConfigurationResponse(BaseResponse):

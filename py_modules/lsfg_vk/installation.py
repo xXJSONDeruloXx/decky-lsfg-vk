@@ -12,10 +12,9 @@ from typing import Dict, Any
 from .base_service import BaseService
 from .constants import (
     LIB_FILENAME, JSON_FILENAME, ZIP_FILENAME, BIN_DIR,
-    SO_EXT, JSON_EXT, LSFG_SCRIPT_TEMPLATE,
-    DEFAULT_MULTIPLIER, DEFAULT_FLOW_SCALE, DEFAULT_ENABLE_LSFG,
-    DEFAULT_HDR, DEFAULT_PERF_MODE, DEFAULT_IMMEDIATE_MODE, DEFAULT_DISABLE_VKBASALT
+    SO_EXT, JSON_EXT
 )
+from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
 
 
@@ -105,15 +104,11 @@ class InstallationService(BaseService):
     
     def _create_lsfg_script(self) -> None:
         """Create the lsfg script in home directory with default configuration"""
-        script_content = LSFG_SCRIPT_TEMPLATE.format(
-            enable_lsfg="export ENABLE_LSFG=1" if DEFAULT_ENABLE_LSFG else "# export ENABLE_LSFG=1",
-            multiplier=DEFAULT_MULTIPLIER,
-            flow_scale=DEFAULT_FLOW_SCALE,
-            hdr="export LSFG_HDR=1" if DEFAULT_HDR else "# export LSFG_HDR=1",
-            perf_mode="export LSFG_PERF_MODE=1" if DEFAULT_PERF_MODE else "# export LSFG_PERF_MODE=1",
-            immediate_mode="export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync" if DEFAULT_IMMEDIATE_MODE else "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync",
-            disable_vkbasalt="export DISABLE_VKBASALT=1" if DEFAULT_DISABLE_VKBASALT else "# export DISABLE_VKBASALT=1"
-        )
+        # Get default configuration
+        defaults = ConfigurationManager.get_defaults()
+        
+        # Generate script content using centralized manager
+        script_content = ConfigurationManager.generate_script_content(defaults)
         
         # Use atomic write to prevent corruption
         self._atomic_write(self.lsfg_script_path, script_content, 0o755)

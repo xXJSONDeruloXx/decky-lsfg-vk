@@ -1,35 +1,14 @@
 import { PanelSectionRow, ToggleField, SliderField } from "@decky/ui";
-
-interface LsfgConfig {
-  enableLsfg: boolean;
-  multiplier: number;
-  flowScale: number;
-  hdr: boolean;
-  perfMode: boolean;
-  immediateMode: boolean;
-  disableVkbasalt: boolean;
-}
+import { ConfigurationData } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
-  config: LsfgConfig;
-  onEnableLsfgChange: (value: boolean) => Promise<void>;
-  onMultiplierChange: (value: number) => Promise<void>;
-  onFlowScaleChange: (value: number) => Promise<void>;
-  onHdrChange: (value: boolean) => Promise<void>;
-  onPerfModeChange: (value: boolean) => Promise<void>;
-  onImmediateModeChange: (value: boolean) => Promise<void>;
-  onDisableVkbasaltChange: (value: boolean) => Promise<void>;
+  config: ConfigurationData;
+  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number) => Promise<void>;
 }
 
 export function ConfigurationSection({
   config,
-  onEnableLsfgChange,
-  onMultiplierChange,
-  onFlowScaleChange,
-  onHdrChange,
-  onPerfModeChange,
-  onImmediateModeChange,
-  onDisableVkbasaltChange
+  onConfigChange
 }: ConfigurationSectionProps) {
   return (
     <>
@@ -52,8 +31,8 @@ export function ConfigurationSection({
         <ToggleField
           label="Enable LSFG"
           description="Enables the frame generation layer"
-          checked={config.enableLsfg}
-          onChange={onEnableLsfgChange}
+          checked={config.enable_lsfg}
+          onChange={(value) => onConfigChange('enable_lsfg', value)}
         />
       </PanelSectionRow>
 
@@ -71,19 +50,19 @@ export function ConfigurationSection({
             { notchIndex: 1, label: "3X" },
             { notchIndex: 2, label: "4X" }
           ]}
-          onChange={onMultiplierChange}
+          onChange={(value) => onConfigChange('multiplier', value)}
         />
       </PanelSectionRow>
 
       <PanelSectionRow>
         <SliderField
-          label={`Flow Scale ${Math.round(config.flowScale * 100)}%`}
+          label={`Flow Scale ${Math.round(config.flow_scale * 100)}%`}
           description="Lowers the internal motion estimation resolution"
-          value={config.flowScale}
+          value={config.flow_scale}
           min={0.25}
           max={1.0}
           step={0.01}
-          onChange={onFlowScaleChange}
+          onChange={(value) => onConfigChange('flow_scale', value)}
         />
       </PanelSectionRow>
 
@@ -92,7 +71,7 @@ export function ConfigurationSection({
           label="HDR Mode"
           description="Enable HDR mode (only if Game supports HDR)"
           checked={config.hdr}
-          onChange={onHdrChange}
+          onChange={(value) => onConfigChange('hdr', value)}
         />
       </PanelSectionRow>
 
@@ -100,8 +79,8 @@ export function ConfigurationSection({
         <ToggleField
           label="Performance Mode"
           description="Use lighter model for FG"
-          checked={config.perfMode}
-          onChange={onPerfModeChange}
+          checked={config.perf_mode}
+          onChange={(value) => onConfigChange('perf_mode', value)}
         />
       </PanelSectionRow>
 
@@ -109,8 +88,20 @@ export function ConfigurationSection({
         <ToggleField
           label="Immediate Mode"
           description="Reduce input lag (Experimental, will cause issues in many games)"
-          checked={config.immediateMode}
-          onChange={onImmediateModeChange}
+          checked={config.immediate_mode}
+          onChange={(value) => onConfigChange('immediate_mode', value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`Game Frame Cap ${config.frame_cap === 0 ? "(Disabled)" : `(${config.frame_cap} FPS)`}`}
+          description="Limit base game FPS (0 = disabled)"
+          value={config.frame_cap}
+          min={0}
+          max={60}
+          step={1}
+          onChange={(value) => onConfigChange('frame_cap', value)}
         />
       </PanelSectionRow>
 
@@ -118,8 +109,8 @@ export function ConfigurationSection({
         <ToggleField
           label="Disable vkbasalt"
           description="Some plugins add vkbasalt layer, which can break lsfg. Toggling on fixes this"
-          checked={config.disableVkbasalt}
-          onChange={onDisableVkbasaltChange}
+          checked={config.disable_vkbasalt}
+          onChange={(value) => onConfigChange('disable_vkbasalt', value)}
         />
       </PanelSectionRow> */}
     </>

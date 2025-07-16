@@ -1,17 +1,8 @@
 import { PanelSectionRow } from "@decky/ui";
-
-interface ConfigType {
-  enableLsfg: boolean;
-  multiplier: number;
-  flowScale: number;
-  hdr: boolean;
-  perfMode: boolean;
-  immediateMode: boolean;
-  disableVkbasalt: boolean;
-}
+import { ConfigurationData } from "../config/configSchema";
 
 interface UsageInstructionsProps {
-  config: ConfigType;
+  config: ConfigurationData;
 }
 
 export function UsageInstructions({ config }: UsageInstructionsProps) {
@@ -19,30 +10,34 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
   const buildManualEnvVars = (): string => {
     const envVars: string[] = [];
     
-    if (config.enableLsfg) {
+    if (config.enable_lsfg) {
       envVars.push("ENABLE_LSFG=1");
     }
     
     // Always include multiplier and flow_scale if LSFG is enabled, as they have defaults
-    if (config.enableLsfg) {
+    if (config.enable_lsfg) {
       envVars.push(`LSFG_MULTIPLIER=${config.multiplier}`);
-      envVars.push(`LSFG_FLOW_SCALE=${config.flowScale}`);
+      envVars.push(`LSFG_FLOW_SCALE=${config.flow_scale}`);
     }
     
     if (config.hdr) {
       envVars.push("LSFG_HDR=1");
     }
     
-    if (config.perfMode) {
+    if (config.perf_mode) {
       envVars.push("LSFG_PERF_MODE=1");
     }
     
-    if (config.immediateMode) {
+    if (config.immediate_mode) {
       envVars.push("MESA_VK_WSI_PRESENT_MODE=immediate");
     }
     
-    if (config.disableVkbasalt) {
+    if (config.disable_vkbasalt) {
       envVars.push("DISABLE_VKBASALT=1");
+    }
+    
+    if (config.frame_cap > 0) {
+      envVars.push(`DXVK_FRAME_RATE=${config.frame_cap}`);
     }
     
     return envVars.length > 0 ? `${envVars.join(" ")} %command%` : "%command%";
