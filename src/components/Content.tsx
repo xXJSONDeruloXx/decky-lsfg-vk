@@ -6,6 +6,8 @@ import { StatusDisplay } from "./StatusDisplay";
 import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
+import { WikiButton } from "./WikiButton";
+import { ClipboardButton } from "./ClipboardButton";
 
 export function Content() {
   const {
@@ -109,6 +111,9 @@ export function Content() {
       )}
 
       <UsageInstructions config={config} />
+      
+      <WikiButton />
+      <ClipboardButton />
     </PanelSection>
   );
 }
