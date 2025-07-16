@@ -8,6 +8,7 @@ interface ConfigType {
   perfMode: boolean;
   immediateMode: boolean;
   disableVkbasalt: boolean;
+  frameCap: number;
 }
 
 interface UsageInstructionsProps {
@@ -43,6 +44,10 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
     
     if (config.disableVkbasalt) {
       envVars.push("DISABLE_VKBASALT=1");
+    }
+    
+    if (config.frameCap > 0) {
+      envVars.push(`DXVK_FRAME_RATE=${config.frameCap}`);
     }
     
     return envVars.length > 0 ? `${envVars.join(" ")} %command%` : "%command%";

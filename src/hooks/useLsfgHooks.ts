@@ -77,6 +77,7 @@ export function useLsfgConfig() {
   const [perfMode, setPerfMode] = useState<boolean>(true);
   const [immediateMode, setImmediateMode] = useState<boolean>(false);
   const [disableVkbasalt, setDisableVkbasalt] = useState<boolean>(true);
+  const [frameCap, setFrameCap] = useState<number>(0);
 
   const loadLsfgConfig = async () => {
     try {
@@ -89,6 +90,7 @@ export function useLsfgConfig() {
         setPerfMode(result.config.perf_mode);
         setImmediateMode(result.config.immediate_mode);
         setDisableVkbasalt(result.config.disable_vkbasalt);
+        setFrameCap(result.config.frame_cap);
         console.log("Loaded lsfg config:", result.config);
       } else {
         console.log("lsfg config not available, using defaults:", result.error);
@@ -105,7 +107,8 @@ export function useLsfgConfig() {
     newHdr: boolean,
     newPerfMode: boolean,
     newImmediateMode: boolean,
-    newDisableVkbasalt: boolean
+    newDisableVkbasalt: boolean,
+    newFrameCap: number
   ): Promise<ConfigUpdateResult> => {
     try {
       const result = await updateLsfgConfig(
@@ -115,7 +118,8 @@ export function useLsfgConfig() {
         newHdr,
         newPerfMode,
         newImmediateMode,
-        newDisableVkbasalt
+        newDisableVkbasalt,
+        newFrameCap
       );
       if (!result.success) {
         toaster.toast({
@@ -145,7 +149,8 @@ export function useLsfgConfig() {
       hdr,
       perfMode,
       immediateMode,
-      disableVkbasalt
+      disableVkbasalt,
+      frameCap
     },
     setters: {
       setEnableLsfg,
@@ -154,7 +159,8 @@ export function useLsfgConfig() {
       setHdr,
       setPerfMode,
       setImmediateMode,
-      setDisableVkbasalt
+      setDisableVkbasalt,
+      setFrameCap
     },
     loadLsfgConfig,
     updateConfig

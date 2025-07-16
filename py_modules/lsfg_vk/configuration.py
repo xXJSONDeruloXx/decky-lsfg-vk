@@ -67,7 +67,8 @@ class ConfigurationService(BaseService):
             "hdr": False,
             "perf_mode": False,
             "immediate_mode": False,
-            "disable_vkbasalt": False
+            "disable_vkbasalt": False,
+            "frame_cap": 0
         }
         
         lines = content.split('\n')
@@ -107,11 +108,22 @@ class ConfigurationService(BaseService):
             # Parse DISABLE_VKBASALT
             elif match := re.match(r'^(#\s*)?export\s+DISABLE_VKBASALT=(\d+)', line):
                 config["disable_vkbasalt"] = not bool(match.group(1)) and match.group(2) == '1'
+            
+            # Parse DXVK_FRAME_RATE
+            elif match := re.match(r'^(#\s*)?export\s+DXVK_FRAME_RATE=(\d+)', line):
+                if not bool(match.group(1)):  # Not commented out
+                    try:
+                        config["frame_cap"] = int(match.group(2))
+                    except ValueError:
+                        pass
+                else:
+                    # If it's commented out, frame cap is disabled (0)
+                    config["frame_cap"] = 0
         
         return config
     
     def update_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, 
-                     hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool) -> ConfigurationResponse:
+                     hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool, frame_cap: int) -> ConfigurationResponse:
         """Update lsfg script configuration
         
         Args:
@@ -122,6 +134,7 @@ class ConfigurationService(BaseService):
             perf_mode: Whether to enable performance mode
             immediate_mode: Whether to enable immediate present mode (disable vsync)
             disable_vkbasalt: Whether to disable vkbasalt layer
+            frame_cap: Frame rate cap value (10-60)
             
         Returns:
             ConfigurationResponse with success status
@@ -129,7 +142,7 @@ class ConfigurationService(BaseService):
         try:
             # Generate script content using template
             script_content = self._generate_script_content(
-                enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt
+                enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt, frame_cap
             )
             
             # Write the updated script atomically
@@ -138,7 +151,7 @@ class ConfigurationService(BaseService):
             self.log.info(f"Updated lsfg script configuration: enable={enable_lsfg}, "
                          f"multiplier={multiplier}, flow_scale={flow_scale}, hdr={hdr}, "
                          f"perf_mode={perf_mode}, immediate_mode={immediate_mode}, "
-                         f"disable_vkbasalt={disable_vkbasalt}")
+                         f"disable_vkbasalt={disable_vkbasalt}, frame_cap={frame_cap}")
             
             return {
                 "success": True,
@@ -158,7 +171,7 @@ class ConfigurationService(BaseService):
             }
     
     def _generate_script_content(self, enable_lsfg: bool, multiplier: int, flow_scale: float,
-                               hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool) -> str:
+                               hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool, frame_cap: int) -> str:
         """Generate script content from configuration parameters
         
         Args:
@@ -169,6 +182,7 @@ class ConfigurationService(BaseService):
             perf_mode: Whether to enable performance mode
             immediate_mode: Whether to enable immediate present mode
             disable_vkbasalt: Whether to disable vkbasalt layer
+            frame_cap: Frame rate cap value (10-60)
             
         Returns:
             Generated script content
@@ -180,5 +194,6 @@ class ConfigurationService(BaseService):
             hdr="export LSFG_HDR=1" if hdr else "# export LSFG_HDR=1",
             perf_mode="export LSFG_PERF_MODE=1" if perf_mode else "# export LSFG_PERF_MODE=1",
             immediate_mode="export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync" if immediate_mode else "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync",
-            disable_vkbasalt="export DISABLE_VKBASALT=1" if disable_vkbasalt else "# export DISABLE_VKBASALT=1"
+            disable_vkbasalt="export DISABLE_VKBASALT=1" if disable_vkbasalt else "# export DISABLE_VKBASALT=1",
+            frame_cap=f"export DXVK_FRAME_RATE={frame_cap}" if frame_cap > 0 else "# export DXVK_FRAME_RATE=60"
         )
