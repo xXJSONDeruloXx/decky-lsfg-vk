@@ -8,6 +8,7 @@ interface LsfgConfig {
   perfMode: boolean;
   immediateMode: boolean;
   disableVkbasalt: boolean;
+  frameCap: number;
 }
 
 interface ConfigurationSectionProps {
@@ -19,6 +20,7 @@ interface ConfigurationSectionProps {
   onPerfModeChange: (value: boolean) => Promise<void>;
   onImmediateModeChange: (value: boolean) => Promise<void>;
   onDisableVkbasaltChange: (value: boolean) => Promise<void>;
+  onFrameCapChange: (value: number) => Promise<void>;
 }
 
 export function ConfigurationSection({
@@ -29,7 +31,8 @@ export function ConfigurationSection({
   onHdrChange,
   onPerfModeChange,
   onImmediateModeChange,
-  onDisableVkbasaltChange
+  onDisableVkbasaltChange,
+  onFrameCapChange
 }: ConfigurationSectionProps) {
   return (
     <>
@@ -111,6 +114,28 @@ export function ConfigurationSection({
           description="Reduce input lag (Experimental, will cause issues in many games)"
           checked={config.immediateMode}
           onChange={onImmediateModeChange}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`Game Frame Cap ${config.frameCap === 0 ? "(Disabled)" : `(${config.frameCap} FPS)`}`}
+          description="Limit frame rate using DXVK_FRAME_RATE (0 = disabled)"
+          value={config.frameCap}
+          min={0}
+          max={60}
+          step={5}
+          notchCount={7}
+          notchLabels={[
+            { notchIndex: 0, label: "Off" },
+            { notchIndex: 1, label: "10" },
+            { notchIndex: 2, label: "20" },
+            { notchIndex: 3, label: "30" },
+            { notchIndex: 4, label: "40" },
+            { notchIndex: 5, label: "50" },
+            { notchIndex: 6, label: "60" }
+          ]}
+          onChange={onFrameCapChange}
         />
       </PanelSectionRow>
 

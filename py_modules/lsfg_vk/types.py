@@ -63,6 +63,7 @@ class ConfigurationData(TypedDict):
     perf_mode: bool
     immediate_mode: bool
     disable_vkbasalt: bool
+    frame_cap: int
 
 
 class ConfigurationResponse(BaseResponse):

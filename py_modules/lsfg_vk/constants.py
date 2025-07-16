@@ -36,6 +36,7 @@ export LSFG_FLOW_SCALE={flow_scale}
 {perf_mode}
 {immediate_mode}
 {disable_vkbasalt}
+{frame_cap}
 
 # Execute the passed command with the environment variables set
 exec "$@"
@@ -54,3 +55,4 @@ DEFAULT_HDR = False
 DEFAULT_PERF_MODE = True
 DEFAULT_IMMEDIATE_MODE = False
 DEFAULT_DISABLE_VKBASALT = True
+DEFAULT_FRAME_CAP = 0
