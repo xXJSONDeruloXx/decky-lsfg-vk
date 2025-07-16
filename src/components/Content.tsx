@@ -8,6 +8,7 @@ import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
+import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
   const {
@@ -21,9 +22,8 @@ export function Content() {
 
   const {
     config,
-    setters,
     loadLsfgConfig,
-    updateConfig
+    updateField
   } = useLsfgConfig();
 
   const { isInstalling, isUninstalling, handleInstall, handleUninstall } = useInstallationActions();
@@ -35,45 +35,9 @@ export function Content() {
     }
   }, [isInstalled, loadLsfgConfig]);
 
-  // Configuration change handlers
-  const handleEnableLsfgChange = async (value: boolean) => {
-    setters.setEnableLsfg(value);
-    await updateConfig(value, config.multiplier, config.flowScale, config.hdr, config.perfMode, config.immediateMode, config.disableVkbasalt, config.frameCap);
-  };
-
-  const handleMultiplierChange = async (value: number) => {
-    setters.setMultiplier(value);
-    await updateConfig(config.enableLsfg, value, config.flowScale, config.hdr, config.perfMode, config.immediateMode, config.disableVkbasalt, config.frameCap);
-  };
-
-  const handleFlowScaleChange = async (value: number) => {
-    setters.setFlowScale(value);
-    await updateConfig(config.enableLsfg, config.multiplier, value, config.hdr, config.perfMode, config.immediateMode, config.disableVkbasalt, config.frameCap);
-  };
-
-  const handleHdrChange = async (value: boolean) => {
-    setters.setHdr(value);
-    await updateConfig(config.enableLsfg, config.multiplier, config.flowScale, value, config.perfMode, config.immediateMode, config.disableVkbasalt, config.frameCap);
-  };
-
-  const handlePerfModeChange = async (value: boolean) => {
-    setters.setPerfMode(value);
-    await updateConfig(config.enableLsfg, config.multiplier, config.flowScale, config.hdr, value, config.immediateMode, config.disableVkbasalt, config.frameCap);
-  };
-
-  const handleImmediateModeChange = async (value: boolean) => {
-    setters.setImmediateMode(value);
-    await updateConfig(config.enableLsfg, config.multiplier, config.flowScale, config.hdr, config.perfMode, value, config.disableVkbasalt, config.frameCap);
-  };
-
-  const handleDisableVkbasaltChange = async (value: boolean) => {
-    setters.setDisableVkbasalt(value);
-    await updateConfig(config.enableLsfg, config.multiplier, config.flowScale, config.hdr, config.perfMode, config.immediateMode, value, config.frameCap);
-  };
-
-  const handleFrameCapChange = async (value: number) => {
-    setters.setFrameCap(value);
-    await updateConfig(config.enableLsfg, config.multiplier, config.flowScale, config.hdr, config.perfMode, config.immediateMode, config.disableVkbasalt, value);
+  // Generic configuration change handler
+  const handleConfigChange = async (fieldName: keyof ConfigurationData, value: boolean | number) => {
+    await updateField(fieldName, value);
   };
 
   const onInstall = () => {
@@ -105,14 +69,7 @@ export function Content() {
       {isInstalled && (
         <ConfigurationSection
           config={config}
-          onEnableLsfgChange={handleEnableLsfgChange}
-          onMultiplierChange={handleMultiplierChange}
-          onFlowScaleChange={handleFlowScaleChange}
-          onHdrChange={handleHdrChange}
-          onPerfModeChange={handlePerfModeChange}
-          onImmediateModeChange={handleImmediateModeChange}
-          onDisableVkbasaltChange={handleDisableVkbasaltChange}
-          onFrameCapChange={handleFrameCapChange}
+          onConfigChange={handleConfigChange}
         />
       )}
 

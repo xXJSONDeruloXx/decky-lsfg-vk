@@ -1,4 +1,5 @@
 import { callable } from "@decky/api";
+import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
 
 // Type definitions for API responses
 export interface InstallationResult {
@@ -27,16 +28,8 @@ export interface DllDetectionResult {
   error?: string;
 }
 
-export interface LsfgConfig {
-  enable_lsfg: boolean;
-  multiplier: number;
-  flow_scale: number;
-  hdr: boolean;
-  perf_mode: boolean;
-  immediate_mode: boolean;
-  disable_vkbasalt: boolean;
-  frame_cap: number;
-}
+// Use centralized configuration data type
+export type LsfgConfig = ConfigurationData;
 
 export interface ConfigResult {
   success: boolean;
@@ -50,13 +43,28 @@ export interface ConfigUpdateResult {
   error?: string;
 }
 
+export interface ConfigSchemaResult {
+  field_names: string[];
+  field_types: Record<string, string>;
+  defaults: ConfigurationData;
+}
+
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
+export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
+
+// Updated config function using centralized configuration
 export const updateLsfgConfig = callable<
   [boolean, number, number, boolean, boolean, boolean, boolean, number],
   ConfigUpdateResult
 >("update_lsfg_config");
+
+// Helper function to create config update from configuration object
+export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
+  const args = ConfigurationManager.createArgsFromConfig(config);
+  return updateLsfgConfig(...args as [boolean, number, number, boolean, boolean, boolean, boolean, number]);
+};
