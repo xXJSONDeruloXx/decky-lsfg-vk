@@ -10,7 +10,7 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 
 **Note:** This plugin is not yet available on the Decky Plugin Store, it is in an experimental state, and likely to change drastically pending a full store release. 
 
-1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lossless-scaling-vk/releases/tag/Latest)
+1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lossless-scaling-vk/releases)
    - Download the "Lossless Scaling.zip" file to your Steam Deck
 2. **Install manually through Decky**:
    - In Game Mode, go to the settings cog in the top right of the Decky Loader tab
