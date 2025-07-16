@@ -79,6 +79,6 @@ DISABLE_VKBASALT=1
 - The `~/lsfg %command%` option uses your plugin's configured settings
 - Manual environment variables override plugin settings
 - Start with 2x multiplier and adjust based on performance
-- Lower flow scale values provide better quality but may impact performance
+- Lower flow scale values provide better performance but may impact visual quality
 - HDR mode requires HDR-capable display and game support
-- Immediate present mode reduces input lag but may cause screen tearing
+- Immediate present mode reduces input lag but may cause issues
