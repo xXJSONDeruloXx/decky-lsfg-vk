@@ -73,7 +73,7 @@ class Plugin:
         return self.configuration_service.get_config()
 
     async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, 
-                          hdr: bool, perf_mode: bool, immediate_mode: bool) -> Dict[str, Any]:
+                          hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool) -> Dict[str, Any]:
         """Update lsfg script configuration
         
         Args:
@@ -83,12 +83,13 @@ class Plugin:
             hdr: Whether to enable HDR
             perf_mode: Whether to enable performance mode
             immediate_mode: Whether to enable immediate present mode (disable vsync)
+            disable_vkbasalt: Whether to disable vkbasalt layer
             
         Returns:
             ConfigurationResponse dict with success status
         """
         return self.configuration_service.update_config(
-            enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode
+            enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt
         )
 
     # Plugin lifecycle methods

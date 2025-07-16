@@ -7,6 +7,7 @@ interface LsfgConfig {
   hdr: boolean;
   perfMode: boolean;
   immediateMode: boolean;
+  disableVkbasalt: boolean;
 }
 
 interface ConfigurationSectionProps {
@@ -17,6 +18,7 @@ interface ConfigurationSectionProps {
   onHdrChange: (value: boolean) => Promise<void>;
   onPerfModeChange: (value: boolean) => Promise<void>;
   onImmediateModeChange: (value: boolean) => Promise<void>;
+  onDisableVkbasaltChange: (value: boolean) => Promise<void>;
 }
 
 export function ConfigurationSection({
@@ -26,7 +28,8 @@ export function ConfigurationSection({
   onFlowScaleChange,
   onHdrChange,
   onPerfModeChange,
-  onImmediateModeChange
+  onImmediateModeChange,
+  onDisableVkbasaltChange
 }: ConfigurationSectionProps) {
   return (
     <>
@@ -110,6 +113,15 @@ export function ConfigurationSection({
           onChange={onImmediateModeChange}
         />
       </PanelSectionRow>
+
+      {/* <PanelSectionRow>
+        <ToggleField
+          label="Disable vkbasalt"
+          description="Some plugins add vkbasalt layer, which can break lsfg. Toggling on fixes this"
+          checked={config.disableVkbasalt}
+          onChange={onDisableVkbasaltChange}
+        />
+      </PanelSectionRow> */}
     </>
   );
 }
