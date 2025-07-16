@@ -6,6 +6,8 @@ import { StatusDisplay } from "./StatusDisplay";
 import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
+import { WikiButton } from "./WikiButton";
+import { ClipboardButton } from "./ClipboardButton";
 
 export function Content() {
   const {
@@ -79,19 +81,19 @@ export function Content() {
 
   return (
     <PanelSection>
-      <StatusDisplay
-        dllDetected={dllDetected}
-        dllDetectionStatus={dllDetectionStatus}
-        isInstalled={isInstalled}
-        installationStatus={installationStatus}
-      />
-
       <InstallationButton
         isInstalled={isInstalled}
         isInstalling={isInstalling}
         isUninstalling={isUninstalling}
         onInstall={onInstall}
         onUninstall={onUninstall}
+      />
+
+      <StatusDisplay
+        dllDetected={dllDetected}
+        dllDetectionStatus={dllDetectionStatus}
+        isInstalled={isInstalled}
+        installationStatus={installationStatus}
       />
 
       {/* Configuration Section - only show if installed */}
@@ -109,6 +111,9 @@ export function Content() {
       )}
 
       <UsageInstructions config={config} />
+      
+      <WikiButton />
+      <ClipboardButton />
     </PanelSection>
   );
 }
