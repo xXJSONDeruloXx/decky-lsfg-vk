@@ -63,21 +63,21 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
         name="flow_scale",
         field_type=ConfigFieldType.FLOAT,
         default=0.8,
-        description="change the flow scale (lower = faster)"
+        description="change the flow scale"
     ),
     
     "performance_mode": ConfigField(
         name="performance_mode",
         field_type=ConfigFieldType.BOOLEAN,
         default=True,
-        description="toggle performance mode (2x-8x performance increase)"
+        description="toggle performance mode"
     ),
     
     "hdr_mode": ConfigField(
         name="hdr_mode",
         field_type=ConfigFieldType.BOOLEAN,
         default=False,
-        description="enable hdr mode (doesn't support scrgb)"
+        description="enable hdr mode"
     )
 }
 
@@ -93,7 +93,7 @@ class ConfigurationData(TypedDict):
 
 
 class ConfigurationManager:
-    """Centralized configuration management for TOML-based config"""
+    """Centralized configuration management"""
     
     @staticmethod
     def get_defaults() -> ConfigurationData:

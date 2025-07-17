@@ -48,21 +48,21 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "flow_scale",
     fieldType: ConfigFieldType.FLOAT,
     default: 0.8,
-    description: "change the flow scale (lower = faster)"
+    description: "change the flow scale"
   },
   
   performance_mode: {
     name: "performance_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: true,
-    description: "toggle performance mode (2x-8x performance increase)"
+    description: "toggle performance mode"
   },
   
   hdr_mode: {
     name: "hdr_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "enable hdr mode (doesn't support scrgb)"
+    description: "enable hdr in games that support it"
   }
 };
 
@@ -74,14 +74,6 @@ export interface ConfigurationData {
   flow_scale: number;
   performance_mode: boolean;
   hdr_mode: boolean;
-}
-  multiplier: number;
-  flow_scale: number;
-  hdr: boolean;
-  perf_mode: boolean;
-  immediate_mode: boolean;
-  disable_vkbasalt: boolean;
-  frame_cap: number;
 }
 
 // Centralized configuration manager
