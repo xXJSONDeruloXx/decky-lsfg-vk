@@ -1,9 +1,9 @@
-import { PanelSectionRow, ToggleField, SliderField } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, TextField } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
   config: ConfigurationData;
-  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number) => Promise<void>;
+  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string) => Promise<void>;
 }
 
 export function ConfigurationSection({
@@ -30,16 +30,25 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Enable LSFG"
-          description="Enables the frame generation layer"
-          checked={config.enable_lsfg}
-          onChange={(value) => onConfigChange('enable_lsfg', value)}
+          description="enable/disable lsfg on every game"
+          checked={config.enable}
+          onChange={(value) => onConfigChange('enable', value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <TextField
+          label="Lossless.dll Path"
+          description="specify where Lossless.dll is stored"
+          value={config.dll}
+          onChange={(e) => onConfigChange('dll', e.target.value)}
         />
       </PanelSectionRow>
 
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
-          description="Traditional FPS multiplier value"
+          description="change the fps multiplier"
           value={config.multiplier}
           min={2}
           max={4}
@@ -57,7 +66,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`Flow Scale ${Math.round(config.flow_scale * 100)}%`}
-          description="Lowers the internal motion estimation resolution"
+          description="change the flow scale (lower = faster)"
           value={config.flow_scale}
           min={0.25}
           max={1.0}
@@ -68,51 +77,21 @@ export function ConfigurationSection({
 
       <PanelSectionRow>
         <ToggleField
-          label="HDR Mode"
-          description="Enable HDR mode (only if Game supports HDR)"
-          checked={config.hdr}
-          onChange={(value) => onConfigChange('hdr', value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
           label="Performance Mode"
-          description="Use lighter model for FG"
-          checked={config.perf_mode}
-          onChange={(value) => onConfigChange('perf_mode', value)}
+          description="toggle performance mode (2x-8x performance increase)"
+          checked={config.performance_mode}
+          onChange={(value) => onConfigChange('performance_mode', value)}
         />
       </PanelSectionRow>
 
       <PanelSectionRow>
         <ToggleField
-          label="Immediate Mode"
-          description="Reduce input lag (Experimental, will cause issues in many games)"
-          checked={config.immediate_mode}
-          onChange={(value) => onConfigChange('immediate_mode', value)}
+          label="HDR Mode"
+          description="enable hdr mode (doesn't support scrgb)"
+          checked={config.hdr_mode}
+          onChange={(value) => onConfigChange('hdr_mode', value)}
         />
       </PanelSectionRow>
-
-      <PanelSectionRow>
-        <SliderField
-          label={`Game Frame Cap ${config.frame_cap === 0 ? "(Disabled)" : `(${config.frame_cap} FPS)`}`}
-          description="Limit base game FPS (0 = disabled)"
-          value={config.frame_cap}
-          min={0}
-          max={60}
-          step={1}
-          onChange={(value) => onConfigChange('frame_cap', value)}
-        />
-      </PanelSectionRow>
-
-      {/* <PanelSectionRow>
-        <ToggleField
-          label="Disable vkbasalt"
-          description="Some plugins add vkbasalt layer, which can break lsfg. Toggling on fixes this"
-          checked={config.disable_vkbasalt}
-          onChange={(value) => onConfigChange('disable_vkbasalt', value)}
-        />
-      </PanelSectionRow> */}
     </>
   );
 }

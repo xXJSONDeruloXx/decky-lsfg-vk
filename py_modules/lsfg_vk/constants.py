@@ -8,9 +8,11 @@ from pathlib import Path
 LOCAL_LIB = ".local/lib"
 LOCAL_SHARE_BASE = ".local/share"
 VULKAN_LAYER_DIR = ".local/share/vulkan/implicit_layer.d"
+CONFIG_DIR = ".config/lsfg-vk"
 
 # File names
 SCRIPT_NAME = "lsfg"
+CONFIG_FILENAME = "conf.toml"
 LIB_FILENAME = "liblsfg-vk.so"
 JSON_FILENAME = "VkLayer_LS_frame_generation.json"
 ZIP_FILENAME = "lsfg-vk_archlinux.zip"

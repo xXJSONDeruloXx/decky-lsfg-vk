@@ -37,7 +37,7 @@ export function Content() {
   }, [isInstalled, loadLsfgConfig]);
 
   // Generic configuration change handler
-  const handleConfigChange = async (fieldName: keyof ConfigurationData, value: boolean | number) => {
+  const handleConfigChange = async (fieldName: keyof ConfigurationData, value: boolean | number | string) => {
     await updateField(fieldName, value);
   };
 
