@@ -21,8 +21,10 @@ class ConfigurationService(BaseService):
         """
         try:
             if not self.config_file_path.exists():
-                # Return default configuration if file doesn't exist
-                config = ConfigurationManager.get_defaults()
+                # Return default configuration with DLL detection if file doesn't exist
+                from .dll_detection import DllDetectionService
+                dll_service = DllDetectionService(self.log)
+                config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
                 return {
                     "success": True,
                     "config": config,
@@ -52,8 +54,10 @@ class ConfigurationService(BaseService):
         except Exception as e:
             error_msg = f"Error parsing config file: {str(e)}"
             self.log.error(error_msg)
-            # Return defaults if parsing fails
-            config = ConfigurationManager.get_defaults()
+            # Return defaults with DLL detection if parsing fails
+            from .dll_detection import DllDetectionService
+            dll_service = DllDetectionService(self.log)
+            config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
             return {
                 "success": True,
                 "config": config,
@@ -134,8 +138,10 @@ class ConfigurationService(BaseService):
             # Get current config
             current_response = self.get_config()
             if not current_response["success"] or current_response["config"] is None:
-                # If we can't read current config, use defaults
-                config = ConfigurationManager.get_defaults()
+                # If we can't read current config, use defaults with DLL detection
+                from .dll_detection import DllDetectionService
+                dll_service = DllDetectionService(self.log)
+                config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
             else:
                 config = current_response["config"]
             
