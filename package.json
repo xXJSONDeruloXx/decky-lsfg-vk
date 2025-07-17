@@ -44,7 +44,7 @@
     {
       "name": "lsfg-vk_archlinux.zip",
       "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/pre-conf-jul16/lsfg-vk_archlinux.zip",
-      "sha256hash": "sha256:1f40a4e2505c83bdbce45ba77c60d221f9203119dc2e97b263bce6b775df9b98"
+      "sha256hash": "1f40a4e2505c83bdbce45ba77c60d221f9203119dc2e97b263bce6b775df9b98"
     }
   ],
   "pnpm": {
