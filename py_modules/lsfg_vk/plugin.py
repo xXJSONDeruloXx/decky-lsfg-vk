@@ -67,7 +67,28 @@ class Plugin:
         Returns:
             DllDetectionResponse dict with detection status and path info
         """
-        return self.dll_detection_service.check_lossless_scaling_dll()
+        result = self.dll_detection_service.check_lossless_scaling_dll()
+        
+        # Convert to dict to allow modification
+        result_dict = dict(result)
+        
+        # If DLL was detected, automatically update the configuration
+        if result.get("detected") and result.get("path"):
+            try:
+                dll_path = result["path"]
+                if dll_path:  # Type guard
+                    update_result = self.configuration_service.update_dll_path(dll_path)
+                    if update_result.get("success"):
+                        result_dict["config_updated"] = True
+                        result_dict["message"] = f"DLL detected and configuration updated: {dll_path}"
+                    else:
+                        result_dict["config_updated"] = False
+                        result_dict["message"] = f"DLL detected but config update failed: {update_result.get('error', 'Unknown error')}"
+            except Exception as e:
+                result_dict["config_updated"] = False
+                result_dict["message"] = f"DLL detected but config update failed: {str(e)}"
+        
+        return result_dict
 
     # Configuration methods
     async def get_lsfg_config(self) -> Dict[str, Any]:
@@ -90,26 +111,35 @@ class Plugin:
             "defaults": ConfigurationManager.get_defaults()
         }
 
-    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, 
-                          hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool, frame_cap: int) -> Dict[str, Any]:
-        """Update lsfg script configuration
+    async def update_lsfg_config(self, enable: bool, dll: str, multiplier: int, flow_scale: float, 
+                          performance_mode: bool, hdr_mode: bool) -> Dict[str, Any]:
+        """Update lsfg TOML configuration
         
         Args:
-            enable_lsfg: Whether to enable LSFG
+            enable: Whether to enable LSFG
+            dll: Path to Lossless.dll
             multiplier: LSFG multiplier value
             flow_scale: LSFG flow scale value
-            hdr: Whether to enable HDR
-            perf_mode: Whether to enable performance mode
-            immediate_mode: Whether to enable immediate present mode (disable vsync)
-            disable_vkbasalt: Whether to disable vkbasalt layer
-            frame_cap: Frame rate cap value (0-60, 0 = disabled)
+            performance_mode: Whether to enable performance mode
+            hdr_mode: Whether to enable HDR mode
             
         Returns:
             ConfigurationResponse dict with success status
         """
         return self.configuration_service.update_config(
-            enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt, frame_cap
+            enable, dll, multiplier, flow_scale, performance_mode, hdr_mode
         )
+
+    async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
+        """Update the DLL path in the configuration when detected
+        
+        Args:
+            dll_path: Path to the detected Lossless.dll file
+            
+        Returns:
+            ConfigurationResponse dict with success status
+        """
+        return self.configuration_service.update_dll_path(dll_path)
 
     # Self-updater methods
     async def check_for_plugin_update(self) -> Dict[str, Any]:

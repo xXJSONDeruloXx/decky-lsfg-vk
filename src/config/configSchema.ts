@@ -9,95 +9,72 @@
 export enum ConfigFieldType {
   BOOLEAN = "boolean",
   INTEGER = "integer",
-  FLOAT = "float"
+  FLOAT = "float",
+  STRING = "string"
 }
 
 // Configuration field definition
 export interface ConfigField {
   name: string;
   fieldType: ConfigFieldType;
-  default: boolean | number;
+  default: boolean | number | string;
   description: string;
-  scriptTemplate: string;
-  scriptComment?: string;
 }
 
 // Configuration schema - must match Python CONFIG_SCHEMA
 export const CONFIG_SCHEMA: Record<string, ConfigField> = {
-  enable_lsfg: {
-    name: "enable_lsfg",
+  enable: {
+    name: "enable",
     fieldType: ConfigFieldType.BOOLEAN,
     default: true,
-    description: "Enables the frame generation layer",
-    scriptTemplate: "export ENABLE_LSFG={value}",
-    scriptComment: "# export ENABLE_LSFG=1"
+    description: "enable/disable lsfg on every game"
+  },
+  
+  dll: {
+    name: "dll",
+    fieldType: ConfigFieldType.STRING,
+    default: "/games/Lossless Scaling/Lossless.dll",
+    description: "specify where Lossless.dll is stored"
   },
   
   multiplier: {
     name: "multiplier",
     fieldType: ConfigFieldType.INTEGER,
     default: 2,
-    description: "Traditional FPS multiplier value",
-    scriptTemplate: "export LSFG_MULTIPLIER={value}"
+    description: "change the fps multiplier"
   },
   
   flow_scale: {
     name: "flow_scale",
     fieldType: ConfigFieldType.FLOAT,
     default: 0.8,
-    description: "Lowers the internal motion estimation resolution",
-    scriptTemplate: "export LSFG_FLOW_SCALE={value}"
+    description: "change the flow scale (lower = faster)"
   },
   
-  hdr: {
-    name: "hdr",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "Enable HDR mode (only if Game supports HDR)",
-    scriptTemplate: "export LSFG_HDR={value}",
-    scriptComment: "# export LSFG_HDR=1"
-  },
-  
-  perf_mode: {
-    name: "perf_mode",
+  performance_mode: {
+    name: "performance_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: true,
-    description: "Use lighter model for FG",
-    scriptTemplate: "export LSFG_PERF_MODE={value}",
-    scriptComment: "# export LSFG_PERF_MODE=1"
+    description: "toggle performance mode (2x-8x performance increase)"
   },
   
-  immediate_mode: {
-    name: "immediate_mode",
+  hdr_mode: {
+    name: "hdr_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Reduce input lag (Experimental, will cause issues in many games)",
-    scriptTemplate: "export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync",
-    scriptComment: "# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync"
-  },
-  
-  disable_vkbasalt: {
-    name: "disable_vkbasalt",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: true,
-    description: "Some plugins add vkbasalt layer, which can break lsfg. Toggling on fixes this",
-    scriptTemplate: "export DISABLE_VKBASALT={value}",
-    scriptComment: "# export DISABLE_VKBASALT=1"
-  },
-  
-  frame_cap: {
-    name: "frame_cap",
-    fieldType: ConfigFieldType.INTEGER,
-    default: 0,
-    description: "Limit base game FPS (0 = disabled)",
-    scriptTemplate: "export DXVK_FRAME_RATE={value}",
-    scriptComment: "# export DXVK_FRAME_RATE=60"
+    description: "enable hdr mode (doesn't support scrgb)"
   }
 };
 
 // Type-safe configuration data structure
 export interface ConfigurationData {
-  enable_lsfg: boolean;
+  enable: boolean;
+  dll: string;
+  multiplier: number;
+  flow_scale: number;
+  performance_mode: boolean;
+  hdr_mode: boolean;
+}
   multiplier: number;
   flow_scale: number;
   hdr: boolean;
@@ -140,7 +117,7 @@ export class ConfigurationManager {
   /**
    * Create ordered arguments array from configuration object
    */
-  static createArgsFromConfig(config: ConfigurationData): (boolean | number)[] {
+  static createArgsFromConfig(config: ConfigurationData): (boolean | number | string)[] {
     return this.getFieldNames().map(fieldName => 
       config[fieldName as keyof ConfigurationData]
     );
@@ -163,6 +140,8 @@ export class ConfigurationManager {
           (validated as any)[fieldName] = parseInt(String(value), 10);
         } else if (fieldDef.fieldType === ConfigFieldType.FLOAT) {
           (validated as any)[fieldName] = parseFloat(String(value));
+        } else if (fieldDef.fieldType === ConfigFieldType.STRING) {
+          (validated as any)[fieldName] = String(value);
         }
       }
     });

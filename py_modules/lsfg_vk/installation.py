@@ -51,8 +51,8 @@ class InstallationService(BaseService):
             # Extract and install files
             self._extract_and_install_files(zip_path)
             
-            # Create the lsfg script
-            self._create_lsfg_script()
+            # Create the config file
+            self._create_config_file()
             
             self.log.info("lsfg-vk installed successfully")
             return {"success": True, "message": "lsfg-vk installed successfully", "error": None}
@@ -102,17 +102,17 @@ class InstallationService(BaseService):
                             shutil.copy2(src_file, dst_file)
                             self.log.info(f"Copied {file} to {dst_file}")
     
-    def _create_lsfg_script(self) -> None:
-        """Create the lsfg script in home directory with default configuration"""
+    def _create_config_file(self) -> None:
+        """Create the TOML config file in ~/.config/lsfg-vk with default configuration"""
         # Get default configuration
         defaults = ConfigurationManager.get_defaults()
         
-        # Generate script content using centralized manager
-        script_content = ConfigurationManager.generate_script_content(defaults)
+        # Generate TOML content using centralized manager
+        toml_content = ConfigurationManager.generate_toml_content(defaults)
         
         # Use atomic write to prevent corruption
-        self._atomic_write(self.lsfg_script_path, script_content, 0o755)
-        self.log.info(f"Created executable lsfg script at {self.lsfg_script_path}")
+        self._atomic_write(self.config_file_path, toml_content, 0o644)
+        self.log.info(f"Created config file at {self.config_file_path}")
     
     def check_installation(self) -> InstallationCheckResponse:
         """Check if lsfg-vk is already installed
@@ -123,18 +123,18 @@ class InstallationService(BaseService):
         try:
             lib_exists = self.lib_file.exists()
             json_exists = self.json_file.exists()
-            script_exists = self.lsfg_script_path.exists()
+            config_exists = self.config_file_path.exists()
             
-            self.log.info(f"Installation check: lib={lib_exists}, json={json_exists}, script={script_exists}")
+            self.log.info(f"Installation check: lib={lib_exists}, json={json_exists}, config={config_exists}")
             
             return {
                 "installed": lib_exists and json_exists,
                 "lib_exists": lib_exists,
                 "json_exists": json_exists,
-                "script_exists": script_exists,
+                "script_exists": config_exists,  # Keep script_exists for backward compatibility
                 "lib_path": str(self.lib_file),
                 "json_path": str(self.json_file),
-                "script_path": str(self.lsfg_script_path),
+                "script_path": str(self.config_file_path),  # Keep script_path for backward compatibility
                 "error": None
             }
             
@@ -148,7 +148,7 @@ class InstallationService(BaseService):
                 "script_exists": False,
                 "lib_path": str(self.lib_file),
                 "json_path": str(self.json_file),
-                "script_path": str(self.lsfg_script_path),
+                "script_path": str(self.config_file_path),
                 "error": str(e)
             }
     
@@ -160,11 +160,23 @@ class InstallationService(BaseService):
         """
         try:
             removed_files = []
-            files_to_remove = [self.lib_file, self.json_file, self.lsfg_script_path]
+            files_to_remove = [self.lib_file, self.json_file, self.config_file_path]
             
             for file_path in files_to_remove:
                 if self._remove_if_exists(file_path):
                     removed_files.append(str(file_path))
+            
+            # Also try to remove the old script file if it exists
+            if self._remove_if_exists(self.lsfg_script_path):
+                removed_files.append(str(self.lsfg_script_path))
+            
+            # Remove config directory if it's empty
+            try:
+                if self.config_dir.exists() and not any(self.config_dir.iterdir()):
+                    self.config_dir.rmdir()
+                    removed_files.append(str(self.config_dir))
+            except OSError:
+                pass  # Directory not empty or other error, ignore
             
             if not removed_files:
                 return {
@@ -198,10 +210,11 @@ class InstallationService(BaseService):
             self.log.info("Checking for lsfg-vk files to clean up:")
             self.log.info(f"  Library file: {self.lib_file}")
             self.log.info(f"  JSON file: {self.json_file}")
-            self.log.info(f"  lsfg script: {self.lsfg_script_path}")
+            self.log.info(f"  Config file: {self.config_file_path}")
+            self.log.info(f"  Old script file: {self.lsfg_script_path}")
             
             removed_files = []
-            files_to_remove = [self.lib_file, self.json_file, self.lsfg_script_path]
+            files_to_remove = [self.lib_file, self.json_file, self.config_file_path, self.lsfg_script_path]
             
             for file_path in files_to_remove:
                 try:
@@ -209,6 +222,14 @@ class InstallationService(BaseService):
                         removed_files.append(str(file_path))
                 except OSError as e:
                     self.log.error(f"Failed to remove {file_path}: {e}")
+            
+            # Try to remove config directory if empty
+            try:
+                if self.config_dir.exists() and not any(self.config_dir.iterdir()):
+                    self.config_dir.rmdir()
+                    removed_files.append(str(self.config_dir))
+            except OSError:
+                pass  # Directory not empty or other error, ignore
             
             if removed_files:
                 self.log.info(f"Cleaned up {len(removed_files)} lsfg-vk files during plugin uninstall: {removed_files}")

@@ -110,7 +110,7 @@ export function useLsfgConfig() {
     }
   }, []);
 
-  const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number): Promise<ConfigUpdateResult> => {
+  const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number | string): Promise<ConfigUpdateResult> => {
     const newConfig = { ...config, [fieldName]: value };
     return updateConfig(newConfig);
   }, [config, updateConfig]);

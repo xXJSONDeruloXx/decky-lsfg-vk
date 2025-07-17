@@ -76,14 +76,14 @@ export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_sche
 
 // Updated config function using centralized configuration
 export const updateLsfgConfig = callable<
-  [boolean, number, number, boolean, boolean, boolean, boolean, number],
+  [boolean, string, number, number, boolean, boolean],
   ConfigUpdateResult
 >("update_lsfg_config");
 
 // Helper function to create config update from configuration object
 export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
   const args = ConfigurationManager.createArgsFromConfig(config);
-  return updateLsfgConfig(...args as [boolean, number, number, boolean, boolean, boolean, boolean, number]);
+  return updateLsfgConfig(...args as [boolean, string, number, number, boolean, boolean]);
 };
 
 // Self-updater API functions

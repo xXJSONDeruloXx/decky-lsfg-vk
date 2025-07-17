@@ -1,16 +1,18 @@
 """
 Centralized configuration schema for lsfg-vk.
 
-This module defines the complete configuration structure, including:
+This module defines the complete configuration structure for TOML-based config files, including:
 - Field definitions with types, defaults, and metadata
-- Script generation logic
+- TOML generation logic
 - Validation rules
 - Type definitions
 """
 
-from typing import TypedDict, Dict, Any, Union, Callable, cast
-from dataclasses import dataclass, field
+import re
+from typing import TypedDict, Dict, Any, Union, cast
+from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 
 
 class ConfigFieldType(Enum):
@@ -18,6 +20,7 @@ class ConfigFieldType(Enum):
     BOOLEAN = "boolean"
     INTEGER = "integer"
     FLOAT = "float"
+    STRING = "string"
 
 
 @dataclass
@@ -25,110 +28,72 @@ class ConfigField:
     """Configuration field definition"""
     name: str
     field_type: ConfigFieldType
-    default: Union[bool, int, float]
+    default: Union[bool, int, float, str]
     description: str
-    script_template: str  # Template for script generation
-    script_comment: str = ""  # Comment to add when disabled
     
-    def get_script_line(self, value: Union[bool, int, float]) -> str:
-        """Generate script line for this field"""
-        if self.field_type == ConfigFieldType.BOOLEAN:
-            if value:
-                return self.script_template.format(value=1)
-            else:
-                return f"# {self.script_template.format(value=1)}"
-        else:
-            return self.script_template.format(value=value)
+    def get_toml_value(self, value: Union[bool, int, float, str]) -> Union[bool, int, float, str]:
+        """Get the value for TOML output"""
+        return value
 
 
 # Configuration schema definition
 CONFIG_SCHEMA: Dict[str, ConfigField] = {
-    "enable_lsfg": ConfigField(
-        name="enable_lsfg",
+    "enable": ConfigField(
+        name="enable",
         field_type=ConfigFieldType.BOOLEAN,
         default=True,
-        description="Enables the frame generation layer",
-        script_template="export ENABLE_LSFG={value}",
-        script_comment="# export ENABLE_LSFG=1"
+        description="enable/disable lsfg on every game"
+    ),
+    
+    "dll": ConfigField(
+        name="dll",
+        field_type=ConfigFieldType.STRING,
+        default="/games/Lossless Scaling/Lossless.dll",
+        description="specify where Lossless.dll is stored"
     ),
     
     "multiplier": ConfigField(
         name="multiplier",
         field_type=ConfigFieldType.INTEGER,
         default=2,
-        description="Traditional FPS multiplier value",
-        script_template="export LSFG_MULTIPLIER={value}"
+        description="change the fps multiplier"
     ),
     
     "flow_scale": ConfigField(
         name="flow_scale",
         field_type=ConfigFieldType.FLOAT,
         default=0.8,
-        description="Lowers the internal motion estimation resolution",
-        script_template="export LSFG_FLOW_SCALE={value}"
+        description="change the flow scale (lower = faster)"
     ),
     
-    "hdr": ConfigField(
-        name="hdr",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=False,
-        description="Enable HDR mode (only if Game supports HDR)",
-        script_template="export LSFG_HDR={value}",
-        script_comment="# export LSFG_HDR=1"
-    ),
-    
-    "perf_mode": ConfigField(
-        name="perf_mode",
+    "performance_mode": ConfigField(
+        name="performance_mode",
         field_type=ConfigFieldType.BOOLEAN,
         default=True,
-        description="Use lighter model for FG",
-        script_template="export LSFG_PERF_MODE={value}",
-        script_comment="# export LSFG_PERF_MODE=1"
+        description="toggle performance mode (2x-8x performance increase)"
     ),
     
-    "immediate_mode": ConfigField(
-        name="immediate_mode",
+    "hdr_mode": ConfigField(
+        name="hdr_mode",
         field_type=ConfigFieldType.BOOLEAN,
         default=False,
-        description="Reduce input lag (Experimental, will cause issues in many games)",
-        script_template="export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync",
-        script_comment="# export MESA_VK_WSI_PRESENT_MODE=immediate # - disable vsync"
-    ),
-    
-    "disable_vkbasalt": ConfigField(
-        name="disable_vkbasalt",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=True,
-        description="Some plugins add vkbasalt layer, which can break lsfg. Toggling on fixes this",
-        script_template="export DISABLE_VKBASALT={value}",
-        script_comment="# export DISABLE_VKBASALT=1"
-    ),
-    
-    "frame_cap": ConfigField(
-        name="frame_cap",
-        field_type=ConfigFieldType.INTEGER,
-        default=0,
-        description="Limit base game FPS (0 = disabled)",
-        script_template="export DXVK_FRAME_RATE={value}",
-        script_comment="# export DXVK_FRAME_RATE=60"
+        description="enable hdr mode (doesn't support scrgb)"
     )
 }
 
 
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure"""
-    enable_lsfg: bool
+    enable: bool
+    dll: str
     multiplier: int
     flow_scale: float
-    hdr: bool
-    perf_mode: bool
-    immediate_mode: bool
-    disable_vkbasalt: bool
-    frame_cap: int
+    performance_mode: bool
+    hdr_mode: bool
 
 
 class ConfigurationManager:
-    """Centralized configuration management"""
+    """Centralized configuration management for TOML-based config"""
     
     @staticmethod
     def get_defaults() -> ConfigurationData:
@@ -166,63 +131,104 @@ class ConfigurationManager:
                 validated[field_name] = int(value)
             elif field_def.field_type == ConfigFieldType.FLOAT:
                 validated[field_name] = float(value)
+            elif field_def.field_type == ConfigFieldType.STRING:
+                validated[field_name] = str(value)
             else:
                 validated[field_name] = value
         
         return cast(ConfigurationData, validated)
     
     @staticmethod
-    def generate_script_content(config: ConfigurationData) -> str:
-        """Generate lsfg script content from configuration"""
-        script_lines = ["#!/bin/bash", ""]
+    def generate_toml_content(config: ConfigurationData) -> str:
+        """Generate TOML configuration file content"""
+        lines = ["[global]"]
         
-        # Generate script lines for each field
-        for field_name in CONFIG_SCHEMA.keys():
-            field_def = CONFIG_SCHEMA[field_name]
-            value = config[field_name]
-            
-            if field_def.field_type == ConfigFieldType.BOOLEAN:
-                if value:
-                    script_lines.append(field_def.script_template.format(value=1))
-                else:
-                    script_lines.append(field_def.script_comment)
-            else:
-                # For frame_cap, special handling for 0 value
-                if field_name == "frame_cap" and value == 0:
-                    script_lines.append(field_def.script_comment)
-                else:
-                    script_lines.append(field_def.script_template.format(value=value))
-        
-        # Add script footer
-        script_lines.extend([
-            "",
-            "# Execute the passed command with the environment variables set",
-            'exec "$@"'
-        ])
-        
-        return "\n".join(script_lines)
-    
-    @staticmethod
-    def get_update_signature() -> list[tuple[str, type]]:
-        """Get the function signature for update_config method"""
-        signature = []
         for field_name, field_def in CONFIG_SCHEMA.items():
-            if field_def.field_type == ConfigFieldType.BOOLEAN:
-                signature.append((field_name, bool))
-            elif field_def.field_type == ConfigFieldType.INTEGER:
-                signature.append((field_name, int))
-            elif field_def.field_type == ConfigFieldType.FLOAT:
-                signature.append((field_name, float))
-        return signature
+            value = config[field_name]
+            lines.append(f"# {field_def.description}")
+            
+            # Format value based on type
+            if isinstance(value, bool):
+                lines.append(f"{field_name} = {str(value).lower()}")
+            elif isinstance(value, str):
+                lines.append(f'{field_name} = "{value}"')
+            else:
+                lines.append(f"{field_name} = {value}")
+            
+            lines.append("")  # Empty line for readability
+        
+        return "\n".join(lines)
     
     @staticmethod
-    def create_config_from_args(*args) -> ConfigurationData:
-        """Create configuration from ordered arguments"""
-        field_names = ConfigurationManager.get_field_names()
-        if len(args) != len(field_names):
-            raise ValueError(f"Expected {len(field_names)} arguments, got {len(args)}")
+    def parse_toml_content(content: str) -> ConfigurationData:
+        """Parse TOML content into configuration data using simple regex parsing"""
+        config = ConfigurationManager.get_defaults()
         
+        try:
+            # Look for [global] section
+            lines = content.split('\n')
+            in_global_section = False
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Skip comments and empty lines
+                if not line or line.startswith('#'):
+                    continue
+                
+                # Check for section headers
+                if line.startswith('[') and line.endswith(']'):
+                    section = line[1:-1].strip()
+                    in_global_section = (section == 'global')
+                    continue
+                
+                # Only parse lines in the global section
+                if not in_global_section:
+                    continue
+                
+                # Parse key = value lines
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    
+                    # Remove quotes from string values
+                    if value.startswith('"') and value.endswith('"'):
+                        value = value[1:-1]
+                    elif value.startswith("'") and value.endswith("'"):
+                        value = value[1:-1]
+                    
+                    # Convert to appropriate type based on field definition
+                    if key in CONFIG_SCHEMA:
+                        field_def = CONFIG_SCHEMA[key]
+                        try:
+                            if field_def.field_type == ConfigFieldType.BOOLEAN:
+                                config[key] = value.lower() in ('true', '1', 'yes', 'on')
+                            elif field_def.field_type == ConfigFieldType.INTEGER:
+                                config[key] = int(value)
+                            elif field_def.field_type == ConfigFieldType.FLOAT:
+                                config[key] = float(value)
+                            elif field_def.field_type == ConfigFieldType.STRING:
+                                config[key] = value
+                        except (ValueError, TypeError):
+                            # If conversion fails, keep default value
+                            pass
+            
+            return config
+            
+        except Exception:
+            # If parsing fails completely, return defaults
+            return ConfigurationManager.get_defaults()
+    
+    @staticmethod
+    def create_config_from_args(enable: bool, dll: str, multiplier: int, flow_scale: float, 
+                               performance_mode: bool, hdr_mode: bool) -> ConfigurationData:
+        """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
-            field_name: args[i] 
-            for i, field_name in enumerate(field_names)
+            "enable": enable,
+            "dll": dll,
+            "multiplier": multiplier,
+            "flow_scale": flow_scale,
+            "performance_mode": performance_mode,
+            "hdr_mode": hdr_mode
         })

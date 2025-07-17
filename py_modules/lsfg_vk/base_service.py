@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
-from .constants import LOCAL_LIB, LOCAL_SHARE_BASE, VULKAN_LAYER_DIR, SCRIPT_NAME
+from .constants import LOCAL_LIB, LOCAL_SHARE_BASE, VULKAN_LAYER_DIR, SCRIPT_NAME, CONFIG_DIR, CONFIG_FILENAME
 
 
 class BaseService:
@@ -31,12 +31,15 @@ class BaseService:
         self.local_lib_dir = self.user_home / LOCAL_LIB
         self.local_share_dir = self.user_home / VULKAN_LAYER_DIR
         self.lsfg_script_path = self.user_home / SCRIPT_NAME
+        self.config_dir = self.user_home / CONFIG_DIR
+        self.config_file_path = self.config_dir / CONFIG_FILENAME
     
     def _ensure_directories(self) -> None:
         """Create necessary directories if they don't exist"""
         self.local_lib_dir.mkdir(parents=True, exist_ok=True)
         self.local_share_dir.mkdir(parents=True, exist_ok=True)
-        self.log.info(f"Ensured directories exist: {self.local_lib_dir}, {self.local_share_dir}")
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.log.info(f"Ensured directories exist: {self.local_lib_dir}, {self.local_share_dir}, {self.config_dir}")
     
     def _remove_if_exists(self, path: Path) -> bool:
         """Remove a file if it exists
