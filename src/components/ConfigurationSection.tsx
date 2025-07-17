@@ -30,25 +30,25 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Enable LSFG"
-          description="enable/disable lsfg on every game"
+          description="enable/disable lsfg globally (apply before launching games)"
           checked={config.enable}
           onChange={(value) => onConfigChange('enable', value)}
         />
       </PanelSectionRow>
 
-      <PanelSectionRow>
+      {/* <PanelSectionRow>
         <TextField
           label="Lossless.dll Path"
           description="specify where Lossless.dll is stored"
           value={config.dll}
           onChange={(e) => onConfigChange('dll', e.target.value)}
         />
-      </PanelSectionRow>
+      </PanelSectionRow> */}
 
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
-          description="change the fps multiplier"
+          description="Traditional FPS multiplier value"
           value={config.multiplier}
           min={2}
           max={4}
@@ -78,7 +78,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Performance Mode"
-          description="toggle performance mode (2x-8x performance increase)"
+          description="use lighter model for FG"
           checked={config.performance_mode}
           onChange={(value) => onConfigChange('performance_mode', value)}
         />
@@ -87,7 +87,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="HDR Mode"
-          description="enable hdr mode (doesn't support scrgb)"
+          description="Enables HDR mode (only for games that support HDR)"
           checked={config.hdr_mode}
           onChange={(value) => onConfigChange('hdr_mode', value)}
         />
