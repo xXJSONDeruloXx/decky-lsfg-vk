@@ -48,7 +48,7 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
     "dll": ConfigField(
         name="dll",
         field_type=ConfigFieldType.STRING,
-        default="/games/Lossless Scaling/Lossless.dll",
+        default="",  # Will be populated dynamically based on detection
         description="specify where Lossless.dll is stored"
     ),
     
@@ -102,6 +102,34 @@ class ConfigurationManager:
             field.name: field.default 
             for field in CONFIG_SCHEMA.values()
         })
+    
+    @staticmethod
+    def get_defaults_with_dll_detection(dll_detection_service=None) -> ConfigurationData:
+        """Get default configuration values with DLL path detection
+        
+        Args:
+            dll_detection_service: Optional DLL detection service instance
+            
+        Returns:
+            ConfigurationData with detected DLL path if available
+        """
+        defaults = ConfigurationManager.get_defaults()
+        
+        # Try to detect DLL path if service provided
+        if dll_detection_service:
+            try:
+                dll_result = dll_detection_service.check_lossless_scaling_dll()
+                if dll_result.get("detected") and dll_result.get("path"):
+                    defaults["dll"] = dll_result["path"]
+            except Exception:
+                # If detection fails, keep empty default
+                pass
+        
+        # If DLL path is still empty, use a reasonable fallback
+        if not defaults["dll"]:
+            defaults["dll"] = "/home/deck/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+        
+        return defaults
     
     @staticmethod
     def get_field_names() -> list[str]:

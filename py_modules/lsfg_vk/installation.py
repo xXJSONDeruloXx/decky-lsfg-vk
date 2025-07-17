@@ -103,16 +103,24 @@ class InstallationService(BaseService):
                             self.log.info(f"Copied {file} to {dst_file}")
     
     def _create_config_file(self) -> None:
-        """Create the TOML config file in ~/.config/lsfg-vk with default configuration"""
-        # Get default configuration
-        defaults = ConfigurationManager.get_defaults()
+        """Create the TOML config file in ~/.config/lsfg-vk with default configuration and detected DLL path"""
+        # Import here to avoid circular imports
+        from .dll_detection import DllDetectionService
+        
+        # Try to detect DLL path
+        dll_service = DllDetectionService(self.log)
+        config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
         
         # Generate TOML content using centralized manager
-        toml_content = ConfigurationManager.generate_toml_content(defaults)
+        toml_content = ConfigurationManager.generate_toml_content(config)
         
         # Use atomic write to prevent corruption
         self._atomic_write(self.config_file_path, toml_content, 0o644)
         self.log.info(f"Created config file at {self.config_file_path}")
+        
+        # Log detected DLL path if found
+        if config["dll"]:
+            self.log.info(f"Configured DLL path: {config['dll']}")
     
     def check_installation(self) -> InstallationCheckResponse:
         """Check if lsfg-vk is already installed
