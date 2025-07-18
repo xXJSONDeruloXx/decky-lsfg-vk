@@ -107,40 +107,6 @@ export function ConfigurationSection({
             color: "white"
           }}
         >
-          Environment Variables (Requires Re-launch)
-        </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="Enable WOW64 for 32-bit games"
-          description="Enables PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
-          checked={config.enable_wow64}
-          onChange={(value) => onConfigChange('enable_wow64', value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="Disable Steam Deck Mode"
-          description="Disables Steam Deck mode (unlocks hidden settings in some games)"
-          checked={config.disable_steamdeck_mode}
-          onChange={(value) => onConfigChange('disable_steamdeck_mode', value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <div
-          style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
-            color: "white"
-          }}
-        >
           Experimental Features
         </div>
       </PanelSectionRow>
@@ -171,6 +137,40 @@ export function ConfigurationSection({
           max={60}
           step={1}
           onChange={(value) => onConfigChange('experimental_fps_limit', value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "16px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+            paddingBottom: "4px",
+            color: "white"
+          }}
+        >
+          Environment Variables (Requires Re-launch)
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Enable WOW64 for 32-bit games"
+          description="Enables PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
+          checked={config.enable_wow64}
+          onChange={(value) => onConfigChange('enable_wow64', value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Disable Steam Deck Mode"
+          description="Disables Steam Deck mode (unlocks hidden settings in some games)"
+          checked={config.disable_steamdeck_mode}
+          onChange={(value) => onConfigChange('disable_steamdeck_mode', value)}
         />
       </PanelSectionRow>
     </>
