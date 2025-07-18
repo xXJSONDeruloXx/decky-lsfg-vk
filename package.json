@@ -15,9 +15,12 @@
   "keywords": [
     "decky",
     "plugin",
-    "plugin-template",
     "steam-deck",
-    "deck"
+    "deck",
+    "lossless-scaling",
+    "frame-generation",
+    "lsfg-vk",
+    "framegen"
   ],
   "author": "Kurt Himebauch <dkh4830@gmail.com>",
   "license": "BSD-3-Clause",
