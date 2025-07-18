@@ -94,17 +94,16 @@ export function ConfigurationSection({
         />
       </PanelSectionRow>
 
-      {/* Experimental Features Section */}
       <PanelSectionRow>
         <div
           style={{
             fontSize: "14px",
             fontWeight: "bold",
-            marginTop: "24px",
+            marginTop: "16px",
             marginBottom: "8px",
-            borderBottom: "1px solid rgba(255, 165, 0, 0.4)",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
             paddingBottom: "4px",
-            color: "rgba(255, 165, 0, 0.9)"
+            color: "white"
           }}
         >
           ⚠️ Experimental Features
@@ -112,18 +111,34 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <Dropdown
-          menuLabel="Present Mode"
-          selectedOption={config.experimental_present_mode}
-          onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
-          rgOptions={[
-            { data: "", label: "Default (FIFO)" },
-            { data: "fifo", label: "FIFO" },
-            { data: "vsync", label: "VSync" },
-            { data: "mailbox", label: "Mailbox" },
-            { data: "immediate", label: "Immediate" }
-          ]}
-        />
+        <div style={{ marginBottom: "8px" }}>
+          <div style={{ 
+            color: "white", 
+            fontSize: "14px", 
+            fontWeight: "500",
+            marginBottom: "4px" 
+          }}>
+            Override Vulkan present mode
+          </div>
+          <div style={{ 
+            color: "rgba(255, 255, 255, 0.7)", 
+            fontSize: "12px",
+            marginBottom: "8px" 
+          }}>
+            Select a specific Vulkan presentation mode for better performance or compatibility
+          </div>
+          <Dropdown
+            selectedOption={config.experimental_present_mode}
+            onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
+            rgOptions={[
+              { data: "", label: "Default (FIFO)" },
+              { data: "fifo", label: "FIFO" },
+              { data: "vsync", label: "VSync" },
+              { data: "mailbox", label: "Mailbox" },
+              { data: "immediate", label: "Immediate" }
+            ]}
+          />
+        </div>
       </PanelSectionRow>
 
       <PanelSectionRow>

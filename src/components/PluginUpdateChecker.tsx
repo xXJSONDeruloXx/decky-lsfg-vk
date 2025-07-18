@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   ButtonItem,
-  PanelSection
+  PanelSection,
+  PanelSectionRow
 } from '@decky/ui';
 import { checkForPluginUpdate, downloadPluginUpdate, UpdateCheckResult, UpdateDownloadResult } from '../api/lsfgApi';
 
@@ -121,66 +122,90 @@ export const PluginUpdateChecker: React.FC<PluginUpdateCheckerProps> = () => {
   };
 
   return (
-    <PanelSection title="Plugin Updates">
-      <ButtonItem
-        layout="below"
-        onClick={handleCheckForUpdate}
-        disabled={checkingUpdate}
-        description={getStatusMessage()}
-      >
-        {checkingUpdate ? 'Checking for updates...' : 'Check for Updates'}
-      </ButtonItem>
+    <PanelSection>
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "16px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+            paddingBottom: "4px",
+            color: "white"
+          }}
+        >
+          PLUGIN UPDATES
+        </div>
+      </PanelSectionRow>
 
-      {updateInfo && updateInfo.updateAvailable && !downloadResult?.success && (
+      <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={handleDownloadUpdate}
-          disabled={downloadingUpdate}
-          description={`Download version ${updateInfo.latestVersion}`}
+          onClick={handleCheckForUpdate}
+          disabled={checkingUpdate}
+          description={getStatusMessage()}
         >
-          {downloadingUpdate ? 'Downloading...' : 'Download Update'}
+          {checkingUpdate ? 'Checking for updates...' : 'Check for Updates'}
         </ButtonItem>
+      </PanelSectionRow>
+
+      {updateInfo && updateInfo.updateAvailable && !downloadResult?.success && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={handleDownloadUpdate}
+            disabled={downloadingUpdate}
+            description={`Download version ${updateInfo.latestVersion}`}
+          >
+            {downloadingUpdate ? 'Downloading...' : 'Download Update'}
+          </ButtonItem>
+        </PanelSectionRow>
       )}
 
       {downloadResult?.success && (
-        <div style={{ 
-          marginTop: '10px', 
-          padding: '10px', 
-          backgroundColor: 'rgba(0, 255, 0, 0.1)', 
-          borderRadius: '4px',
-          border: '1px solid rgba(0, 255, 0, 0.3)'
-        }}>
-          <div style={{ color: 'lightgreen', fontWeight: 'bold', marginBottom: '5px' }}>
-            ✓ Download Complete!
+        <PanelSectionRow>
+          <div style={{ 
+            marginTop: '10px', 
+            padding: '10px', 
+            backgroundColor: 'rgba(0, 255, 0, 0.1)', 
+            borderRadius: '4px',
+            border: '1px solid rgba(0, 255, 0, 0.3)'
+          }}>
+            <div style={{ color: 'lightgreen', fontWeight: 'bold', marginBottom: '5px' }}>
+              ✓ Download Complete!
+            </div>
+            <div style={{ fontSize: '12px', marginBottom: '10px' }}>
+              File saved to: {downloadResult.download_path}
+            </div>
+            <div style={{ fontSize: '12px' }}>
+              <strong>Installation Instructions:</strong>
+              <ol style={{ paddingLeft: '20px', marginTop: '5px' }}>
+                <li>Go to Decky Loader settings</li>
+                <li>Click "Developer" tab</li>
+                <li>Click "Uninstall" next to "Lossless Scaling"</li>
+                <li>Click "Install from ZIP"</li>
+                <li>Select the downloaded file</li>
+                <li>Restart Steam or reload plugins</li>
+              </ol>
+            </div>
           </div>
-          <div style={{ fontSize: '12px', marginBottom: '10px' }}>
-            File saved to: {downloadResult.download_path}
-          </div>
-          <div style={{ fontSize: '12px' }}>
-            <strong>Installation Instructions:</strong>
-            <ol style={{ paddingLeft: '20px', marginTop: '5px' }}>
-              <li>Go to Decky Loader settings</li>
-              <li>Click "Developer" tab</li>
-              <li>Click "Uninstall" next to "Lossless Scaling"</li>
-              <li>Click "Install from ZIP"</li>
-              <li>Select the downloaded file</li>
-              <li>Restart Steam or reload plugins</li>
-            </ol>
-          </div>
-        </div>
+        </PanelSectionRow>
       )}
 
       {updateError && (
-        <div style={{ 
-          color: 'red', 
-          marginTop: '10px', 
-          padding: '8px', 
-          backgroundColor: 'rgba(255, 0, 0, 0.1)', 
-          borderRadius: '4px',
-          fontSize: '12px'
-        }}>
-          {updateError}
-        </div>
+        <PanelSectionRow>
+          <div style={{ 
+            color: 'red', 
+            marginTop: '10px', 
+            padding: '8px', 
+            backgroundColor: 'rgba(255, 0, 0, 0.1)', 
+            borderRadius: '4px',
+            fontSize: '12px'
+          }}>
+            {updateError}
+          </div>
+        </PanelSectionRow>
       )}
     </PanelSection>
   );
