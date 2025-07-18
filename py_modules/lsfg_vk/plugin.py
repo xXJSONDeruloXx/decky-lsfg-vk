@@ -69,6 +69,38 @@ class Plugin:
         """
         return self.dll_detection_service.check_lossless_scaling_dll()
 
+    async def check_lossless_scaling_dll_and_update_config(self) -> Dict[str, Any]:
+        """Check for DLL and automatically update configuration if found
+        
+        This method should only be used during installation or when explicitly
+        requested by the user, not for routine DLL detection checks.
+        
+        Returns:
+            DllDetectionResponse dict with detection status and path info
+        """
+        result = self.dll_detection_service.check_lossless_scaling_dll()
+        
+        # Convert to dict to allow modification
+        result_dict = dict(result)
+        
+        # If DLL was detected, automatically update the configuration
+        if result.get("detected") and result.get("path"):
+            try:
+                dll_path = result["path"]
+                if dll_path:  # Type guard
+                    update_result = self.configuration_service.update_dll_path(dll_path)
+                    if update_result.get("success"):
+                        result_dict["config_updated"] = True
+                        result_dict["message"] = f"DLL detected and configuration updated: {dll_path}"
+                    else:
+                        result_dict["config_updated"] = False
+                        result_dict["message"] = f"DLL detected but config update failed: {update_result.get('error', 'Unknown error')}"
+            except Exception as e:
+                result_dict["config_updated"] = False
+                result_dict["message"] = f"DLL detected but config update failed: {str(e)}"
+        
+        return result_dict
+
     # Configuration methods
     async def get_lsfg_config(self) -> Dict[str, Any]:
         """Read current lsfg script configuration
@@ -90,26 +122,40 @@ class Plugin:
             "defaults": ConfigurationManager.get_defaults()
         }
 
-    async def update_lsfg_config(self, enable_lsfg: bool, multiplier: int, flow_scale: float, 
-                          hdr: bool, perf_mode: bool, immediate_mode: bool, disable_vkbasalt: bool, frame_cap: int) -> Dict[str, Any]:
-        """Update lsfg script configuration
+    async def update_lsfg_config(self, enable: bool, dll: str, multiplier: int, flow_scale: float, 
+                          performance_mode: bool, hdr_mode: bool, 
+                          experimental_present_mode: str = "", 
+                          experimental_fps_limit: int = 0) -> Dict[str, Any]:
+        """Update lsfg TOML configuration
         
         Args:
-            enable_lsfg: Whether to enable LSFG
+            enable: Whether to enable LSFG
+            dll: Path to Lossless.dll
             multiplier: LSFG multiplier value
             flow_scale: LSFG flow scale value
-            hdr: Whether to enable HDR
-            perf_mode: Whether to enable performance mode
-            immediate_mode: Whether to enable immediate present mode (disable vsync)
-            disable_vkbasalt: Whether to disable vkbasalt layer
-            frame_cap: Frame rate cap value (0-60, 0 = disabled)
+            performance_mode: Whether to enable performance mode
+            hdr_mode: Whether to enable HDR mode
+            experimental_present_mode: Experimental Vulkan present mode override
+            experimental_fps_limit: Experimental FPS limit for DXVK games
             
         Returns:
             ConfigurationResponse dict with success status
         """
         return self.configuration_service.update_config(
-            enable_lsfg, multiplier, flow_scale, hdr, perf_mode, immediate_mode, disable_vkbasalt, frame_cap
+            enable, dll, multiplier, flow_scale, performance_mode, hdr_mode,
+            experimental_present_mode, experimental_fps_limit
         )
+
+    async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
+        """Update the DLL path in the configuration when detected
+        
+        Args:
+            dll_path: Path to the detected Lossless.dll file
+            
+        Returns:
+            ConfigurationResponse dict with success status
+        """
+        return self.configuration_service.update_dll_path(dll_path)
 
     # Self-updater methods
     async def check_for_plugin_update(self) -> Dict[str, Any]:
@@ -306,29 +352,43 @@ class Plugin:
             return False
 
     # Plugin lifecycle methods
+    # Launch option methods
+    async def get_launch_option(self) -> Dict[str, Any]:
+        """Get the launch option that users need to set for their games
+        
+        Returns:
+            Dict containing the launch option string and instructions
+        """
+        return {
+            "launch_option": "~/lsfg %command%",
+            "instructions": "Add this to your game's launch options in Steam Properties",
+            "explanation": "The lsfg script is created during installation and sets up the environment for the plugin"
+        }
+
+    # Lifecycle methods
     async def _main(self):
         """
-        Asyncio-compatible long-running code, executed in a task when the plugin is loaded.
+        Main entry point for the plugin.
         
-        This method is called by Decky Loader when the plugin starts up.
-        Currently just logs that the plugin has loaded successfully.
+        This method is called by Decky Loader when the plugin is loaded.
+        Any initialization code should go here.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin loaded!")
+        decky.logger.info("Lossless Scaling VK plugin loaded")
 
     async def _unload(self):
         """
-        Function called first during the unload process.
+        Cleanup tasks when the plugin is unloaded.
         
         This method is called by Decky Loader when the plugin is being unloaded.
-        Use this for cleanup that should happen when the plugin stops.
+        Any cleanup code should go here.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin unloading")
+        decky.logger.info("Lossless Scaling VK plugin unloaded")
 
     async def _uninstall(self):
         """
-        Function called after `_unload` during uninstall.
+        Cleanup tasks when the plugin is uninstalled.
         
         This method is called by Decky Loader when the plugin is being uninstalled.
         It automatically cleans up any lsfg-vk files that were installed.

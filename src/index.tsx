@@ -11,6 +11,8 @@ export default definePlugin(() => {
     name: "Lossless Scaling",
     // The element displayed at the top of your plugin's menu
     titleView: <div className={staticClasses.Title}>Lossless Scaling</div>,
+    // Always render to retain state when panel is toggled
+    alwaysRender: true,
     // The content of your plugin's menu
     content: <Content />,
     // The icon displayed in the plugin list

@@ -66,6 +66,12 @@ export interface UpdateDownloadResult {
   error?: string;
 }
 
+export interface LaunchOptionResult {
+  launch_option: string;
+  instructions: string;
+  explanation: string;
+}
+
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
@@ -73,17 +79,18 @@ export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg
 export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
+export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
 
 // Updated config function using centralized configuration
 export const updateLsfgConfig = callable<
-  [boolean, number, number, boolean, boolean, boolean, boolean, number],
+  [boolean, string, number, number, boolean, boolean, string, number],
   ConfigUpdateResult
 >("update_lsfg_config");
 
 // Helper function to create config update from configuration object
 export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
   const args = ConfigurationManager.createArgsFromConfig(config);
-  return updateLsfgConfig(...args as [boolean, number, number, boolean, boolean, boolean, boolean, number]);
+  return updateLsfgConfig(...args as [boolean, string, number, number, boolean, boolean, string, number]);
 };
 
 // Self-updater API functions
