@@ -5,7 +5,7 @@ import { useInstallationActions } from "../hooks/useInstallationActions";
 import { StatusDisplay } from "./StatusDisplay";
 import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
-import { UsageInstructions } from "./UsageInstructions";
+// import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
@@ -74,7 +74,7 @@ export function Content() {
         />
       )}
 
-      <UsageInstructions config={config} />
+      {/* <UsageInstructions config={config} /> */}
       
       <WikiButton />
       <ClipboardButton />

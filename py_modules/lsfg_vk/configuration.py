@@ -66,7 +66,9 @@ class ConfigurationService(BaseService):
             }
     
     def update_config(self, enable: bool, dll: str, multiplier: int, flow_scale: float, 
-                     performance_mode: bool, hdr_mode: bool) -> ConfigurationResponse:
+                     performance_mode: bool, hdr_mode: bool, 
+                     experimental_present_mode: str = "", 
+                     experimental_fps_limit: int = 0) -> ConfigurationResponse:
         """Update TOML configuration
         
         Args:
@@ -76,6 +78,8 @@ class ConfigurationService(BaseService):
             flow_scale: LSFG flow scale value
             performance_mode: Whether to enable performance mode
             hdr_mode: Whether to enable HDR mode
+            experimental_present_mode: Experimental Vulkan present mode override
+            experimental_fps_limit: Experimental FPS limit for DXVK games
             
         Returns:
             ConfigurationResponse with success status
@@ -83,7 +87,8 @@ class ConfigurationService(BaseService):
         try:
             # Create configuration from individual arguments
             config = ConfigurationManager.create_config_from_args(
-                enable, dll, multiplier, flow_scale, performance_mode, hdr_mode
+                enable, dll, multiplier, flow_scale, performance_mode, hdr_mode,
+                experimental_present_mode, experimental_fps_limit
             )
             
             # Generate TOML content using centralized manager
@@ -97,7 +102,9 @@ class ConfigurationService(BaseService):
             
             self.log.info(f"Updated lsfg TOML configuration: enable={enable}, "
                          f"dll='{dll}', multiplier={multiplier}, flow_scale={flow_scale}, "
-                         f"performance_mode={performance_mode}, hdr_mode={hdr_mode}")
+                         f"performance_mode={performance_mode}, hdr_mode={hdr_mode}, "
+                         f"experimental_present_mode='{experimental_present_mode}', "
+                         f"experimental_fps_limit={experimental_fps_limit}")
             
             return {
                 "success": True,

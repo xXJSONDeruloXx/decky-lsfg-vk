@@ -78,6 +78,20 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
         field_type=ConfigFieldType.BOOLEAN,
         default=False,
         description="enable hdr mode"
+    ),
+    
+    "experimental_present_mode": ConfigField(
+        name="experimental_present_mode",
+        field_type=ConfigFieldType.STRING,
+        default="",
+        description="experimental: override vulkan present mode (empty/fifo/vsync/mailbox/immediate)"
+    ),
+    
+    "experimental_fps_limit": ConfigField(
+        name="experimental_fps_limit",
+        field_type=ConfigFieldType.INTEGER,
+        default=0,
+        description="experimental: base framerate cap for dxvk games, before frame multiplier (0 = disabled)"
     )
 }
 
@@ -90,6 +104,8 @@ class ConfigurationData(TypedDict):
     flow_scale: float
     performance_mode: bool
     hdr_mode: bool
+    experimental_present_mode: str
+    experimental_fps_limit: int
 
 
 class ConfigurationManager:
@@ -250,7 +266,9 @@ class ConfigurationManager:
     
     @staticmethod
     def create_config_from_args(enable: bool, dll: str, multiplier: int, flow_scale: float, 
-                               performance_mode: bool, hdr_mode: bool) -> ConfigurationData:
+                               performance_mode: bool, hdr_mode: bool, 
+                               experimental_present_mode: str = "", 
+                               experimental_fps_limit: int = 0) -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
             "enable": enable,
@@ -258,5 +276,7 @@ class ConfigurationManager:
             "multiplier": multiplier,
             "flow_scale": flow_scale,
             "performance_mode": performance_mode,
-            "hdr_mode": hdr_mode
+            "hdr_mode": hdr_mode,
+            "experimental_present_mode": experimental_present_mode,
+            "experimental_fps_limit": experimental_fps_limit
         })
