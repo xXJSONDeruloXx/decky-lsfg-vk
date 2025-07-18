@@ -67,6 +67,17 @@ class Plugin:
         Returns:
             DllDetectionResponse dict with detection status and path info
         """
+        return self.dll_detection_service.check_lossless_scaling_dll()
+
+    async def check_lossless_scaling_dll_and_update_config(self) -> Dict[str, Any]:
+        """Check for DLL and automatically update configuration if found
+        
+        This method should only be used during installation or when explicitly
+        requested by the user, not for routine DLL detection checks.
+        
+        Returns:
+            DllDetectionResponse dict with detection status and path info
+        """
         result = self.dll_detection_service.check_lossless_scaling_dll()
         
         # Convert to dict to allow modification
