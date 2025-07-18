@@ -55,7 +55,7 @@ export function ConfigurationSection({
           step={1}
           notchCount={4}
           notchLabels={[
-            { notchIndex: 0, label: "1X" },
+            { notchIndex: 0, label: "OFF" },
             { notchIndex: 1, label: "2X" },
             { notchIndex: 2, label: "3X" },
             { notchIndex: 3, label: "4X" }
