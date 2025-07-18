@@ -123,7 +123,9 @@ class Plugin:
         }
 
     async def update_lsfg_config(self, enable: bool, dll: str, multiplier: int, flow_scale: float, 
-                          performance_mode: bool, hdr_mode: bool) -> Dict[str, Any]:
+                          performance_mode: bool, hdr_mode: bool, 
+                          experimental_present_mode: str = "", 
+                          experimental_fps_limit: int = 0) -> Dict[str, Any]:
         """Update lsfg TOML configuration
         
         Args:
@@ -133,12 +135,15 @@ class Plugin:
             flow_scale: LSFG flow scale value
             performance_mode: Whether to enable performance mode
             hdr_mode: Whether to enable HDR mode
+            experimental_present_mode: Experimental Vulkan present mode override
+            experimental_fps_limit: Experimental FPS limit for DXVK games
             
         Returns:
             ConfigurationResponse dict with success status
         """
         return self.configuration_service.update_config(
-            enable, dll, multiplier, flow_scale, performance_mode, hdr_mode
+            enable, dll, multiplier, flow_scale, performance_mode, hdr_mode,
+            experimental_present_mode, experimental_fps_limit
         )
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:

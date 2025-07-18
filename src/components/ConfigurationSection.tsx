@@ -1,4 +1,4 @@
-import { PanelSectionRow, ToggleField, SliderField, TextField } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, Dropdown } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
@@ -91,6 +91,50 @@ export function ConfigurationSection({
           description="Enables HDR mode (only for games that support HDR)"
           checked={config.hdr_mode}
           onChange={(value) => onConfigChange('hdr_mode', value)}
+        />
+      </PanelSectionRow>
+
+      {/* Experimental Features Section */}
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "24px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255, 165, 0, 0.4)",
+            paddingBottom: "4px",
+            color: "rgba(255, 165, 0, 0.9)"
+          }}
+        >
+          ⚠️ Experimental Features
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <Dropdown
+          menuLabel="Present Mode"
+          selectedOption={config.experimental_present_mode}
+          onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
+          rgOptions={[
+            { data: "", label: "Default (FIFO)" },
+            { data: "fifo", label: "FIFO" },
+            { data: "vsync", label: "VSync" },
+            { data: "mailbox", label: "Mailbox" },
+            { data: "immediate", label: "Immediate" }
+          ]}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
+          description="Base framerate cap for DXVK games, before frame multiplier (0 = disabled)"
+          value={config.experimental_fps_limit}
+          min={0}
+          max={60}
+          step={1}
+          onChange={(value) => onConfigChange('experimental_fps_limit', value)}
         />
       </PanelSectionRow>
     </>

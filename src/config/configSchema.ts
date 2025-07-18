@@ -63,6 +63,20 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
     description: "enable hdr in games that support it"
+  },
+  
+  experimental_present_mode: {
+    name: "experimental_present_mode",
+    fieldType: ConfigFieldType.STRING,
+    default: "",
+    description: "experimental: override vulkan present mode (empty/fifo/vsync/mailbox/immediate)"
+  },
+  
+  experimental_fps_limit: {
+    name: "experimental_fps_limit",
+    fieldType: ConfigFieldType.INTEGER,
+    default: 0,
+    description: "experimental: base framerate cap for dxvk games, before frame multiplier (0 = disabled)"
   }
 };
 
@@ -74,6 +88,8 @@ export interface ConfigurationData {
   flow_scale: number;
   performance_mode: boolean;
   hdr_mode: boolean;
+  experimental_present_mode: string;
+  experimental_fps_limit: number;
 }
 
 // Centralized configuration manager
