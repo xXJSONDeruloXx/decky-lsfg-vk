@@ -130,7 +130,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DXVK games, before frame multiplier (0 = disabled)"
+          description="Base framerate cap for DirectX games, before frame multiplier (0 = disabled)"
           value={config.experimental_fps_limit}
           min={0}
           max={60}
