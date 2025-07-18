@@ -48,7 +48,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
-          description="Traditional FPS multiplier value (1 = no interpolation)"
+          description="Traditional FPS multiplier value (OFF = no interpolation)"
           value={config.multiplier}
           min={1}
           max={4}

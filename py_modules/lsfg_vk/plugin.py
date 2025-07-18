@@ -360,9 +360,9 @@ class Plugin:
             Dict containing the launch option string and instructions
         """
         return {
-            "launch_option": "LSFG_PROCESS=decky-lsfg-vk %command%",
+            "launch_option": "~/lsfg %command%",
             "instructions": "Add this to your game's launch options in Steam Properties",
-            "explanation": "This tells lsfg-vk to use the plugin-managed configuration for this game"
+            "explanation": "The lsfg script is created during installation and sets up the environment for the plugin"
         }
 
     # Lifecycle methods

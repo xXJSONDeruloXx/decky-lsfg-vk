@@ -55,7 +55,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
         >
           Required Launch Option:
           <br />
-          <strong>LSFG_PROCESS=decky-lsfg-vk %command%</strong>
+          <strong>~/lsfg %command%</strong>
         </div>
       </PanelSectionRow>
 
@@ -89,7 +89,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
             marginTop: "8px"
           }}
         >
-          Add the launch option to each game's Properties → Launch Options in Steam. The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
+          Add the launch option to each game's Properties → Launch Options in Steam. The lsfg script is automatically created during installation and connects your games to the plugin's configuration. The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
         </div>
       </PanelSectionRow>
     </>
