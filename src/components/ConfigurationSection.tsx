@@ -27,14 +27,14 @@ export function ConfigurationSection({
         </div>
       </PanelSectionRow>
 
-      <PanelSectionRow>
+      {/* <PanelSectionRow>
         <ToggleField
           label="Enable LSFG"
-          description="enable/disable lsfg globally (apply before launching games)"
+          description="Enables lsfg globally (apply before launching games)"
           checked={config.enable}
           onChange={(value) => onConfigChange('enable', value)}
         />
-      </PanelSectionRow>
+      </PanelSectionRow> */}
 
       {/* <PanelSectionRow>
         <TextField
