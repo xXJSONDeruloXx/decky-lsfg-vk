@@ -89,11 +89,11 @@ class ConfigurationService(BaseService):
             # Generate TOML content using centralized manager
             toml_content = ConfigurationManager.generate_toml_content(config)
             
-            # Ensure config directory exists
+                        # Ensure config directory exists
             self.config_dir.mkdir(parents=True, exist_ok=True)
             
-            # Write the updated config atomically
-            self._atomic_write(self.config_file_path, toml_content, 0o644)
+            # Write the updated config directly to preserve inode for file watchers
+            self._write_file(self.config_file_path, toml_content, 0o644)
             
             self.log.info(f"Updated lsfg TOML configuration: enable={enable}, "
                          f"dll='{dll}', multiplier={multiplier}, flow_scale={flow_scale}, "
@@ -154,8 +154,8 @@ class ConfigurationService(BaseService):
             # Ensure config directory exists
             self.config_dir.mkdir(parents=True, exist_ok=True)
             
-            # Write the updated config atomically
-            self._atomic_write(self.config_file_path, toml_content, 0o644)
+            # Write the updated config directly to preserve inode for file watchers
+            self._write_file(self.config_file_path, toml_content, 0o644)
             
             self.log.info(f"Updated DLL path in lsfg configuration: '{dll_path}'")
             
