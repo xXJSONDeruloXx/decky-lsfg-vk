@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   ButtonItem,
   PanelSection,
-  PanelSectionRow
+  PanelSectionRow,
+  Field,
+  Focusable
 } from '@decky/ui';
 import { checkForPluginUpdate, downloadPluginUpdate, UpdateCheckResult, UpdateDownloadResult } from '../api/lsfgApi';
 
@@ -100,45 +102,17 @@ export const PluginUpdateChecker: React.FC<PluginUpdateCheckerProps> = () => {
 
     if (updateInfo.updateAvailable) {
       if (downloadResult?.success) {
-        return (
-          <div style={{ color: 'lightgreen', marginTop: '5px' }}>
-            ✓ v{updateInfo.latestVersion} downloaded - ready to install
-          </div>
-        );
+        return "✓ v" + updateInfo.latestVersion + " downloaded - ready to install";
       } else {
-        return (
-          <div style={{ color: 'orange', marginTop: '5px' }}>
-            Update available: v{updateInfo.latestVersion}
-          </div>
-        );
+        return "Update available: v" + updateInfo.latestVersion;
       }
     } else {
-      return (
-        <div style={{ color: 'lightgreen', marginTop: '5px' }}>
-          Up to date (v{updateInfo.currentVersion})
-        </div>
-      );
+      return "Up to date (v" + updateInfo.currentVersion + ")";
     }
   };
 
   return (
-    <PanelSection>
-      <PanelSectionRow>
-        <div
-          style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
-            color: "white"
-          }}
-        >
-          PLUGIN UPDATES
-        </div>
-      </PanelSectionRow>
-
+    <PanelSection title="PLUGIN UPDATES">
       <PanelSectionRow>
         <ButtonItem
           layout="below"
@@ -164,47 +138,37 @@ export const PluginUpdateChecker: React.FC<PluginUpdateCheckerProps> = () => {
       )}
 
       {downloadResult?.success && (
-        <PanelSectionRow>
-          <div style={{ 
-            marginTop: '10px', 
-            padding: '10px', 
-            backgroundColor: 'rgba(0, 255, 0, 0.1)', 
-            borderRadius: '4px',
-            border: '1px solid rgba(0, 255, 0, 0.3)'
-          }}>
-            <div style={{ color: 'lightgreen', fontWeight: 'bold', marginBottom: '5px' }}>
-              ✓ Download Complete!
-            </div>
-            <div style={{ fontSize: '12px', marginBottom: '10px' }}>
-              File saved to: {downloadResult.download_path}
-            </div>
-            <div style={{ fontSize: '12px' }}>
-              <strong>Installation Instructions:</strong>
-              <ol style={{ paddingLeft: '20px', marginTop: '5px' }}>
-                <li>Go to Decky Loader settings</li>
-                <li>Click "Developer" tab</li>
-                <li>Click "Uninstall" next to "Lossless Scaling"</li>
-                <li>Click "Install from ZIP"</li>
-                <li>Select the downloaded file</li>
-                <li>Restart Steam or reload plugins</li>
-              </ol>
-            </div>
-          </div>
-        </PanelSectionRow>
+        <>
+          <PanelSectionRow>
+            <Field label="✓ Download Complete!">
+              <Focusable>
+                File saved to: {downloadResult.download_path}
+              </Focusable>
+            </Field>
+          </PanelSectionRow>
+          
+          <PanelSectionRow>
+            <Field label="Installation Instructions:">
+              <Focusable>
+                1. Go to Decky Loader settings
+                <br />2. Click "Developer" tab
+                <br />3. Click "Uninstall" next to "Lossless Scaling"
+                <br />4. Click "Install from ZIP"
+                <br />5. Select the downloaded file
+                <br />6. Restart Steam or reload plugins
+              </Focusable>
+            </Field>
+          </PanelSectionRow>
+        </>
       )}
 
       {updateError && (
         <PanelSectionRow>
-          <div style={{ 
-            color: 'red', 
-            marginTop: '10px', 
-            padding: '8px', 
-            backgroundColor: 'rgba(255, 0, 0, 0.1)', 
-            borderRadius: '4px',
-            fontSize: '12px'
-          }}>
-            {updateError}
-          </div>
+          <Field label="Error:">
+            <Focusable>
+              {updateError}
+            </Focusable>
+          </Field>
         </PanelSectionRow>
       )}
     </PanelSection>
