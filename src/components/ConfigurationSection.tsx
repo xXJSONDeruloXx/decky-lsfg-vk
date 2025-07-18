@@ -20,7 +20,8 @@ export function ConfigurationSection({
             marginTop: "16px",
             marginBottom: "8px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px"
+            paddingBottom: "4px",
+            color: "white"
           }}
         >
           LSFG Configuration
@@ -106,7 +107,7 @@ export function ConfigurationSection({
             color: "white"
           }}
         >
-          Environment Variables
+          Environment Variables (Requires Re-launch)
         </div>
       </PanelSectionRow>
 
