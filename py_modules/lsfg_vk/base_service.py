@@ -4,7 +4,6 @@ Base service class with common functionality.
 
 import os
 import shutil
-import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
@@ -65,8 +64,8 @@ class BaseService:
             self.log.info(f"File not found: {path}")
             return False
     
-    def _atomic_write(self, path: Path, content: str, mode: int = 0o644) -> None:
-        """Write content to a file atomically
+    def _write_file(self, path: Path, content: str, mode: int = 0o644) -> None:
+        """Write content to a file
         
         Args:
             path: Target file path
@@ -76,31 +75,17 @@ class BaseService:
         Raises:
             OSError: If write fails
         """
-        # Create temporary file in the same directory to ensure atomic move
-        temp_path = None
         try:
-            with tempfile.NamedTemporaryFile(
-                mode='w', 
-                dir=path.parent, 
-                delete=False,
-                prefix=f'.{path.name}.',
-                suffix='.tmp'
-            ) as temp_file:
-                temp_file.write(content)
-                temp_path = Path(temp_file.name)
+            # Write directly to the file
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
+                f.flush()  # Ensure data is written to disk
+                os.fsync(f.fileno())  # Force filesystem sync
             
-            # Set permissions before moving
-            temp_path.chmod(mode)
-            
-            # Atomic move
-            temp_path.replace(path)
-            self.log.info(f"Atomically wrote to {path}")
+            # Set permissions
+            path.chmod(mode)
+            self.log.info(f"Wrote to {path}")
             
         except Exception:
-            # Clean up temp file if something went wrong
-            if temp_path and temp_path.exists():
-                try:
-                    temp_path.unlink()
-                except OSError:
-                    pass  # Best effort cleanup
+            self.log.error(f"Failed to write to {path}")
             raise

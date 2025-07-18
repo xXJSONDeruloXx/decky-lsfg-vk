@@ -114,8 +114,8 @@ class InstallationService(BaseService):
         # Generate TOML content using centralized manager
         toml_content = ConfigurationManager.generate_toml_content(config)
         
-        # Use atomic write to prevent corruption
-        self._atomic_write(self.config_file_path, toml_content, 0o644)
+        # Write initial config file
+        self._write_file(self.config_file_path, toml_content, 0o644)
         self.log.info(f"Created config file at {self.config_file_path}")
         
         # Log detected DLL path if found
