@@ -1,9 +1,9 @@
-import { PanelSectionRow, ToggleField, SliderField } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
   config: ConfigurationData;
-  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number) => Promise<void>;
+  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string) => Promise<void>;
 }
 
 export function ConfigurationSection({
@@ -27,28 +27,38 @@ export function ConfigurationSection({
         </div>
       </PanelSectionRow>
 
-      <PanelSectionRow>
+      {/* <PanelSectionRow>
         <ToggleField
           label="Enable LSFG"
-          description="Enables the frame generation layer"
-          checked={config.enable_lsfg}
-          onChange={(value) => onConfigChange('enable_lsfg', value)}
+          description="Enables lsfg globally (apply before launching games)"
+          checked={config.enable}
+          onChange={(value) => onConfigChange('enable', value)}
         />
-      </PanelSectionRow>
+      </PanelSectionRow> */}
+
+      {/* <PanelSectionRow>
+        <TextField
+          label="Lossless.dll Path"
+          description="specify where Lossless.dll is stored"
+          value={config.dll}
+          onChange={(e) => onConfigChange('dll', e.target.value)}
+        />
+      </PanelSectionRow> */}
 
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
           description="Traditional FPS multiplier value"
           value={config.multiplier}
-          min={2}
+          min={1}
           max={4}
           step={1}
-          notchCount={3}
+          notchCount={4}
           notchLabels={[
-            { notchIndex: 0, label: "2X" },
-            { notchIndex: 1, label: "3X" },
-            { notchIndex: 2, label: "4X" }
+            { notchIndex: 0, label: "OFF" },
+            { notchIndex: 1, label: "2X" },
+            { notchIndex: 2, label: "3X" },
+            { notchIndex: 3, label: "4X" }
           ]}
           onChange={(value) => onConfigChange('multiplier', value)}
         />
@@ -57,7 +67,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`Flow Scale ${Math.round(config.flow_scale * 100)}%`}
-          description="Lowers the internal motion estimation resolution"
+          description="Lowers internal motion estimation resolution, improving performance slightly"
           value={config.flow_scale}
           min={0.25}
           max={1.0}
@@ -68,51 +78,66 @@ export function ConfigurationSection({
 
       <PanelSectionRow>
         <ToggleField
-          label="HDR Mode"
-          description="Enable HDR mode (only if Game supports HDR)"
-          checked={config.hdr}
-          onChange={(value) => onConfigChange('hdr', value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
           label="Performance Mode"
-          description="Use lighter model for FG"
-          checked={config.perf_mode}
-          onChange={(value) => onConfigChange('perf_mode', value)}
+          description="Uses a lighter model for FG (Recommended for most games)"
+          checked={config.performance_mode}
+          onChange={(value) => onConfigChange('performance_mode', value)}
         />
       </PanelSectionRow>
 
       <PanelSectionRow>
         <ToggleField
-          label="Immediate Mode"
-          description="Reduce input lag (Experimental, will cause issues in many games)"
-          checked={config.immediate_mode}
-          onChange={(value) => onConfigChange('immediate_mode', value)}
+          label="HDR Mode"
+          description="Enables HDR mode (only for games that support HDR)"
+          checked={config.hdr_mode}
+          onChange={(value) => onConfigChange('hdr_mode', value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "16px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+            paddingBottom: "4px",
+            color: "white"
+          }}
+        >
+          Experimental Features
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <DropdownItem
+          label="Override Vulkan present mode"
+          description="Select a specific Vulkan presentation mode for better performance or compatibility (may cause crashes)"
+          menuLabel="Select presentation mode"
+          selectedOption={config.experimental_present_mode}
+          onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
+          rgOptions={[
+            { data: "", label: "Default" },
+            { data: "fifo", label: "FIFO" },
+            { data: "vsync", label: "VSync" },
+            { data: "mailbox", label: "Mailbox" },
+            { data: "immediate", label: "Immediate" }
+          ]}
         />
       </PanelSectionRow>
 
       <PanelSectionRow>
         <SliderField
-          label={`Game Frame Cap ${config.frame_cap === 0 ? "(Disabled)" : `(${config.frame_cap} FPS)`}`}
-          description="Limit base game FPS (0 = disabled)"
-          value={config.frame_cap}
+          label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
+          description="Base framerate cap for DirectX games, before frame multiplier (requires game re-launch)"
+          value={config.experimental_fps_limit}
           min={0}
           max={60}
           step={1}
-          onChange={(value) => onConfigChange('frame_cap', value)}
+          onChange={(value) => onConfigChange('experimental_fps_limit', value)}
         />
       </PanelSectionRow>
-
-      {/* <PanelSectionRow>
-        <ToggleField
-          label="Disable vkbasalt"
-          description="Some plugins add vkbasalt layer, which can break lsfg. Toggling on fixes this"
-          checked={config.disable_vkbasalt}
-          onChange={(value) => onConfigChange('disable_vkbasalt', value)}
-        />
-      </PanelSectionRow> */}
     </>
   );
 }
