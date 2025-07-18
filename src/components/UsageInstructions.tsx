@@ -33,9 +33,29 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
           }}
         >
           {config.enable 
-            ? "LSFG is enabled globally. The layer will be active for all games automatically. No launch arguments needed."
-            : "LSFG is disabled. Enable it above to activate frame generation for all games."
+            ? "LSFG is enabled. Add the launch option below to Steam games to activate frame generation."
+            : "LSFG is disabled. Enable it above and add the launch option to activate frame generation."
           }
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "12px",
+            lineHeight: "1.4",
+            opacity: "0.8",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            padding: "8px",
+            borderRadius: "4px",
+            fontFamily: "monospace",
+            marginTop: "8px",
+            marginBottom: "8px"
+          }}
+        >
+          Required Launch Option:
+          <br />
+          <strong>LSFG_PROCESS=decky-lsfg-vk %command%</strong>
         </div>
       </PanelSectionRow>
 
@@ -69,7 +89,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
             marginTop: "8px"
           }}
         >
-          The configuration is stored in ~/.config/lsfg-vk/conf.toml and applies to all games globally.
+          Add the launch option to each game's Properties → Launch Options in Steam. The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
         </div>
       </PanelSectionRow>
     </>

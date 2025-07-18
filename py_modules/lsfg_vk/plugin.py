@@ -352,29 +352,43 @@ class Plugin:
             return False
 
     # Plugin lifecycle methods
+    # Launch option methods
+    async def get_launch_option(self) -> Dict[str, Any]:
+        """Get the launch option that users need to set for their games
+        
+        Returns:
+            Dict containing the launch option string and instructions
+        """
+        return {
+            "launch_option": "LSFG_PROCESS=decky-lsfg-vk %command%",
+            "instructions": "Add this to your game's launch options in Steam Properties",
+            "explanation": "This tells lsfg-vk to use the plugin-managed configuration for this game"
+        }
+
+    # Lifecycle methods
     async def _main(self):
         """
-        Asyncio-compatible long-running code, executed in a task when the plugin is loaded.
+        Main entry point for the plugin.
         
-        This method is called by Decky Loader when the plugin starts up.
-        Currently just logs that the plugin has loaded successfully.
+        This method is called by Decky Loader when the plugin is loaded.
+        Any initialization code should go here.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin loaded!")
+        decky.logger.info("Lossless Scaling VK plugin loaded")
 
     async def _unload(self):
         """
-        Function called first during the unload process.
+        Cleanup tasks when the plugin is unloaded.
         
         This method is called by Decky Loader when the plugin is being unloaded.
-        Use this for cleanup that should happen when the plugin stops.
+        Any cleanup code should go here.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin unloading")
+        decky.logger.info("Lossless Scaling VK plugin unloaded")
 
     async def _uninstall(self):
         """
-        Function called after `_unload` during uninstall.
+        Cleanup tasks when the plugin is uninstalled.
         
         This method is called by Decky Loader when the plugin is being uninstalled.
         It automatically cleans up any lsfg-vk files that were installed.
