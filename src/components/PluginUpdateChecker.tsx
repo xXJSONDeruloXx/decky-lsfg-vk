@@ -140,7 +140,7 @@ export const PluginUpdateChecker: React.FC<PluginUpdateCheckerProps> = () => {
       {downloadResult?.success && (
         <>
           <PanelSectionRow>
-            <Field label="✓ Download Complete!">
+            <Field label="Download Complete!">
               <Focusable>
                 File saved to: {downloadResult.download_path}
               </Focusable>

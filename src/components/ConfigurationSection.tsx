@@ -1,4 +1,4 @@
-import { PanelSectionRow, ToggleField, SliderField, Dropdown } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
@@ -106,39 +106,25 @@ export function ConfigurationSection({
             color: "white"
           }}
         >
-          ⚠️ Experimental Features
+          Experimental Features
         </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div style={{ marginBottom: "8px" }}>
-          <div style={{ 
-            color: "white", 
-            fontSize: "14px", 
-            fontWeight: "500",
-            marginBottom: "4px" 
-          }}>
-            Override Vulkan present mode
-          </div>
-          <div style={{ 
-            color: "rgba(255, 255, 255, 0.7)", 
-            fontSize: "12px",
-            marginBottom: "8px" 
-          }}>
-            Select a specific Vulkan presentation mode for better performance or compatibility
-          </div>
-          <Dropdown
-            selectedOption={config.experimental_present_mode}
-            onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
-            rgOptions={[
-              { data: "", label: "Default (FIFO)" },
-              { data: "fifo", label: "FIFO" },
-              { data: "vsync", label: "VSync" },
-              { data: "mailbox", label: "Mailbox" },
-              { data: "immediate", label: "Immediate" }
-            ]}
-          />
-        </div>
+        <DropdownItem
+          label="Override Vulkan present mode"
+          description="Select a specific Vulkan presentation mode for better performance or compatibility"
+          menuLabel="Select presentation mode"
+          selectedOption={config.experimental_present_mode}
+          onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
+          rgOptions={[
+            { data: "", label: "Default (FIFO)" },
+            { data: "fifo", label: "FIFO" },
+            { data: "vsync", label: "VSync" },
+            { data: "mailbox", label: "Mailbox" },
+            { data: "immediate", label: "Immediate" }
+          ]}
+        />
       </PanelSectionRow>
 
       <PanelSectionRow>
