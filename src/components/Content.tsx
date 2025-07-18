@@ -7,7 +7,7 @@ import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 // import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
-import { ClipboardButton } from "./ClipboardButton";
+// import { ClipboardButton } from "./ClipboardButton";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { ConfigurationData } from "../config/configSchema";
 
@@ -77,7 +77,7 @@ export function Content() {
       {/* <UsageInstructions config={config} /> */}
       
       <WikiButton />
-      <ClipboardButton />
+      {/* <ClipboardButton /> */}
       
       {/* Plugin Update Checker */}
       <PluginUpdateChecker />
