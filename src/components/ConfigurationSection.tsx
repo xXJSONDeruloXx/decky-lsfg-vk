@@ -48,7 +48,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
-          description="Traditional FPS multiplier value (OFF = no interpolation)"
+          description="Traditional FPS multiplier value"
           value={config.multiplier}
           min={1}
           max={4}
@@ -67,7 +67,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`Flow Scale ${Math.round(config.flow_scale * 100)}%`}
-          description="Changes the flow scale (lower = faster)"
+          description="Lowers internal motion estimation resolution, improving performance slightly"
           value={config.flow_scale}
           min={0.25}
           max={1.0}
