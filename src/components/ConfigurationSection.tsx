@@ -67,7 +67,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`Flow Scale ${Math.round(config.flow_scale * 100)}%`}
-          description="change the flow scale (lower = faster)"
+          description="Changes the flow scale (lower = faster)"
           value={config.flow_scale}
           min={0.25}
           max={1.0}
@@ -79,7 +79,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Performance Mode"
-          description="use lighter model for FG"
+          description="Uses a lighter model for FG (Recommended for most games)"
           checked={config.performance_mode}
           onChange={(value) => onConfigChange('performance_mode', value)}
         />
@@ -118,7 +118,7 @@ export function ConfigurationSection({
           selectedOption={config.experimental_present_mode}
           onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
           rgOptions={[
-            { data: "", label: "Default (FIFO)" },
+            { data: "", label: "Default" },
             { data: "fifo", label: "FIFO" },
             { data: "vsync", label: "VSync" },
             { data: "mailbox", label: "Mailbox" },
@@ -130,7 +130,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier (0 = disabled)"
+          description="Base framerate cap for DirectX games, before frame multiplier"
           value={config.experimental_fps_limit}
           min={0}
           max={60}
