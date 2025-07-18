@@ -77,6 +77,20 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.INTEGER,
     default: 0,
     description: "experimental: base framerate cap for dxvk games, before frame multiplier (0 = disabled)"
+  },
+  
+  enable_wow64: {
+    name: "enable_wow64",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
+  },
+  
+  disable_steamdeck_mode: {
+    name: "disable_steamdeck_mode",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "disable Steam Deck mode (unlocks hidden settings in some games)"
   }
 };
 
@@ -90,6 +104,8 @@ export interface ConfigurationData {
   hdr_mode: boolean;
   experimental_present_mode: string;
   experimental_fps_limit: number;
+  enable_wow64: boolean;
+  disable_steamdeck_mode: boolean;
 }
 
 // Centralized configuration manager

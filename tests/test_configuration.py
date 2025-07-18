@@ -88,21 +88,31 @@ def test_generate_script_content():
         service.user_home = temp_home
         service.lsfg_script_path = temp_home / "lsfg"
         
-        content = service._generate_script_content(
-            enable_lsfg=True,
-            multiplier=4,
-            flow_scale=2.0,
-            hdr=False,
-            perf_mode=True,
-            immediate_mode=False
-        )
+        # Test with no toggles enabled
+        config = {
+            "enable_wow64": False,
+            "disable_steamdeck_mode": False
+        }
+        content = service._generate_script_content(config)
         
-        assert "export ENABLE_LSFG=1" in content
-        assert "export LSFG_MULTIPLIER=4" in content
-        assert "export LSFG_FLOW_SCALE=2.0" in content
-        assert "# export LSFG_HDR=1" in content
-        assert "export LSFG_PERF_MODE=1" in content
-        assert "# export MESA_VK_WSI_PRESENT_MODE=immediate" in content
+        assert "#!/bin/bash" in content
+        assert "export LSFG_PROCESS=decky-lsfg-vk" in content
+        assert "export PROTON_USE_WOW64=1" not in content
+        assert "export SteamDeck=0" not in content
+        assert 'exec "$@"' in content
+        
+        # Test with both toggles enabled
+        config = {
+            "enable_wow64": True,
+            "disable_steamdeck_mode": True
+        }
+        content = service._generate_script_content(config)
+        
+        assert "#!/bin/bash" in content
+        assert "export PROTON_USE_WOW64=1" in content
+        assert "export SteamDeck=0" in content
+        assert "export LSFG_PROCESS=decky-lsfg-vk" in content
+        assert 'exec "$@"' in content
 
 
 def test_config_roundtrip():
@@ -118,18 +128,35 @@ def test_config_roundtrip():
         
         # Update config
         result = service.update_config(
-            enable_lsfg=True,
+            enable=True,
+            dll="/path/to/dll",
             multiplier=3,
             flow_scale=1.5,
-            hdr=True,
-            perf_mode=False,
-            immediate_mode=True
+            performance_mode=False,
+            hdr_mode=True,
+            experimental_present_mode="immediate",
+            experimental_fps_limit=30,
+            enable_wow64=True,
+            disable_steamdeck_mode=False
         )
         
         assert result["success"] is True
         
         # Read it back
         read_result = service.get_config()
+        
+        assert read_result["success"] is True
+        config = read_result["config"]
+        assert config["enable"] is True
+        assert config["dll"] == "/path/to/dll"
+        assert config["multiplier"] == 3
+        assert config["flow_scale"] == 1.5
+        assert config["performance_mode"] is False
+        assert config["hdr_mode"] is True
+        assert config["experimental_present_mode"] == "immediate"
+        assert config["experimental_fps_limit"] == 30
+        assert config["enable_wow64"] is True
+        assert config["disable_steamdeck_mode"] is False
         
         assert read_result["success"] is True
         config = read_result["config"]

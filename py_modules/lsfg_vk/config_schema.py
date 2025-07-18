@@ -92,6 +92,20 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
         field_type=ConfigFieldType.INTEGER,
         default=0,
         description="experimental: base framerate cap for dxvk games, before frame multiplier (0 = disabled)"
+    ),
+    
+    "enable_wow64": ConfigField(
+        name="enable_wow64",
+        field_type=ConfigFieldType.BOOLEAN,
+        default=False,
+        description="enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
+    ),
+    
+    "disable_steamdeck_mode": ConfigField(
+        name="disable_steamdeck_mode",
+        field_type=ConfigFieldType.BOOLEAN,
+        default=False,
+        description="disable Steam Deck mode (unlocks hidden settings in some games)"
     )
 }
 
@@ -106,6 +120,8 @@ class ConfigurationData(TypedDict):
     hdr_mode: bool
     experimental_present_mode: str
     experimental_fps_limit: int
+    enable_wow64: bool
+    disable_steamdeck_mode: bool
 
 
 class ConfigurationManager:
@@ -314,7 +330,9 @@ class ConfigurationManager:
     def create_config_from_args(enable: bool, dll: str, multiplier: int, flow_scale: float, 
                                performance_mode: bool, hdr_mode: bool, 
                                experimental_present_mode: str = "", 
-                               experimental_fps_limit: int = 0) -> ConfigurationData:
+                               experimental_fps_limit: int = 0,
+                               enable_wow64: bool = False,
+                               disable_steamdeck_mode: bool = False) -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
             "enable": enable,
@@ -324,5 +342,7 @@ class ConfigurationManager:
             "performance_mode": performance_mode,
             "hdr_mode": hdr_mode,
             "experimental_present_mode": experimental_present_mode,
-            "experimental_fps_limit": experimental_fps_limit
+            "experimental_fps_limit": experimental_fps_limit,
+            "enable_wow64": enable_wow64,
+            "disable_steamdeck_mode": disable_steamdeck_mode
         })
