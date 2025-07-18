@@ -48,16 +48,17 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
-          description="Traditional FPS multiplier value"
+          description="Traditional FPS multiplier value (1 = no interpolation)"
           value={config.multiplier}
-          min={2}
+          min={1}
           max={4}
           step={1}
-          notchCount={3}
+          notchCount={4}
           notchLabels={[
-            { notchIndex: 0, label: "2X" },
-            { notchIndex: 1, label: "3X" },
-            { notchIndex: 2, label: "4X" }
+            { notchIndex: 0, label: "1X" },
+            { notchIndex: 1, label: "2X" },
+            { notchIndex: 2, label: "3X" },
+            { notchIndex: 3, label: "4X" }
           ]}
           onChange={(value) => onConfigChange('multiplier', value)}
         />
