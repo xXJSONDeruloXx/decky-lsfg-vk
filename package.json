@@ -49,6 +49,7 @@
       "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16378130046/lsfg-vk_archlinux.zip",
       "sha256hash": "779f2081a7b3096a116f3395a0d12f436bccacdee0a05b9dcf0e11c61f51b2ad"
     }
+
   ],
   "pnpm": {
     "peerDependencyRules": {
