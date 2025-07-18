@@ -184,19 +184,44 @@ class ConfigurationManager:
     
     @staticmethod
     def generate_toml_content(config: ConfigurationData) -> str:
-        """Generate TOML configuration file content"""
-        lines = ["[global]"]
+        """Generate TOML configuration file content using the new game-specific format"""
+        lines = ["version = 1"]
+        lines.append("")
         
+        # Add global section with DLL path only (if specified)
+        if config.get("dll"):
+            lines.append("[global]")
+            lines.append(f"# specify where Lossless.dll is stored")
+            lines.append(f'dll = "{config["dll"]}"')
+            lines.append("")
+        
+        # Add game section with process name for LSFG_PROCESS approach
+        lines.append("[[game]]")
+        lines.append("# Plugin-managed game entry (uses LSFG_PROCESS=decky-lsfg-vk)")
+        lines.append('exe = "decky-lsfg-vk"')
+        lines.append("")
+        
+        # Add all configuration fields to the game section
         for field_name, field_def in CONFIG_SCHEMA.items():
+            # Skip dll and enable fields - dll goes in global, enable is handled via multiplier
+            if field_name in ["dll", "enable"]:
+                continue
+                
             value = config[field_name]
-            lines.append(f"# {field_def.description}")
+            
+            # Handle enable field by setting multiplier to 1 when disabled
+            if field_name == "multiplier" and not config.get("enable", True):
+                value = 1
+                lines.append(f"# LSFG disabled via plugin - multiplier set to 1")
+            else:
+                lines.append(f"# {field_def.description}")
             
             # Format value based on type
             if isinstance(value, bool):
                 lines.append(f"{field_name} = {str(value).lower()}")
-            elif isinstance(value, str):
+            elif isinstance(value, str) and value:  # Only add non-empty strings
                 lines.append(f'{field_name} = "{value}"')
-            else:
+            elif isinstance(value, (int, float)) and value != 0:  # Only add non-zero numbers
                 lines.append(f"{field_name} = {value}")
             
             lines.append("")  # Empty line for readability
@@ -209,9 +234,11 @@ class ConfigurationManager:
         config = ConfigurationManager.get_defaults()
         
         try:
-            # Look for [global] section
+            # Look for both [global] and [[game]] sections
             lines = content.split('\n')
             in_global_section = False
+            in_game_section = False
+            current_game_exe = None
             
             for line in lines:
                 line = line.strip()
@@ -222,12 +249,16 @@ class ConfigurationManager:
                 
                 # Check for section headers
                 if line.startswith('[') and line.endswith(']'):
-                    section = line[1:-1].strip()
-                    in_global_section = (section == 'global')
-                    continue
-                
-                # Only parse lines in the global section
-                if not in_global_section:
+                    if line == '[global]':
+                        in_global_section = True
+                        in_game_section = False
+                    elif line == '[[game]]':
+                        in_global_section = False
+                        in_game_section = True
+                        current_game_exe = None
+                    else:
+                        in_global_section = False
+                        in_game_section = False
                     continue
                 
                 # Parse key = value lines
@@ -242,21 +273,36 @@ class ConfigurationManager:
                     elif value.startswith("'") and value.endswith("'"):
                         value = value[1:-1]
                     
-                    # Convert to appropriate type based on field definition
-                    if key in CONFIG_SCHEMA:
-                        field_def = CONFIG_SCHEMA[key]
-                        try:
-                            if field_def.field_type == ConfigFieldType.BOOLEAN:
-                                config[key] = value.lower() in ('true', '1', 'yes', 'on')
-                            elif field_def.field_type == ConfigFieldType.INTEGER:
-                                config[key] = int(value)
-                            elif field_def.field_type == ConfigFieldType.FLOAT:
-                                config[key] = float(value)
-                            elif field_def.field_type == ConfigFieldType.STRING:
-                                config[key] = value
-                        except (ValueError, TypeError):
-                            # If conversion fails, keep default value
-                            pass
+                    # Handle global section (dll only)
+                    if in_global_section and key == "dll":
+                        config["dll"] = value
+                    
+                    # Handle game section
+                    elif in_game_section:
+                        # Track the exe for this game section
+                        if key == "exe":
+                            current_game_exe = value
+                        # Only parse config for our plugin-managed game entry
+                        elif current_game_exe == "decky-lsfg-vk" and key in CONFIG_SCHEMA:
+                            field_def = CONFIG_SCHEMA[key]
+                            try:
+                                if field_def.field_type == ConfigFieldType.BOOLEAN:
+                                    config[key] = value.lower() in ('true', '1', 'yes', 'on')
+                                elif field_def.field_type == ConfigFieldType.INTEGER:
+                                    parsed_value = int(value)
+                                    # Handle enable field via multiplier
+                                    if key == "multiplier":
+                                        config[key] = parsed_value
+                                        config["enable"] = parsed_value != 1
+                                    else:
+                                        config[key] = parsed_value
+                                elif field_def.field_type == ConfigFieldType.FLOAT:
+                                    config[key] = float(value)
+                                elif field_def.field_type == ConfigFieldType.STRING:
+                                    config[key] = value
+                            except (ValueError, TypeError):
+                                # If conversion fails, keep default value
+                                pass
             
             return config
             
