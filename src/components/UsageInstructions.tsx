@@ -33,7 +33,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
           }}
         >
           {config.enable 
-            ? "LSFG is enabled. Add the launch option below to Steam games to activate frame generation."
+            ? "Add the launch option below (or use \"Launch Option Clipboard\") to Steam games to activate frame generation."
             : "LSFG is disabled. Enable it above and add the launch option to activate frame generation."
           }
         </div>
@@ -42,24 +42,23 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
       <PanelSectionRow>
         <div
           style={{
-            fontSize: "12px",
-            lineHeight: "1.4",
-            opacity: "0.8",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            padding: "8px",
-            borderRadius: "4px",
-            fontFamily: "monospace",
-            marginTop: "8px",
-            marginBottom: "8px"
+        fontSize: "12px",
+        lineHeight: "1.4",
+        opacity: "0.8",
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        padding: "8px",
+        borderRadius: "4px",
+        fontFamily: "monospace",
+        marginTop: "8px",
+        marginBottom: "8px",
+        textAlign: "center"
           }}
         >
-          Required Launch Option:
-          <br />
           <strong>~/lsfg %command%</strong>
         </div>
       </PanelSectionRow>
 
-      <PanelSectionRow>
+      {/* <PanelSectionRow>
         <div
           style={{
             fontSize: "12px",
@@ -78,7 +77,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
 • Present Mode: ${config.experimental_present_mode || "Default (FIFO)"}
 • FPS Limit: ${config.experimental_fps_limit > 0 ? `${config.experimental_fps_limit} FPS` : "Off"}`}
         </div>
-      </PanelSectionRow>
+      </PanelSectionRow> */}
 
       <PanelSectionRow>
         <div
@@ -89,7 +88,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
             marginTop: "8px"
           }}
         >
-          Add the launch option to each game's Properties → Launch Options in Steam. The lsfg script is automatically created during installation and connects your games to the plugin's configuration. The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
+The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
         </div>
       </PanelSectionRow>
     </>
