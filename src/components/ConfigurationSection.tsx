@@ -113,7 +113,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <DropdownItem
           label="Override Vulkan present mode"
-          description="Select a specific Vulkan presentation mode for better performance or compatibility"
+          description="Select a specific Vulkan presentation mode for better performance or compatibility (may cause crashes)"
           menuLabel="Select presentation mode"
           selectedOption={config.experimental_present_mode}
           onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
@@ -130,7 +130,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <SliderField
           label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier"
+          description="Base framerate cap for DirectX games, before frame multiplier (requires game re-launch)"
           value={config.experimental_fps_limit}
           min={0}
           max={60}
