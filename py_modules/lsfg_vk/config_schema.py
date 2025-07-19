@@ -316,6 +316,73 @@ class ConfigurationManager:
             return ConfigurationManager.get_defaults()
     
     @staticmethod
+    def parse_script_content(script_content: str) -> Dict[str, Union[bool, int, str]]:
+        """Parse launch script content to extract environment variable values
+        
+        Args:
+            script_content: Content of the launch script file
+            
+        Returns:
+            Dict containing parsed script-only field values
+        """
+        script_values = {}
+        
+        try:
+            lines = script_content.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Skip comments, empty lines, and non-export lines
+                if not line or line.startswith('#') or not line.startswith('export '):
+                    continue
+                
+                # Parse export statements: export VAR=value
+                if '=' in line:
+                    # Remove 'export ' prefix
+                    export_line = line[7:]  # len('export ') = 7
+                    key, value = export_line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    
+                    # Map environment variables to config field names
+                    if key == "DXVK_FRAME_RATE":
+                        try:
+                            script_values["dxvk_frame_rate"] = int(value)
+                        except ValueError:
+                            pass
+                    elif key == "PROTON_USE_WOW64":
+                        script_values["enable_wow64"] = value == "1"
+                    elif key == "SteamDeck":
+                        script_values["disable_steamdeck_mode"] = value == "0"
+            
+        except Exception:
+            # If parsing fails, return empty dict (will use defaults)
+            pass
+        
+        return script_values
+    
+    @staticmethod
+    def merge_config_with_script(toml_config: ConfigurationData, script_values: Dict[str, Union[bool, int, str]]) -> ConfigurationData:
+        """Merge TOML configuration with script environment variable values
+        
+        Args:
+            toml_config: Configuration loaded from TOML file
+            script_values: Environment variable values parsed from script
+            
+        Returns:
+            Complete configuration with script values overlaid on TOML config
+        """
+        merged_config = dict(toml_config)
+        
+        # Update script-only fields with values from script
+        for field_name in SCRIPT_ONLY_FIELDS.keys():
+            if field_name in script_values:
+                merged_config[field_name] = script_values[field_name]
+        
+        return cast(ConfigurationData, merged_config)
+
+    @staticmethod
     def create_config_from_args(dll: str, multiplier: int, flow_scale: float, 
                                performance_mode: bool, hdr_mode: bool, 
                                experimental_present_mode: str = "fifo", 

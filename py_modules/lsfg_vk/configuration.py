@@ -14,26 +14,34 @@ class ConfigurationService(BaseService):
     """Service for managing TOML-based lsfg configuration"""
     
     def get_config(self) -> ConfigurationResponse:
-        """Read current TOML configuration
+        """Read current TOML configuration merged with launch script environment variables
         
         Returns:
             ConfigurationResponse with current configuration or error
         """
         try:
+            # Get TOML configuration (with defaults if file doesn't exist)
             if not self.config_file_path.exists():
                 # Return default configuration with DLL detection if file doesn't exist
                 from .dll_detection import DllDetectionService
                 dll_service = DllDetectionService(self.log)
-                config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
-                return {
-                    "success": True,
-                    "config": config,
-                    "message": "Using default configuration (config file not found)",
-                    "error": None
-                }
+                toml_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+            else:
+                content = self.config_file_path.read_text(encoding='utf-8')
+                toml_config = ConfigurationManager.parse_toml_content(content)
             
-            content = self.config_file_path.read_text(encoding='utf-8')
-            config = ConfigurationManager.parse_toml_content(content)
+            # Get script environment variables (if script exists)
+            script_values = {}
+            if self.lsfg_script_path.exists():
+                try:
+                    script_content = self.lsfg_script_path.read_text(encoding='utf-8')
+                    script_values = ConfigurationManager.parse_script_content(script_content)
+                    self.log.info(f"Parsed script values: {script_values}")
+                except Exception as e:
+                    self.log.warning(f"Failed to parse launch script: {str(e)}")
+            
+            # Merge TOML config with script values
+            config = ConfigurationManager.merge_config_with_script(toml_config, script_values)
             
             return {
                 "success": True,
@@ -151,7 +159,7 @@ class ConfigurationService(BaseService):
             ConfigurationResponse with success status
         """
         try:
-            # Get current config
+            # Get current merged config (TOML + script)
             current_response = self.get_config()
             if not current_response["success"] or current_response["config"] is None:
                 # If we can't read current config, use defaults with DLL detection
