@@ -65,7 +65,7 @@ class ConfigurationService(BaseService):
                 "error": None
             }
     
-    def update_config(self, enable: bool, dll: str, multiplier: int, flow_scale: float, 
+    def update_config(self, dll: str, multiplier: int, flow_scale: float, 
                      performance_mode: bool, hdr_mode: bool, 
                      experimental_present_mode: str = "", 
                      experimental_fps_limit: int = 0,
@@ -74,7 +74,6 @@ class ConfigurationService(BaseService):
         """Update TOML configuration
         
         Args:
-            enable: Whether to enable LSFG
             dll: Path to Lossless.dll
             multiplier: LSFG multiplier value
             flow_scale: LSFG flow scale value
@@ -91,7 +90,7 @@ class ConfigurationService(BaseService):
         try:
             # Create configuration from individual arguments
             config = ConfigurationManager.create_config_from_args(
-                enable, dll, multiplier, flow_scale, performance_mode, hdr_mode,
+                dll, multiplier, flow_scale, performance_mode, hdr_mode,
                 experimental_present_mode, experimental_fps_limit, enable_wow64, disable_steamdeck_mode
             )
             
@@ -109,7 +108,7 @@ class ConfigurationService(BaseService):
             if not script_result["success"]:
                 self.log.warning(f"Failed to update launch script: {script_result['error']}")
             
-            self.log.info(f"Updated lsfg TOML configuration: enable={enable}, "
+            self.log.info(f"Updated lsfg TOML configuration: "
                          f"dll='{dll}', multiplier={multiplier}, flow_scale={flow_scale}, "
                          f"performance_mode={performance_mode}, hdr_mode={hdr_mode}, "
                          f"experimental_present_mode='{experimental_present_mode}', "

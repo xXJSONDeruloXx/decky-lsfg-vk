@@ -38,13 +38,6 @@ class ConfigField:
 
 # Configuration schema definition
 CONFIG_SCHEMA: Dict[str, ConfigField] = {
-    "enable": ConfigField(
-        name="enable",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=True,
-        description="enable/disable lsfg on every game"
-    ),
-    
     "dll": ConfigField(
         name="dll",
         field_type=ConfigFieldType.STRING,
@@ -55,7 +48,7 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
     "multiplier": ConfigField(
         name="multiplier",
         field_type=ConfigFieldType.INTEGER,
-        default=2,
+        default=1,
         description="change the fps multiplier"
     ),
     
@@ -112,7 +105,6 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
 
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure"""
-    enable: bool
     dll: str
     multiplier: int
     flow_scale: float
@@ -219,25 +211,21 @@ class ConfigurationManager:
         
         # Add all configuration fields to the game section
         for field_name, field_def in CONFIG_SCHEMA.items():
-            # Skip dll and enable fields - dll goes in global, enable is handled via multiplier
-            if field_name in ["dll", "enable"]:
+            # Skip dll field - dll goes in global section
+            if field_name == "dll":
                 continue
                 
             value = config[field_name]
             
-            # Handle enable field by setting multiplier to 1 when disabled
-            if field_name == "multiplier" and not config.get("enable", True):
-                value = 1
-                lines.append(f"# LSFG disabled via plugin - multiplier set to 1")
-            else:
-                lines.append(f"# {field_def.description}")
+            # Add field description comment
+            lines.append(f"# {field_def.description}")
             
             # Format value based on type
             if isinstance(value, bool):
                 lines.append(f"{field_name} = {str(value).lower()}")
             elif isinstance(value, str) and value:  # Only add non-empty strings
                 lines.append(f'{field_name} = "{value}"')
-            elif isinstance(value, (int, float)) and value != 0:  # Only add non-zero numbers
+            elif isinstance(value, (int, float)):  # Always include numbers, even if 0 or 1
                 lines.append(f"{field_name} = {value}")
             
             lines.append("")  # Empty line for readability
@@ -306,12 +294,7 @@ class ConfigurationManager:
                                     config[key] = value.lower() in ('true', '1', 'yes', 'on')
                                 elif field_def.field_type == ConfigFieldType.INTEGER:
                                     parsed_value = int(value)
-                                    # Handle enable field via multiplier
-                                    if key == "multiplier":
-                                        config[key] = parsed_value
-                                        config["enable"] = parsed_value != 1
-                                    else:
-                                        config[key] = parsed_value
+                                    config[key] = parsed_value
                                 elif field_def.field_type == ConfigFieldType.FLOAT:
                                     config[key] = float(value)
                                 elif field_def.field_type == ConfigFieldType.STRING:
@@ -327,7 +310,7 @@ class ConfigurationManager:
             return ConfigurationManager.get_defaults()
     
     @staticmethod
-    def create_config_from_args(enable: bool, dll: str, multiplier: int, flow_scale: float, 
+    def create_config_from_args(dll: str, multiplier: int, flow_scale: float, 
                                performance_mode: bool, hdr_mode: bool, 
                                experimental_present_mode: str = "", 
                                experimental_fps_limit: int = 0,
@@ -335,7 +318,6 @@ class ConfigurationManager:
                                disable_steamdeck_mode: bool = False) -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
-            "enable": enable,
             "dll": dll,
             "multiplier": multiplier,
             "flow_scale": flow_scale,
