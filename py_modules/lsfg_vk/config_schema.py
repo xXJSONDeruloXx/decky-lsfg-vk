@@ -340,7 +340,7 @@ class ConfigurationManager:
                 # Parse export statements: export VAR=value
                 if '=' in line:
                     # Remove 'export ' prefix
-                    export_line = line[7:]  # len('export ') = 7
+                    export_line = line[len('export '):]
                     key, value = export_line.split('=', 1)
                     key = key.strip()
                     value = value.strip()
