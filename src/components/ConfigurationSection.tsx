@@ -104,8 +104,7 @@ export function ConfigurationSection({
           onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
           rgOptions={[
             { data: "fifo", label: "FIFO (VSync) - Default" },
-            { data: "mailbox", label: "Mailbox" },
-            { data: "immediate", label: "Immediate" }
+            { data: "mailbox", label: "Mailbox" }
           ]}
         />
       </PanelSectionRow>
