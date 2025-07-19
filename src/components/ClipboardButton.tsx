@@ -1,5 +1,5 @@
 import { PanelSectionRow, ButtonItem } from "@decky/ui";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { FaClipboard } from "react-icons/fa";
 
 export function ClipboardButton() {
   const handleClipboardClick = () => {
@@ -13,7 +13,7 @@ export function ClipboardButton() {
         onClick={handleClipboardClick}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <FaExternalLinkAlt />
+          <FaClipboard />
           <div>Launch Option Clipboard</div>
         </div>
       </ButtonItem>

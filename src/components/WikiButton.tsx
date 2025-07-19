@@ -1,5 +1,5 @@
 import { PanelSectionRow, ButtonItem } from "@decky/ui";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { FaBook } from "react-icons/fa";
 
 export function WikiButton() {
   const handleWikiClick = () => {
@@ -13,7 +13,7 @@ export function WikiButton() {
         onClick={handleWikiClick}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <FaExternalLinkAlt />
+          <FaBook />
           <div>LSFG-VK Wiki</div>
         </div>
       </ButtonItem>
