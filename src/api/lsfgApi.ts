@@ -28,6 +28,14 @@ export interface DllDetectionResult {
   error?: string;
 }
 
+export interface DllStatsResult {
+  success: boolean;
+  dll_path?: string;
+  dll_sha256?: string;
+  dll_source?: string;
+  error?: string;
+}
+
 // Use centralized configuration data type
 export type LsfgConfig = ConfigurationData;
 
@@ -77,6 +85,7 @@ export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk")
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
+export const getDllStats = callable<[], DllStatsResult>("get_dll_stats");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");

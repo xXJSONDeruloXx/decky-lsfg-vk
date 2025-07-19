@@ -7,3 +7,4 @@ export { WikiButton } from "./WikiButton";
 export { ClipboardButton } from "./ClipboardButton";
 export { LaunchOptionInfo } from "./LaunchOptionInfo";
 export { PluginUpdateChecker } from "./PluginUpdateChecker";
+export { NerdStuffModal } from "./NerdStuffModal";
