@@ -80,6 +80,13 @@ export interface LaunchOptionResult {
   explanation: string;
 }
 
+export interface FileContentResult {
+  success: boolean;
+  content?: string;
+  path?: string;
+  error?: string;
+}
+
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
@@ -89,6 +96,8 @@ export const getDllStats = callable<[], DllStatsResult>("get_dll_stats");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
+export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
+export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
 
 // Updated config function using centralized configuration
 export const updateLsfgConfig = callable<

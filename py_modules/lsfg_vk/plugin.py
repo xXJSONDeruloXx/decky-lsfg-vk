@@ -430,6 +430,69 @@ class Plugin:
             "explanation": "The lsfg script is created during installation and sets up the environment for the plugin"
         }
 
+    # File content methods
+    async def get_config_file_content(self) -> Dict[str, Any]:
+        """Get the current config file content
+        
+        Returns:
+            Dict containing the config file content or error message
+        """
+        try:
+            config_path = self.configuration_service.config_file_path
+            if not config_path.exists():
+                return {
+                    "success": False,
+                    "content": None,
+                    "path": str(config_path),
+                    "error": "Config file does not exist"
+                }
+            
+            content = config_path.read_text(encoding='utf-8')
+            return {
+                "success": True,
+                "content": content,
+                "path": str(config_path),
+                "error": None
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "content": None,
+                "path": str(config_path) if 'config_path' in locals() else "unknown",
+                "error": f"Error reading config file: {str(e)}"
+            }
+
+    async def get_launch_script_content(self) -> Dict[str, Any]:
+        """Get the current launch script content
+        
+        Returns:
+            Dict containing the launch script content or error message
+        """
+        try:
+            script_path = self.installation_service.lsfg_script_path
+            if not script_path.exists():
+                return {
+                    "success": False,
+                    "content": None,
+                    "path": str(script_path),
+                    "error": "Launch script does not exist"
+                }
+            
+            content = script_path.read_text(encoding='utf-8')
+            return {
+                "success": True,
+                "content": content,
+                "path": str(script_path),
+                "error": None
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "content": None,
+                "path": str(script_path) if 'script_path' in locals() else "unknown",
+                "error": f"Error reading launch script: {str(e)}"
+            }
+
     # Lifecycle methods
     async def _main(self):
         """
