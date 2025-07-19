@@ -100,27 +100,13 @@ export function ConfigurationSection({
           label="Override Vulkan present mode"
           description="Select a specific Vulkan presentation mode for better performance or compatibility (may cause crashes)"
           menuLabel="Select presentation mode"
-          selectedOption={config.experimental_present_mode}
+          selectedOption={config.experimental_present_mode || "fifo"}
           onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
           rgOptions={[
-            { data: "", label: "Default" },
-            { data: "fifo", label: "FIFO" },
-            { data: "vsync", label: "VSync" },
+            { data: "fifo", label: "FIFO (VSync)" },
             { data: "mailbox", label: "Mailbox" },
             { data: "immediate", label: "Immediate" }
           ]}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <SliderField
-          label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier (requires game re-launch)"
-          value={config.experimental_fps_limit}
-          min={0}
-          max={60}
-          step={1}
-          onChange={(value) => onConfigChange('experimental_fps_limit', value)}
         />
       </PanelSectionRow>
 
@@ -138,6 +124,18 @@ export function ConfigurationSection({
         >
           Environment Variables (Requires Re-launch)
         </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`DXVK Frame Rate${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
+          description="Base framerate cap for DirectX games, before frame multiplier (requires game re-launch)"
+          value={config.dxvk_frame_rate}
+          min={0}
+          max={60}
+          step={1}
+          onChange={(value) => onConfigChange('dxvk_frame_rate', value)}
+        />
       </PanelSectionRow>
 
       <PanelSectionRow>

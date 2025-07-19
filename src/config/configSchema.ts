@@ -61,15 +61,15 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   experimental_present_mode: {
     name: "experimental_present_mode",
     fieldType: ConfigFieldType.STRING,
-    default: "",
-    description: "experimental: override vulkan present mode (empty/fifo/vsync/mailbox/immediate)"
+    default: "fifo",
+    description: "experimental: override vulkan present mode (fifo/mailbox/immediate)"
   },
   
-  experimental_fps_limit: {
-    name: "experimental_fps_limit",
+  dxvk_frame_rate: {
+    name: "dxvk_frame_rate",
     fieldType: ConfigFieldType.INTEGER,
     default: 0,
-    description: "experimental: base framerate cap for dxvk games, before frame multiplier (0 = disabled)"
+    description: "Base framerate cap for DirectX games, before frame multiplier (0 = disabled, requires game re-launch)"
   },
   
   enable_wow64: {
@@ -95,7 +95,7 @@ export interface ConfigurationData {
   performance_mode: boolean;
   hdr_mode: boolean;
   experimental_present_mode: string;
-  experimental_fps_limit: number;
+  dxvk_frame_rate: number;
   enable_wow64: boolean;
   disable_steamdeck_mode: boolean;
 }
