@@ -71,8 +71,8 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
 • Flow Scale: ${Math.round(config.flow_scale * 100)}%
 • Performance Mode: ${config.performance_mode ? "Yes" : "No"}
 • HDR Mode: ${config.hdr_mode ? "Yes" : "No"}
-• Present Mode: ${config.experimental_present_mode || "Default (FIFO)"}
-• FPS Limit: ${config.experimental_fps_limit > 0 ? `${config.experimental_fps_limit} FPS` : "Off"}`}
+• Present Mode: ${config.experimental_present_mode || "FIFO (VSync)"}
+• DXVK Frame Rate: ${config.dxvk_frame_rate > 0 ? `${config.dxvk_frame_rate} FPS` : "Off"}`}
         </div>
       </PanelSectionRow> */}
 

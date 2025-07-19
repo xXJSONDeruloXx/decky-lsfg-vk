@@ -98,29 +98,15 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <DropdownItem
           label="Override Vulkan present mode"
-          description="Select a specific Vulkan presentation mode for better performance or compatibility (may cause crashes)"
+          description="Select a specific Vulkan presentation mode for better performance or compatibility (May cause crashes)"
           menuLabel="Select presentation mode"
-          selectedOption={config.experimental_present_mode}
+          selectedOption={config.experimental_present_mode || "fifo"}
           onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
           rgOptions={[
-            { data: "", label: "Default" },
-            { data: "fifo", label: "FIFO" },
-            { data: "vsync", label: "VSync" },
+            { data: "fifo", label: "FIFO (VSync) - Default" },
             { data: "mailbox", label: "Mailbox" },
             { data: "immediate", label: "Immediate" }
           ]}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <SliderField
-          label={`FPS Limit${config.experimental_fps_limit > 0 ? ` (${config.experimental_fps_limit} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier (requires game re-launch)"
-          value={config.experimental_fps_limit}
-          min={0}
-          max={60}
-          step={1}
-          onChange={(value) => onConfigChange('experimental_fps_limit', value)}
         />
       </PanelSectionRow>
 
@@ -136,14 +122,26 @@ export function ConfigurationSection({
             color: "white"
           }}
         >
-          Environment Variables (Requires Re-launch)
+          Environment Variables (Requires re-launch)
         </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
+          description="Base framerate cap for DirectX games, before frame multiplier"
+          value={config.dxvk_frame_rate}
+          min={0}
+          max={60}
+          step={1}
+          onChange={(value) => onConfigChange('dxvk_frame_rate', value)}
+        />
       </PanelSectionRow>
 
       <PanelSectionRow>
         <ToggleField
           label="Enable WOW64 for 32-bit games"
-          description="Enables PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
+          description="Enables PROTON_USE_WOW64=1 for 32-bit games (Use with ProtonGE to fix crashing)"
           checked={config.enable_wow64}
           onChange={(value) => onConfigChange('enable_wow64', value)}
         />
@@ -152,7 +150,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="Disable Steam Deck Mode"
-          description="Disables Steam Deck mode (unlocks hidden settings in some games)"
+          description="Disables Steam Deck mode (Unlocks hidden settings in some games)"
           checked={config.disable_steamdeck_mode}
           onChange={(value) => onConfigChange('disable_steamdeck_mode', value)}
         />

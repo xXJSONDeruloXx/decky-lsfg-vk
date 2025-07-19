@@ -134,7 +134,7 @@ def test_config_roundtrip():
             performance_mode=False,
             hdr_mode=True,
             experimental_present_mode="immediate",
-            experimental_fps_limit=30,
+            dxvk_frame_rate=30,
             enable_wow64=True,
             disable_steamdeck_mode=False
         )
@@ -152,7 +152,7 @@ def test_config_roundtrip():
         assert config["performance_mode"] is False
         assert config["hdr_mode"] is True
         assert config["experimental_present_mode"] == "immediate"
-        assert config["experimental_fps_limit"] == 30
+        assert config["dxvk_frame_rate"] == 30
         assert config["enable_wow64"] is True
         assert config["disable_steamdeck_mode"] is False
         
