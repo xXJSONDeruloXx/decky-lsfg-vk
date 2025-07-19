@@ -28,24 +28,6 @@ export function ConfigurationSection({
         </div>
       </PanelSectionRow>
 
-      {/* <PanelSectionRow>
-        <ToggleField
-          label="Enable LSFG"
-          description="Enables lsfg globally (apply before launching games)"
-          checked={config.enable}
-          onChange={(value) => onConfigChange('enable', value)}
-        />
-      </PanelSectionRow> */}
-
-      {/* <PanelSectionRow>
-        <TextField
-          label="Lossless.dll Path"
-          description="specify where Lossless.dll is stored"
-          value={config.dll}
-          onChange={(e) => onConfigChange('dll', e.target.value)}
-        />
-      </PanelSectionRow> */}
-
       <PanelSectionRow>
         <SliderField
           label="FPS Multiplier"
@@ -56,11 +38,13 @@ export function ConfigurationSection({
           step={1}
           notchCount={4}
           notchLabels={[
-            { notchIndex: 1, label: "OFF" },
-            { notchIndex: 2, label: "2X" },
-            { notchIndex: 3, label: "3X" },
-            { notchIndex: 4, label: "4X" }
+            { notchIndex: 0, label: "OFF", value: 1 },
+            { notchIndex: 1, label: "2X", value: 2 },
+            { notchIndex: 2, label: "3X", value: 3 },
+            { notchIndex: 3, label: "4X", value: 4 }
           ]}
+          showValue={false}
+          notchTicksVisible={true}
           onChange={(value) => onConfigChange('multiplier', value)}
         />
       </PanelSectionRow>
