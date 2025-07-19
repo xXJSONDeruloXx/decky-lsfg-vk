@@ -186,8 +186,8 @@ class Plugin:
 
     async def update_lsfg_config(self, dll: str, multiplier: int, flow_scale: float, 
                           performance_mode: bool, hdr_mode: bool, 
-                          experimental_present_mode: str = "", 
-                          experimental_fps_limit: int = 0,
+                          experimental_present_mode: str = "fifo", 
+                          dxvk_frame_rate: int = 0,
                           enable_wow64: bool = False,
                           disable_steamdeck_mode: bool = False) -> Dict[str, Any]:
         """Update lsfg TOML configuration
@@ -199,7 +199,7 @@ class Plugin:
             performance_mode: Whether to enable performance mode
             hdr_mode: Whether to enable HDR mode
             experimental_present_mode: Experimental Vulkan present mode override
-            experimental_fps_limit: Experimental FPS limit for DXVK games
+            dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
             enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
             disable_steamdeck_mode: Whether to disable Steam Deck mode
             
@@ -208,7 +208,7 @@ class Plugin:
         """
         return self.configuration_service.update_config(
             dll, multiplier, flow_scale, performance_mode, hdr_mode,
-            experimental_present_mode, experimental_fps_limit, enable_wow64, disable_steamdeck_mode
+            experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
         )
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:

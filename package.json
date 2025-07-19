@@ -1,6 +1,6 @@
 {
-  "name": "lossless-scaling-vk",
-  "version": "0.6.3",
+  "name": "decky-lossless-scaling-vk",
+  "version": "0.6.5",
   "description": "Use Lossless Scaling on the Steam Deck using the lsfg-vk vulkan layer",
   "type": "module",
   "scripts": {
@@ -46,8 +46,8 @@
   "remote_binary": [
     {
       "name": "lsfg-vk_archlinux.zip",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16378130046/lsfg-vk_archlinux.zip",
-      "sha256hash": "779f2081a7b3096a116f3395a0d12f436bccacdee0a05b9dcf0e11c61f51b2ad"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16389394927/lsfg-vk_archlinux.zip",
+      "sha256hash": "3ef1e2e89652f83089e326c67a7dbf586bcdb8cf5c427f300abd8887d733d6fa"
     }
 
   ],
