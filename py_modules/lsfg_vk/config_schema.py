@@ -356,9 +356,9 @@ class ConfigurationManager:
                     elif key == "SteamDeck":
                         script_values["disable_steamdeck_mode"] = value == "0"
             
-        except Exception:
-            # If parsing fails, return empty dict (will use defaults)
-            pass
+        except (ValueError, KeyError, IndexError) as e:
+            # If parsing fails, log the error and return empty dict (will use defaults)
+            print(f"Error parsing script content: {e}")
         
         return script_values
     
