@@ -10,6 +10,7 @@ import json
 import subprocess
 import urllib.request
 import ssl
+import hashlib
 from typing import Dict, Any
 from pathlib import Path
 
@@ -100,6 +101,67 @@ class Plugin:
                 result_dict["message"] = f"DLL detected but config update failed: {str(e)}"
         
         return result_dict
+
+    async def get_dll_stats(self) -> Dict[str, Any]:
+        """Get detailed statistics about the detected DLL
+        
+        Returns:
+            Dict containing DLL path, SHA256 hash, and other stats
+        """
+        try:
+            # First check if DLL is detected
+            dll_result = self.dll_detection_service.check_lossless_scaling_dll()
+            
+            if not dll_result.get("detected") or not dll_result.get("path"):
+                return {
+                    "success": False,
+                    "error": "DLL not detected",
+                    "dll_path": None,
+                    "dll_sha256": None
+                }
+            
+            dll_path = dll_result["path"]
+            if dll_path is None:
+                return {
+                    "success": False,
+                    "error": "DLL path is None",
+                    "dll_path": None,
+                    "dll_sha256": None
+                }
+            
+            dll_path_obj = Path(dll_path)
+            
+            # Calculate SHA256 hash
+            sha256_hash = hashlib.sha256()
+            try:
+                with open(dll_path_obj, "rb") as f:
+                    # Read file in chunks to handle large files efficiently
+                    for chunk in iter(lambda: f.read(4096), b""):
+                        sha256_hash.update(chunk)
+                dll_sha256 = sha256_hash.hexdigest()
+            except Exception as e:
+                return {
+                    "success": False,
+                    "error": f"Failed to calculate SHA256: {str(e)}",
+                    "dll_path": dll_path,
+                    "dll_sha256": None
+                }
+            
+            return {
+                "success": True,
+                "dll_path": dll_path,
+                "dll_sha256": dll_sha256,
+                "dll_source": dll_result.get("source"),
+                "error": None
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to get DLL stats: {str(e)}",
+                "dll_path": None,
+                "dll_sha256": None
+            }
 
     # Configuration methods
     async def get_lsfg_config(self) -> Dict[str, Any]:

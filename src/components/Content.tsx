@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { PanelSection } from "@decky/ui";
+import { PanelSection, showModal, ButtonItem, PanelSectionRow } from "@decky/ui";
 import { useInstallationStatus, useDllDetection, useLsfgConfig } from "../hooks/useLsfgHooks";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { StatusDisplay } from "./StatusDisplay";
@@ -9,6 +9,7 @@ import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
+import { NerdStuffModal } from "./NerdStuffModal";
 import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
@@ -49,6 +50,10 @@ export function Content() {
     handleUninstall(setIsInstalled, setInstallationStatus);
   };
 
+  const handleShowNerdStuff = () => {
+    showModal(<NerdStuffModal />);
+  };
+
   return (
     <PanelSection>
       <InstallationButton
@@ -81,6 +86,16 @@ export function Content() {
       
       {/* Plugin Update Checker */}
       <PluginUpdateChecker />
+      
+      {/* Nerd Stuff Button */}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleShowNerdStuff}
+        >
+          Nerd Stuff
+        </ButtonItem>
+      </PanelSectionRow>
     </PanelSection>
   );
 }
