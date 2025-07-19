@@ -1,7 +1,7 @@
 """
 Centralized configuration schema for lsfg-vk.
 
-This module defines the complete configuration structure for TOML-based config files, including:
+This module defines the complete configuration structure for lsfg-vk, managing TOML-based config files, including:
 - Field definitions with types, defaults, and metadata
 - TOML generation logic
 - Validation rules
@@ -76,15 +76,18 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
     "experimental_present_mode": ConfigField(
         name="experimental_present_mode",
         field_type=ConfigFieldType.STRING,
-        default="",
-        description="experimental: override vulkan present mode (empty/fifo/vsync/mailbox/immediate)"
+        default="fifo",
+        description="experimental: override vulkan present mode (fifo/mailbox/immediate)"
     ),
-    
-    "experimental_fps_limit": ConfigField(
-        name="experimental_fps_limit",
+}
+
+# Fields that should ONLY be in the lsfg script, not in TOML config
+SCRIPT_ONLY_FIELDS = {
+    "dxvk_frame_rate": ConfigField(
+        name="dxvk_frame_rate",
         field_type=ConfigFieldType.INTEGER,
         default=0,
-        description="experimental: base framerate cap for dxvk games, before frame multiplier (0 = disabled)"
+        description="base framerate cap for DirectX games, before frame multiplier (0 = disabled, requires game re-launch)"
     ),
     
     "enable_wow64": ConfigField(
@@ -102,6 +105,9 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
     )
 }
 
+# Complete configuration schema (TOML + script-only fields)
+COMPLETE_CONFIG_SCHEMA = {**CONFIG_SCHEMA, **SCRIPT_ONLY_FIELDS}
+
 
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure"""
@@ -111,7 +117,7 @@ class ConfigurationData(TypedDict):
     performance_mode: bool
     hdr_mode: bool
     experimental_present_mode: str
-    experimental_fps_limit: int
+    dxvk_frame_rate: int
     enable_wow64: bool
     disable_steamdeck_mode: bool
 
@@ -124,7 +130,7 @@ class ConfigurationManager:
         """Get default configuration values"""
         return cast(ConfigurationData, {
             field.name: field.default 
-            for field in CONFIG_SCHEMA.values()
+            for field in COMPLETE_CONFIG_SCHEMA.values()
         })
     
     @staticmethod
@@ -158,7 +164,7 @@ class ConfigurationManager:
     @staticmethod
     def get_field_names() -> list[str]:
         """Get ordered list of configuration field names"""
-        return list(CONFIG_SCHEMA.keys())
+        return list(COMPLETE_CONFIG_SCHEMA.keys())
     
     @staticmethod
     def get_field_types() -> Dict[str, ConfigFieldType]:
@@ -173,7 +179,7 @@ class ConfigurationManager:
         """Validate and convert configuration data"""
         validated = {}
         
-        for field_name, field_def in CONFIG_SCHEMA.items():
+        for field_name, field_def in COMPLETE_CONFIG_SCHEMA.items():
             value = config.get(field_name, field_def.default)
             
             # Type validation and conversion
@@ -312,8 +318,8 @@ class ConfigurationManager:
     @staticmethod
     def create_config_from_args(dll: str, multiplier: int, flow_scale: float, 
                                performance_mode: bool, hdr_mode: bool, 
-                               experimental_present_mode: str = "", 
-                               experimental_fps_limit: int = 0,
+                               experimental_present_mode: str = "fifo", 
+                               dxvk_frame_rate: int = 0,
                                enable_wow64: bool = False,
                                disable_steamdeck_mode: bool = False) -> ConfigurationData:
         """Create configuration from individual arguments"""
@@ -324,7 +330,7 @@ class ConfigurationManager:
             "performance_mode": performance_mode,
             "hdr_mode": hdr_mode,
             "experimental_present_mode": experimental_present_mode,
-            "experimental_fps_limit": experimental_fps_limit,
+            "dxvk_frame_rate": dxvk_frame_rate,
             "enable_wow64": enable_wow64,
             "disable_steamdeck_mode": disable_steamdeck_mode
         })
