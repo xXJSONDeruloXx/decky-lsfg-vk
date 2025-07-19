@@ -184,7 +184,7 @@ class Plugin:
             "defaults": ConfigurationManager.get_defaults()
         }
 
-    async def update_lsfg_config(self, enable: bool, dll: str, multiplier: int, flow_scale: float, 
+    async def update_lsfg_config(self, dll: str, multiplier: int, flow_scale: float, 
                           performance_mode: bool, hdr_mode: bool, 
                           experimental_present_mode: str = "", 
                           experimental_fps_limit: int = 0,
@@ -193,7 +193,6 @@ class Plugin:
         """Update lsfg TOML configuration
         
         Args:
-            enable: Whether to enable LSFG
             dll: Path to Lossless.dll
             multiplier: LSFG multiplier value
             flow_scale: LSFG flow scale value
@@ -208,7 +207,7 @@ class Plugin:
             ConfigurationResponse dict with success status
         """
         return self.configuration_service.update_config(
-            enable, dll, multiplier, flow_scale, performance_mode, hdr_mode,
+            dll, multiplier, flow_scale, performance_mode, hdr_mode,
             experimental_present_mode, experimental_fps_limit, enable_wow64, disable_steamdeck_mode
         )
 

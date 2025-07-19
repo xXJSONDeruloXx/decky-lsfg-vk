@@ -33,10 +33,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
             whiteSpace: "pre-wrap"
           }}
         >
-          {config.enable 
-            ? "Add the launch option below (or use \"Launch Option Clipboard\") to Steam games to activate frame generation."
-            : "LSFG is disabled. Enable it above and add the launch option to activate frame generation."
-          }
+          Add the launch option below (or use "Launch Option Clipboard") to Steam games to activate frame generation.
         </div>
       </PanelSectionRow>
 
@@ -69,7 +66,6 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
           }}
         >
           {`Current Configuration:
-• Enable: ${config.enable ? "Yes" : "No"}
 • DLL Path: ${config.dll}
 • Multiplier: ${config.multiplier}x
 • Flow Scale: ${Math.round(config.flow_scale * 100)}%

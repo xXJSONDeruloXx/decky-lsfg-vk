@@ -23,13 +23,6 @@ export interface ConfigField {
 
 // Configuration schema - must match Python CONFIG_SCHEMA
 export const CONFIG_SCHEMA: Record<string, ConfigField> = {
-  enable: {
-    name: "enable",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: true,
-    description: "enable/disable lsfg on every game"
-  },
-  
   dll: {
     name: "dll",
     fieldType: ConfigFieldType.STRING,
@@ -40,7 +33,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   multiplier: {
     name: "multiplier",
     fieldType: ConfigFieldType.INTEGER,
-    default: 2,
+    default: 1,
     description: "change the fps multiplier"
   },
   
@@ -96,7 +89,6 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
 
 // Type-safe configuration data structure
 export interface ConfigurationData {
-  enable: boolean;
   dll: string;
   multiplier: number;
   flow_scale: number;
