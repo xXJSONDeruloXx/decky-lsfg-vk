@@ -128,7 +128,6 @@ def test_config_roundtrip():
         
         # Update config
         result = service.update_config(
-            enable=True,
             dll="/path/to/dll",
             multiplier=3,
             flow_scale=1.5,
@@ -147,7 +146,6 @@ def test_config_roundtrip():
         
         assert read_result["success"] is True
         config = read_result["config"]
-        assert config["enable"] is True
         assert config["dll"] == "/path/to/dll"
         assert config["multiplier"] == 3
         assert config["flow_scale"] == 1.5
