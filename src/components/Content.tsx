@@ -7,6 +7,7 @@ import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
+import { ClipboardButton } from "./ClipboardButton";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
@@ -82,6 +83,7 @@ export function Content() {
       <UsageInstructions config={config} />
       
       <WikiButton />
+      <ClipboardButton />
       <SmartClipboardButton />
       
       {/* Plugin Update Checker */}

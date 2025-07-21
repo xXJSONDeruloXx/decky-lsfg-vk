@@ -1,5 +1,5 @@
 import { PanelSectionRow, ButtonItem } from "@decky/ui";
-import { FaClipboard } from "react-icons/fa";
+import { FaBook } from "react-icons/fa";
 
 export function ClipboardButton() {
   const handleClipboardClick = () => {
@@ -13,8 +13,8 @@ export function ClipboardButton() {
         onClick={handleClipboardClick}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <FaClipboard />
-          <div>Launch Option Clipboard</div>
+          <FaBook />
+          <div>Plugin Wiki</div>
         </div>
       </ButtonItem>
     </PanelSectionRow>
