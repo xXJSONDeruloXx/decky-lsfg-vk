@@ -8,6 +8,8 @@ import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
+import { SmartClipboardButton } from "./SmartClipboardButton";
+import { ClipboardExperiments } from "./ClipboardExperiments";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
 import { ConfigurationData } from "../config/configSchema";
@@ -83,6 +85,10 @@ export function Content() {
       
       <WikiButton />
       <ClipboardButton />
+      <SmartClipboardButton />
+      
+      {/* Experimental Clipboard Automation */}
+      <ClipboardExperiments />
       
       {/* Plugin Update Checker */}
       <PluginUpdateChecker />
