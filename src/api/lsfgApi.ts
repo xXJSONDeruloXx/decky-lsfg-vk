@@ -36,13 +36,6 @@ export interface DllStatsResult {
   error?: string;
 }
 
-export interface ClipboardResult {
-  success: boolean;
-  method?: string;
-  message?: string;
-  error?: string;
-}
-
 // Use centralized configuration data type
 export type LsfgConfig = ConfigurationData;
 
@@ -105,9 +98,6 @@ export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_sche
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
-
-// Clipboard API
-export const copyToSystemClipboard = callable<[string], ClipboardResult>("copy_to_system_clipboard");
 
 // Updated config function using centralized configuration
 export const updateLsfgConfig = callable<
