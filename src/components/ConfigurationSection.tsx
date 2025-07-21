@@ -1,5 +1,6 @@
 import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
+import { FpsMultiplierField } from "./FpsMultiplierField";
 
 interface ConfigurationSectionProps {
   config: ConfigurationData;
@@ -29,22 +30,10 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <SliderField
+        <FpsMultiplierField
           label="FPS Multiplier"
           description="Traditional FPS multiplier value"
           value={config.multiplier}
-          min={1}
-          max={4}
-          step={1}
-          notchCount={4}
-          notchLabels={[
-            { notchIndex: 0, label: "OFF", value: 1 },
-            { notchIndex: 1, label: "2X", value: 2 },
-            { notchIndex: 2, label: "3X", value: 3 },
-            { notchIndex: 3, label: "4X", value: 4 }
-          ]}
-          showValue={false}
-          notchTicksVisible={true}
           onChange={(value) => onConfigChange('multiplier', value)}
         />
       </PanelSectionRow>
