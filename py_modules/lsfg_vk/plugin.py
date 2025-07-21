@@ -432,7 +432,7 @@ class Plugin:
 
     # File content methods
     async def get_config_file_content(self) -> Dict[str, Any]:
-        """Get the current TOML configuration file content
+        """Get the current config file content
         
         Returns:
             Dict containing the config file content or error message
@@ -444,7 +444,7 @@ class Plugin:
                     "success": False,
                     "content": None,
                     "path": str(config_path),
-                    "error": "Configuration file does not exist"
+                    "error": "Config file does not exist"
                 }
             
             content = config_path.read_text(encoding='utf-8')
@@ -469,7 +469,7 @@ class Plugin:
             Dict containing the launch script content or error message
         """
         try:
-            script_path = self.installation_service.lsfg_launch_script_path
+            script_path = self.installation_service.lsfg_script_path
             if not script_path.exists():
                 return {
                     "success": False,
