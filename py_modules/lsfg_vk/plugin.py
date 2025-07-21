@@ -432,7 +432,7 @@ class Plugin:
 
     # File content methods
     async def get_config_file_content(self) -> Dict[str, Any]:
-        """Get the current config file content
+        """Get the current TOML configuration file content
         
         Returns:
             Dict containing the config file content or error message
@@ -444,7 +444,7 @@ class Plugin:
                     "success": False,
                     "content": None,
                     "path": str(config_path),
-                    "error": "Config file does not exist"
+                    "error": "Configuration file does not exist"
                 }
             
             content = config_path.read_text(encoding='utf-8')
@@ -469,7 +469,7 @@ class Plugin:
             Dict containing the launch script content or error message
         """
         try:
-            script_path = self.installation_service.lsfg_script_path
+            script_path = self.installation_service.lsfg_launch_script_path
             if not script_path.exists():
                 return {
                     "success": False,
@@ -492,6 +492,87 @@ class Plugin:
                 "path": str(script_path) if 'script_path' in locals() else "unknown",
                 "error": f"Error reading launch script: {str(e)}"
             }
+
+    async def copy_to_system_clipboard(self, text: str) -> Dict[str, Any]:
+        """Copy text to system clipboard using native tools
+        
+        Args:
+            text: The text to copy to clipboard
+            
+        Returns:
+            Dict indicating success or failure
+        """
+        try:
+            # Detect desktop environment and available clipboard tools
+            clipboard_tools = []
+            
+            # Check for Wayland (wl-clipboard)
+            if os.environ.get('WAYLAND_DISPLAY'):
+                if self._command_exists('wl-copy'):
+                    clipboard_tools.append(('wl-copy', lambda t: subprocess.run(['wl-copy'], input=t, text=True, check=True)))
+            
+            # Check for X11 (xclip or xsel)
+            if os.environ.get('DISPLAY'):
+                if self._command_exists('xclip'):
+                    clipboard_tools.append(('xclip', lambda t: subprocess.run(['xclip', '-selection', 'clipboard'], input=t, text=True, check=True)))
+                elif self._command_exists('xsel'):
+                    clipboard_tools.append(('xsel', lambda t: subprocess.run(['xsel', '--clipboard', '--input'], input=t, text=True, check=True)))
+            
+            # Check for pbcopy (macOS - unlikely on Steam Deck but just in case)
+            if self._command_exists('pbcopy'):
+                clipboard_tools.append(('pbcopy', lambda t: subprocess.run(['pbcopy'], input=t, text=True, check=True)))
+            
+            if not clipboard_tools:
+                return {
+                    "success": False,
+                    "error": "No compatible clipboard tools found (tried: wl-copy, xclip, xsel, pbcopy)",
+                    "method": None
+                }
+            
+            # Try each clipboard tool until one works
+            for tool_name, copy_func in clipboard_tools:
+                try:
+                    copy_func(text)
+                    return {
+                        "success": True,
+                        "method": tool_name,
+                        "message": f"Successfully copied text using {tool_name}"
+                    }
+                except subprocess.CalledProcessError as e:
+                    continue  # Try next tool
+                except Exception as e:
+                    continue  # Try next tool
+            
+            return {
+                "success": False,
+                "error": "All clipboard tools failed to copy text",
+                "method": None
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error accessing system clipboard: {str(e)}",
+                "method": None
+            }
+
+    def _command_exists(self, command: str) -> bool:
+        """Check if a command exists in the system PATH
+        
+        Args:
+            command: Command name to check
+            
+        Returns:
+            True if command exists, False otherwise
+        """
+        try:
+            subprocess.run(['which', command], 
+                         stdout=subprocess.DEVNULL, 
+                         stderr=subprocess.DEVNULL, 
+                         check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
 
     # Lifecycle methods
     async def _main(self):
