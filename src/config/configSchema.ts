@@ -84,6 +84,13 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
     description: "disable Steam Deck mode (unlocks hidden settings in some games)"
+  },
+  
+  unlock_higher_multipliers: {
+    name: "unlock_higher_multipliers",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "unlock higher FPS multipliers up to 10X (unstable)"
   }
 };
 
@@ -98,6 +105,7 @@ export interface ConfigurationData {
   dxvk_frame_rate: number;
   enable_wow64: boolean;
   disable_steamdeck_mode: boolean;
+  unlock_higher_multipliers: boolean;
 }
 
 // Centralized configuration manager

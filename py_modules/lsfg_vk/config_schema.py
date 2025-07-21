@@ -102,6 +102,13 @@ SCRIPT_ONLY_FIELDS = {
         field_type=ConfigFieldType.BOOLEAN,
         default=False,
         description="disable Steam Deck mode (unlocks hidden settings in some games)"
+    ),
+    
+    "unlock_higher_multipliers": ConfigField(
+        name="unlock_higher_multipliers",
+        field_type=ConfigFieldType.BOOLEAN,
+        default=False,
+        description="unlock higher FPS multipliers up to 10X (unstable)"
     )
 }
 
@@ -120,6 +127,7 @@ class ConfigurationData(TypedDict):
     dxvk_frame_rate: int
     enable_wow64: bool
     disable_steamdeck_mode: bool
+    unlock_higher_multipliers: bool
 
 
 class ConfigurationManager:
@@ -388,7 +396,8 @@ class ConfigurationManager:
                                experimental_present_mode: str = "fifo", 
                                dxvk_frame_rate: int = 0,
                                enable_wow64: bool = False,
-                               disable_steamdeck_mode: bool = False) -> ConfigurationData:
+                               disable_steamdeck_mode: bool = False,
+                               unlock_higher_multipliers: bool = False) -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
             "dll": dll,
@@ -399,5 +408,6 @@ class ConfigurationManager:
             "experimental_present_mode": experimental_present_mode,
             "dxvk_frame_rate": dxvk_frame_rate,
             "enable_wow64": enable_wow64,
-            "disable_steamdeck_mode": disable_steamdeck_mode
+            "disable_steamdeck_mode": disable_steamdeck_mode,
+            "unlock_higher_multipliers": unlock_higher_multipliers
         })

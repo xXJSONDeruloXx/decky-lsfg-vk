@@ -11,7 +11,7 @@ import subprocess
 import urllib.request
 import ssl
 import hashlib
-from typing import Dict, Any
+from typing import Dict, Any, cast
 from pathlib import Path
 
 from .installation import InstallationService
@@ -38,37 +38,21 @@ class Plugin:
 
     # Installation methods
     async def install_lsfg_vk(self) -> Dict[str, Any]:
-        """Install lsfg-vk by extracting the zip file to ~/.local
-        
-        Returns:
-            InstallationResponse dict with success status and message/error
-        """
-        return self.installation_service.install()
+        """Install lsfg-vk layer"""
+        return cast(Dict[str, Any], self.installation_service.install())
 
-    async def check_lsfg_vk_installed(self) -> Dict[str, Any]:
-        """Check if lsfg-vk is already installed
-        
-        Returns:
-            InstallationCheckResponse dict with installation status and paths
-        """
-        return self.installation_service.check_installation()
+    async def check_installation(self) -> Dict[str, Any]:
+        """Check installation status"""
+        return cast(Dict[str, Any], self.installation_service.check_installation())
 
     async def uninstall_lsfg_vk(self) -> Dict[str, Any]:
-        """Uninstall lsfg-vk by removing the installed files
-        
-        Returns:
-            UninstallationResponse dict with success status and removed files
-        """
-        return self.installation_service.uninstall()
+        """Uninstall lsfg-vk layer"""
+        return cast(Dict[str, Any], self.installation_service.uninstall())
 
     # DLL detection methods
     async def check_lossless_scaling_dll(self) -> Dict[str, Any]:
-        """Check if Lossless Scaling DLL is available at the expected paths
-        
-        Returns:
-            DllDetectionResponse dict with detection status and path info
-        """
-        return self.dll_detection_service.check_lossless_scaling_dll()
+        """Check for Lossless.dll in common directories"""
+        return cast(Dict[str, Any], self.dll_detection_service.check_lossless_scaling_dll())
 
     async def check_lossless_scaling_dll_and_update_config(self) -> Dict[str, Any]:
         """Check for DLL and automatically update configuration if found
@@ -170,7 +154,7 @@ class Plugin:
         Returns:
             ConfigurationResponse dict with current configuration or error
         """
-        return self.configuration_service.get_config()
+        return cast(Dict[str, Any], self.configuration_service.get_config())
 
     async def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema information for frontend
@@ -189,7 +173,8 @@ class Plugin:
                           experimental_present_mode: str = "fifo", 
                           dxvk_frame_rate: int = 0,
                           enable_wow64: bool = False,
-                          disable_steamdeck_mode: bool = False) -> Dict[str, Any]:
+                          disable_steamdeck_mode: bool = False,
+                          unlock_higher_multipliers: bool = False) -> Dict[str, Any]:
         """Update lsfg TOML configuration
         
         Args:
@@ -202,14 +187,16 @@ class Plugin:
             dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
             enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
             disable_steamdeck_mode: Whether to disable Steam Deck mode
+            unlock_higher_multipliers: Whether to unlock higher FPS multipliers (unstable)
             
         Returns:
             ConfigurationResponse dict with success status
         """
-        return self.configuration_service.update_config(
+        return cast(Dict[str, Any], self.configuration_service.update_config(
             dll, multiplier, flow_scale, performance_mode, hdr_mode,
-            experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
-        )
+            experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
+            unlock_higher_multipliers
+        ))
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
         """Update the DLL path in the configuration when detected
@@ -220,7 +207,7 @@ class Plugin:
         Returns:
             ConfigurationResponse dict with success status
         """
-        return self.configuration_service.update_dll_path(dll_path)
+        return cast(Dict[str, Any], self.configuration_service.update_dll_path(dll_path))
 
     # Self-updater methods
     async def check_for_plugin_update(self) -> Dict[str, Any]:

@@ -78,7 +78,8 @@ class ConfigurationService(BaseService):
                      experimental_present_mode: str = "fifo", 
                      dxvk_frame_rate: int = 0,
                      enable_wow64: bool = False,
-                     disable_steamdeck_mode: bool = False) -> ConfigurationResponse:
+                     disable_steamdeck_mode: bool = False,
+                     unlock_higher_multipliers: bool = False) -> ConfigurationResponse:
         """Update TOML configuration
         
         Args:
@@ -91,6 +92,7 @@ class ConfigurationService(BaseService):
             dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
             enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
             disable_steamdeck_mode: Whether to disable Steam Deck mode
+            unlock_higher_multipliers: Whether to unlock higher FPS multipliers (unstable)
             
         Returns:
             ConfigurationResponse with success status
@@ -99,7 +101,8 @@ class ConfigurationService(BaseService):
             # Create configuration from individual arguments
             config = ConfigurationManager.create_config_from_args(
                 dll, multiplier, flow_scale, performance_mode, hdr_mode,
-                experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
+                experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
+                unlock_higher_multipliers
             )
             
             # Generate TOML content using centralized manager

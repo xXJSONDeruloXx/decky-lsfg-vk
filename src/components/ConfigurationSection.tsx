@@ -34,7 +34,9 @@ export function ConfigurationSection({
           label="FPS Multiplier"
           description="Traditional FPS multiplier value"
           value={config.multiplier}
+          unlock={config.unlock_higher_multipliers}
           onChange={(value) => onConfigChange('multiplier', value)}
+          onUnlockChange={(value) => onConfigChange('unlock_higher_multipliers', value)}
         />
       </PanelSectionRow>
 
