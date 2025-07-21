@@ -33,7 +33,7 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
             whiteSpace: "pre-wrap"
           }}
         >
-          Add the launch option below (or use "Launch Option Clipboard") to Steam games to activate frame generation.
+          Click "Copy Launch Option" button, then paste it into your Steam game's launch options to enable frame generation.
         </div>
       </PanelSectionRow>
 

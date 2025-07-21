@@ -8,6 +8,7 @@ import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
+import { SmartClipboardButton } from "./SmartClipboardButton";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
 import { ConfigurationData } from "../config/configSchema";
@@ -70,6 +71,8 @@ export function Content() {
         isInstalled={isInstalled}
         installationStatus={installationStatus}
       />
+      
+      <SmartClipboardButton />
 
       {/* Configuration Section - only show if installed */}
       {isInstalled && (
@@ -85,9 +88,7 @@ export function Content() {
       <ClipboardButton />
       
       {/* Plugin Update Checker */}
-      <PluginUpdateChecker />
-      
-      {/* Nerd Stuff Button */}
+      <PluginUpdateChecker />      {/* Nerd Stuff Button */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
