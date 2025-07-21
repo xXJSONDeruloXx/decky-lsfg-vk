@@ -4,7 +4,7 @@ export { InstallationButton } from "./InstallationButton";
 export { ConfigurationSection } from "./ConfigurationSection";
 // export { UsageInstructions } from "./UsageInstructions";
 export { WikiButton } from "./WikiButton";
-export { ClipboardButton } from "./ClipboardButton";
+export { SmartClipboardButton } from "./SmartClipboardButton";
 export { LaunchOptionInfo } from "./LaunchOptionInfo";
 export { PluginUpdateChecker } from "./PluginUpdateChecker";
 export { NerdStuffModal } from "./NerdStuffModal";
