@@ -71,6 +71,8 @@ export function Content() {
         isInstalled={isInstalled}
         installationStatus={installationStatus}
       />
+      
+      <SmartClipboardButton />
 
       {/* Configuration Section - only show if installed */}
       {isInstalled && (
@@ -84,7 +86,6 @@ export function Content() {
       
       <WikiButton />
       <ClipboardButton />
-      <SmartClipboardButton />
       
       {/* Plugin Update Checker */}
       <PluginUpdateChecker />      {/* Nerd Stuff Button */}
