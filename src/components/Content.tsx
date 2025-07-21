@@ -7,9 +7,7 @@ import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
-import { ClipboardButton } from "./ClipboardButton";
 import { SmartClipboardButton } from "./SmartClipboardButton";
-import { ClipboardExperiments } from "./ClipboardExperiments";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
 import { ConfigurationData } from "../config/configSchema";
@@ -84,16 +82,10 @@ export function Content() {
       <UsageInstructions config={config} />
       
       <WikiButton />
-      <ClipboardButton />
       <SmartClipboardButton />
       
-      {/* Experimental Clipboard Automation */}
-      <ClipboardExperiments />
-      
       {/* Plugin Update Checker */}
-      <PluginUpdateChecker />
-      
-      {/* Nerd Stuff Button */}
+      <PluginUpdateChecker />      {/* Nerd Stuff Button */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
