@@ -114,7 +114,7 @@ def generate_typescript_schema():
 
 
 def main():
-    """Main function to generate TypeScript schema"""
+    """Main function to generate TypeScript schema and Python boilerplate"""
     try:
         # Generate the TypeScript content
         ts_content = generate_typescript_schema()
@@ -126,8 +126,22 @@ def main():
         print(f"✅ Generated {target_file} from shared_config.py")
         print(f"   Fields: {len(CONFIG_SCHEMA_DEF)}")
         
+        # Also generate Python boilerplate
+        print("\n🔄 Generating Python boilerplate...")
+        from pathlib import Path
+        import subprocess
+        
+        boilerplate_script = project_root / "scripts" / "generate_python_boilerplate.py"
+        result = subprocess.run([sys.executable, str(boilerplate_script)], 
+                              capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print(result.stdout)
+        else:
+            print(f"⚠️  Python boilerplate generation had issues:\n{result.stderr}")
+        
     except Exception as e:
-        print(f"❌ Error generating TypeScript schema: {e}")
+        print(f"❌ Error generating schema: {e}")
         sys.exit(1)
 
 
