@@ -5,7 +5,7 @@ interface UsageInstructionsProps {
   config: ConfigurationData;
 }
 
-export function UsageInstructions({ config }: UsageInstructionsProps) {
+export function UsageInstructions({ config: _config }: UsageInstructionsProps) {
   return (
     <>
       <PanelSectionRow>
@@ -55,26 +55,6 @@ export function UsageInstructions({ config }: UsageInstructionsProps) {
           <strong>~/lsfg %command%</strong>
         </div>
       </PanelSectionRow>
-
-      {/* <PanelSectionRow>
-        <div
-          style={{
-            fontSize: "12px",
-            lineHeight: "1.4",
-            opacity: "0.8",
-            whiteSpace: "pre-wrap"
-          }}
-        >
-          {`Current Configuration:
-• DLL Path: ${config.dll}
-• Multiplier: ${config.multiplier}x
-• Flow Scale: ${Math.round(config.flow_scale * 100)}%
-• Performance Mode: ${config.performance_mode ? "Yes" : "No"}
-• HDR Mode: ${config.hdr_mode ? "Yes" : "No"}
-• Present Mode: ${config.experimental_present_mode || "FIFO (VSync)"}
-• DXVK Frame Rate: ${config.dxvk_frame_rate > 0 ? `${config.dxvk_frame_rate} FPS` : "Off"}`}
-        </div>
-      </PanelSectionRow> */}
 
       <PanelSectionRow>
         <div
