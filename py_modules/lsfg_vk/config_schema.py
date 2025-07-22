@@ -171,7 +171,9 @@ class ConfigurationManager:
         if config.get("dll"):
             lines.append("[global]")
             lines.append(f"# specify where Lossless.dll is stored")
-            lines.append(f'dll = "{config["dll"]}"')
+            # Generate TOML lines for TOML fields only - USE GENERATED CONSTANTS
+            from .config_schema_generated import DLL
+            lines.append(f'dll = "{config[DLL]}"')
             lines.append("")
         
         # Add game section with process name for LSFG_PROCESS approach
@@ -248,9 +250,10 @@ class ConfigurationManager:
                     elif value.startswith("'") and value.endswith("'"):
                         value = value[1:-1]
                     
-                    # Handle global section (dll only)
+                    # Handle global section (dll only) - USE GENERATED CONSTANTS
                     if in_global_section and key == "dll":
-                        config["dll"] = value
+                        from .config_schema_generated import DLL
+                        config[DLL] = value
                     
                     # Handle game section
                     elif in_game_section:
@@ -315,25 +318,8 @@ class ConfigurationManager:
         return cast(ConfigurationData, merged_config)
 
     @staticmethod
-    def create_config_from_args(dll: str, multiplier: int, flow_scale: float, 
-                               performance_mode: bool, hdr_mode: bool, 
-                               experimental_present_mode: str = "fifo", 
-                               dxvk_frame_rate: int = 0,
-                               enable_wow64: bool = False,
-                               disable_steamdeck_mode: bool = False,
-                               mangohud_workaround: bool = False,
-                               disable_vkbasalt: bool = False) -> ConfigurationData:
-        """Create configuration from individual arguments"""
-        return cast(ConfigurationData, {
-            "dll": dll,
-            "multiplier": multiplier,
-            "flow_scale": flow_scale,
-            "performance_mode": performance_mode,
-            "hdr_mode": hdr_mode,
-            "experimental_present_mode": experimental_present_mode,
-            "dxvk_frame_rate": dxvk_frame_rate,
-            "enable_wow64": enable_wow64,
-            "disable_steamdeck_mode": disable_steamdeck_mode,
-            "mangohud_workaround": mangohud_workaround,
-            "disable_vkbasalt": disable_vkbasalt
-        })
+    @staticmethod
+    def create_config_from_args(**kwargs) -> ConfigurationData:
+        """Create configuration from keyword arguments - USES GENERATED CODE"""
+        from .config_schema_generated import create_config_dict
+        return create_config_dict(**kwargs)

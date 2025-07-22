@@ -76,12 +76,12 @@ def generate_function_signature() -> str:
 
 def generate_config_dict_creation() -> str:
     """Generate dictionary creation for create_config_from_args"""
-    lines = ["        return cast(ConfigurationData, {"]
+    lines = ["    return cast(ConfigurationData, {"]
     
     for field_name in CONFIG_SCHEMA_DEF.keys():
-        lines.append(f'            "{field_name}": {field_name},')
+        lines.append(f'        "{field_name}": kwargs.get("{field_name}"),')
     
-    lines.append("        })")
+    lines.append("    })")
     return "\n".join(lines)
 
 
@@ -180,6 +180,13 @@ def generate_log_statement() -> str:
 
 def generate_complete_schema_file() -> str:
     """Generate complete config_schema_generated.py file"""
+    
+    # Generate field name constants
+    field_constants = []
+    for field_name in CONFIG_SCHEMA_DEF.keys():
+        const_name = field_name.upper()
+        field_constants.append(f'{const_name} = "{field_name}"')
+    
     lines = [
         '"""',
         'Auto-generated configuration schema components from shared_config.py',
@@ -194,6 +201,9 @@ def generate_complete_schema_file() -> str:
         '# Import shared configuration constants',
         'sys.path.insert(0, str(Path(__file__).parent.parent.parent))',
         'from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType',
+        '',
+        '# Field name constants for type-safe access',
+    ] + field_constants + [
         '',
         '',
         generate_typed_dict(),

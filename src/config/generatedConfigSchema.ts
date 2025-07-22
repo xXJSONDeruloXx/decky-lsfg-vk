@@ -7,6 +7,19 @@ export enum ConfigFieldType {
   STRING = "string"
 }
 
+// Field name constants for type-safe access
+export const DLL = "dll" as const;
+export const MULTIPLIER = "multiplier" as const;
+export const FLOW_SCALE = "flow_scale" as const;
+export const PERFORMANCE_MODE = "performance_mode" as const;
+export const HDR_MODE = "hdr_mode" as const;
+export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
+export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
+export const ENABLE_WOW64 = "enable_wow64" as const;
+export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
+export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
+export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
+
 // Configuration field definition
 export interface ConfigField {
   name: string;

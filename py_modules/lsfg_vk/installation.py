@@ -121,9 +121,10 @@ class InstallationService(BaseService):
         self._write_file(self.config_file_path, toml_content, 0o644)
         self.log.info(f"Created config file at {self.config_file_path}")
         
-        # Log detected DLL path if found
-        if config["dll"]:
-            self.log.info(f"Configured DLL path: {config['dll']}")
+        # Log detected DLL path if found - USE GENERATED CONSTANTS
+        from .config_schema_generated import DLL
+        if config[DLL]:
+            self.log.info(f"Configured DLL path: {config[DLL]}")
     
     def _create_lsfg_launch_script(self) -> None:
         """Create the ~/lsfg launch script for easier game setup"""

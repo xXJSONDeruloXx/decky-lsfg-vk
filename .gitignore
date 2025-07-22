@@ -55,3 +55,8 @@ out/*
 cli/
 cli/*
 cli/decky
+
+# generated files
+py_modules/lsfg_vk/config_schema_generated.py
+py_modules/lsfg_vk/configuration_helpers_generated.py
+src/config/generatedConfigSchema.ts

@@ -103,39 +103,18 @@ class ConfigurationService(BaseService):
             self.log.error(error_msg)
             return self._error_response(ConfigurationResponse, str(e), config=None)
     
-    def update_config(self, dll: str, multiplier: int, flow_scale: float, 
-                     performance_mode: bool, hdr_mode: bool, 
-                     experimental_present_mode: str = "fifo", 
-                     dxvk_frame_rate: int = 0,
-                     enable_wow64: bool = False,
-                     disable_steamdeck_mode: bool = False,
-                     mangohud_workaround: bool = False,
-                     disable_vkbasalt: bool = False) -> ConfigurationResponse:
-        """Update TOML configuration
+    def update_config(self, **kwargs) -> ConfigurationResponse:
+        """Update TOML configuration using generated schema - SIMPLIFIED WITH GENERATED CODE
         
         Args:
-            dll: Path to Lossless.dll
-            multiplier: LSFG multiplier value
-            flow_scale: LSFG flow scale value
-            performance_mode: Whether to enable performance mode
-            hdr_mode: Whether to enable HDR mode
-            experimental_present_mode: Experimental Vulkan present mode override
-            dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
-            enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
-            disable_steamdeck_mode: Whether to disable Steam Deck mode
-            mangohud_workaround: Whether to enable MangoHud workaround with transparent overlay
-            disable_vkbasalt: Whether to disable vkBasalt layer
+            **kwargs: Configuration field values (see shared_config.py for available fields)
             
         Returns:
             ConfigurationResponse with success status
         """
         try:
-            # Create configuration from individual arguments
-            config = ConfigurationManager.create_config_from_args(
-                dll, multiplier, flow_scale, performance_mode, hdr_mode,
-                experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
-                mangohud_workaround, disable_vkbasalt
-            )
+            # Create configuration from keyword arguments using generated function
+            config = ConfigurationManager.create_config_from_args(**kwargs)
             
             # Generate TOML content using centralized manager
             toml_content = ConfigurationManager.generate_toml_content(config)
@@ -187,8 +166,9 @@ class ConfigurationService(BaseService):
             else:
                 config = current_response["config"]
             
-            # Update just the DLL path
-            config["dll"] = dll_path
+            # Update just the DLL path - USE GENERATED CONSTANTS
+            from .config_schema_generated import DLL
+            config[DLL] = dll_path
             
             # Generate TOML content and write it
             toml_content = ConfigurationManager.generate_toml_content(config)
