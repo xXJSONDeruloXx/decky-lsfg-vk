@@ -1,10 +1,4 @@
-/**
- * Auto-generated TypeScript configuration schema.
- * DO NOT EDIT MANUALLY - Generated from shared_config.py
- * 
- * To update this file, run: python3 generate_ts_config.py > src/config/generatedConfigSchema.ts
- */
-
+// src/config/generatedConfigSchema.ts
 // Configuration field type enum - matches Python
 export enum ConfigFieldType {
   BOOLEAN = "boolean",
