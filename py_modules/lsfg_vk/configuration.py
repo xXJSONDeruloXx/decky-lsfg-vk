@@ -60,6 +60,47 @@ class ConfigurationService(BaseService):
                                         f"Using default configuration due to parse error: {str(e)}", 
                                         config=config)
     
+    def update_config_from_dict(self, config: ConfigurationData) -> ConfigurationResponse:
+        """Update TOML configuration from configuration dictionary (eliminates parameter duplication)
+        
+        Args:
+            config: Complete configuration data dictionary
+            
+        Returns:
+            ConfigurationResponse with success status
+        """
+        try:
+            # Generate TOML content using centralized manager
+            toml_content = ConfigurationManager.generate_toml_content(config)
+            
+            # Ensure config directory exists
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Write the updated config directly to preserve inode for file watchers
+            self._write_file(self.config_file_path, toml_content, 0o644)
+            
+            # Update the launch script with the new configuration
+            script_result = self.update_lsfg_script(config)
+            if not script_result["success"]:
+                self.log.warning(f"Failed to update launch script: {script_result['error']}")
+            
+            # Log with dynamic field listing
+            field_values = ", ".join(f"{k}={repr(v)}" for k, v in config.items())
+            self.log.info(f"Updated lsfg configuration: {field_values}")
+            
+            return self._success_response(ConfigurationResponse,
+                                        "lsfg configuration updated successfully",
+                                        config=config)
+            
+        except (OSError, IOError) as e:
+            error_msg = f"Error updating lsfg config: {str(e)}"
+            self.log.error(error_msg)
+            return self._error_response(ConfigurationResponse, str(e), config=None)
+        except ValueError as e:
+            error_msg = f"Invalid configuration arguments: {str(e)}"
+            self.log.error(error_msg)
+            return self._error_response(ConfigurationResponse, str(e), config=None)
+    
     def update_config(self, dll: str, multiplier: int, flow_scale: float, 
                      performance_mode: bool, hdr_mode: bool, 
                      experimental_present_mode: str = "fifo", 
@@ -67,7 +108,9 @@ class ConfigurationService(BaseService):
                      enable_wow64: bool = False,
                      disable_steamdeck_mode: bool = False,
                      mangohud_workaround: bool = False,
-                     disable_vkbasalt: bool = False) -> ConfigurationResponse:
+                     disable_vkbasalt: bool = False,
+                     foobar_toggle: bool = False,
+                     test_config_only: str = "default_value") -> ConfigurationResponse:
         """Update TOML configuration
         
         Args:
@@ -82,6 +125,8 @@ class ConfigurationService(BaseService):
             disable_steamdeck_mode: Whether to disable Steam Deck mode
             mangohud_workaround: Whether to enable MangoHud workaround with transparent overlay
             disable_vkbasalt: Whether to disable vkBasalt layer
+            foobar_toggle: Test script-only toggle that exports FOOBAR=1
+            test_config_only: Test TOML-only configuration field
             
         Returns:
             ConfigurationResponse with success status
@@ -91,7 +136,7 @@ class ConfigurationService(BaseService):
             config = ConfigurationManager.create_config_from_args(
                 dll, multiplier, flow_scale, performance_mode, hdr_mode,
                 experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
-                mangohud_workaround, disable_vkbasalt
+                mangohud_workaround, disable_vkbasalt, foobar_toggle, test_config_only
             )
             
             # Generate TOML content using centralized manager
@@ -114,7 +159,8 @@ class ConfigurationService(BaseService):
                          f"experimental_present_mode='{experimental_present_mode}', "
                          f"dxvk_frame_rate={dxvk_frame_rate}, "
                          f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}, "
-                         f"mangohud_workaround={mangohud_workaround}, disable_vkbasalt={disable_vkbasalt}")
+                         f"mangohud_workaround={mangohud_workaround}, disable_vkbasalt={disable_vkbasalt}, "
+                         f"foobar_toggle={foobar_toggle}, test_config_only='{test_config_only}'")
             
             return self._success_response(ConfigurationResponse,
                                         "lsfg configuration updated successfully",
@@ -226,6 +272,9 @@ class ConfigurationService(BaseService):
         
         if config.get("disable_vkbasalt", False):
             lines.append("export DISABLE_VKBASALT=1")
+        
+        if config.get("foobar_toggle", False):
+            lines.append("export FOOBAR=1")
         
         # Add DXVK_FRAME_RATE if dxvk_frame_rate is set
         dxvk_frame_rate = config.get("dxvk_frame_rate", 0)
