@@ -34,23 +34,20 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <SliderField
+        <DropdownItem
           label="FPS Multiplier"
           description="Traditional FPS multiplier value"
-          value={config.multiplier}
-          min={1}
-          max={4}
-          step={1}
-          notchCount={4}
-          notchLabels={[
-            { notchIndex: 0, label: "OFF", value: 1 },
-            { notchIndex: 1, label: "2X", value: 2 },
-            { notchIndex: 2, label: "3X", value: 3 },
-            { notchIndex: 3, label: "4X", value: 4 }
+          menuLabel="Select FPS multiplier"
+          selectedOption={config.multiplier}
+          onChange={(value) => onConfigChange(MULTIPLIER, value.data)}
+          rgOptions={[
+            { data: 1, label: "OFF" },
+            { data: 2, label: "2X" },
+            { data: 3, label: "3X" },
+            { data: 4, label: "4X" },
+            { data: 5, label: "5X" },
+            { data: 6, label: "6X" },
           ]}
-          showValue={false}
-          notchTicksVisible={true}
-          onChange={(value) => onConfigChange(MULTIPLIER, value)}
         />
       </PanelSectionRow>
 
