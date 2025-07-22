@@ -1,7 +1,8 @@
-import { PanelSectionRow, ToggleField, SliderField, DropdownItem, DialogButton, Focusable } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
+import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
-  MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
+  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT
 } from "../config/generatedConfigSchema";
@@ -34,63 +35,7 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       {/* FPS Multiplier */}
-
-      <PanelSectionRow>
-        <Focusable
-          style={{
-            marginTop: "10px",
-            marginBottom: "10px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center"
-          }}
-          flow-children="horizontal"
-        >
-          <DialogButton
-            style={{
-              marginLeft: "0px",
-              height: "30px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "5px 0px 0px 0px",
-              minWidth: "40px",
-            }}
-            onClick={() => onConfigChange(MULTIPLIER, Math.max(1, config.multiplier - 1))}
-            disabled={config.multiplier <= 1}
-          >
-            −
-          </DialogButton>
-          <div
-            style={{
-              marginLeft: "20px",
-              marginRight: "20px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              color: "white",
-              minWidth: "60px",
-              textAlign: "center"
-            }}
-          >
-            {config.multiplier < 2 ? "OFF" : `${config.multiplier}X`}
-          </div>
-          <DialogButton
-            style={{
-              marginLeft: "0px",
-              height: "30px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "5px 0px 0px 0px",
-              minWidth: "40px",
-            }}
-            onClick={() => onConfigChange(MULTIPLIER, Math.min(6, config.multiplier + 1))}
-            disabled={config.multiplier >= 6}
-          >
-            +
-          </DialogButton>
-        </Focusable>
-      </PanelSectionRow>
+      <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
 
       <PanelSectionRow>
         <SliderField
