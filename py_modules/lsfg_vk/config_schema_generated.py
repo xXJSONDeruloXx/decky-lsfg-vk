@@ -12,6 +12,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 
+# Field name constants for type-safe access
+DLL = "dll"
+MULTIPLIER = "multiplier"
+FLOW_SCALE = "flow_scale"
+PERFORMANCE_MODE = "performance_mode"
+HDR_MODE = "hdr_mode"
+EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode"
+DXVK_FRAME_RATE = "dxvk_frame_rate"
+ENABLE_WOW64 = "enable_wow64"
+DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
+MANGOHUD_WORKAROUND = "mangohud_workaround"
+DISABLE_VKBASALT = "disable_vkbasalt"
+
 
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure - AUTO-GENERATED"""
@@ -98,17 +111,17 @@ def get_function_parameters() -> str:
 def create_config_dict(**kwargs) -> ConfigurationData:
     """Create configuration dictionary from keyword arguments"""
     return cast(ConfigurationData, {
-            "dll": dll,
-            "multiplier": multiplier,
-            "flow_scale": flow_scale,
-            "performance_mode": performance_mode,
-            "hdr_mode": hdr_mode,
-            "experimental_present_mode": experimental_present_mode,
-            "dxvk_frame_rate": dxvk_frame_rate,
-            "enable_wow64": enable_wow64,
-            "disable_steamdeck_mode": disable_steamdeck_mode,
-            "mangohud_workaround": mangohud_workaround,
-            "disable_vkbasalt": disable_vkbasalt,
+        "dll": kwargs.get("dll"),
+        "multiplier": kwargs.get("multiplier"),
+        "flow_scale": kwargs.get("flow_scale"),
+        "performance_mode": kwargs.get("performance_mode"),
+        "hdr_mode": kwargs.get("hdr_mode"),
+        "experimental_present_mode": kwargs.get("experimental_present_mode"),
+        "dxvk_frame_rate": kwargs.get("dxvk_frame_rate"),
+        "enable_wow64": kwargs.get("enable_wow64"),
+        "disable_steamdeck_mode": kwargs.get("disable_steamdeck_mode"),
+        "mangohud_workaround": kwargs.get("mangohud_workaround"),
+        "disable_vkbasalt": kwargs.get("disable_vkbasalt"),
     })
 
 

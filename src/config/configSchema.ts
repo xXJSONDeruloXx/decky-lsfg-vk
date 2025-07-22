@@ -18,7 +18,11 @@ export {
   ConfigurationData,
   getFieldNames,
   getDefaults,
-  getFieldTypes
+  getFieldTypes,
+  // Field name constants for type-safe access
+  DLL, MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
+  EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, ENABLE_WOW64,
+  DISABLE_STEAMDECK_MODE, MANGOHUD_WORKAROUND, DISABLE_VKBASALT
 } from './generatedConfigSchema';
 
 /**
