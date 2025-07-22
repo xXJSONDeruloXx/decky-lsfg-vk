@@ -1,181 +1,147 @@
 /**
- * Centralized configuration schema for lsfg-vk frontend.
+ * Configuration schema and management for LSFG VK plugin
  * 
- * This mirrors the Python configuration schema to ensure consistency
- * between frontend and backend configuration handling.
+ * This file re-exports auto-generated configuration constants from generatedConfigSchema.ts
+ * and provides the ConfigurationManager class for handling configuration operations.
  */
 
-// Configuration field type enum
-export enum ConfigFieldType {
-  BOOLEAN = "boolean",
-  INTEGER = "integer",
-  FLOAT = "float",
-  STRING = "string"
-}
+import { callable } from "@decky/api";
+import type { ConfigurationData } from './generatedConfigSchema';
+import { getDefaults } from './generatedConfigSchema';
 
-// Configuration field definition
-export interface ConfigField {
-  name: string;
-  fieldType: ConfigFieldType;
-  default: boolean | number | string;
-  description: string;
-}
+// Re-export all auto-generated configuration constants
+export {
+  ConfigFieldType,
+  ConfigField,
+  CONFIG_SCHEMA,
+  ConfigurationData,
+  getFieldNames,
+  getDefaults,
+  getFieldTypes
+} from './generatedConfigSchema';
 
-// Configuration schema - must match Python CONFIG_SCHEMA
-export const CONFIG_SCHEMA: Record<string, ConfigField> = {
-  dll: {
-    name: "dll",
-    fieldType: ConfigFieldType.STRING,
-    default: "/games/Lossless Scaling/Lossless.dll",
-    description: "specify where Lossless.dll is stored"
-  },
-  
-  multiplier: {
-    name: "multiplier",
-    fieldType: ConfigFieldType.INTEGER,
-    default: 1,
-    description: "change the fps multiplier"
-  },
-  
-  flow_scale: {
-    name: "flow_scale",
-    fieldType: ConfigFieldType.FLOAT,
-    default: 0.8,
-    description: "change the flow scale"
-  },
-  
-  performance_mode: {
-    name: "performance_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: true,
-    description: "toggle performance mode"
-  },
-  
-  hdr_mode: {
-    name: "hdr_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable hdr in games that support it"
-  },
-  
-  experimental_present_mode: {
-    name: "experimental_present_mode",
-    fieldType: ConfigFieldType.STRING,
-    default: "fifo",
-    description: "experimental: override vulkan present mode (fifo/mailbox/immediate)"
-  },
-  
-  dxvk_frame_rate: {
-    name: "dxvk_frame_rate",
-    fieldType: ConfigFieldType.INTEGER,
-    default: 0,
-    description: "Base framerate cap for DirectX games, before frame multiplier (0 = disabled, requires game re-launch)"
-  },
-  
-  enable_wow64: {
-    name: "enable_wow64",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
-  },
-  
-  disable_steamdeck_mode: {
-    name: "disable_steamdeck_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "disable Steam Deck mode (unlocks hidden settings in some games)"
-  }
-};
-
-// Type-safe configuration data structure
-export interface ConfigurationData {
-  dll: string;
-  multiplier: number;
-  flow_scale: number;
-  performance_mode: boolean;
-  hdr_mode: boolean;
-  experimental_present_mode: string;
-  dxvk_frame_rate: number;
-  enable_wow64: boolean;
-  disable_steamdeck_mode: boolean;
-}
-
-// Centralized configuration manager
+/**
+ * Configuration management class
+ * Handles CRUD operations for plugin configuration
+ */
 export class ConfigurationManager {
+  private static instance: ConfigurationManager;
+  private _config: ConfigurationData | null = null;
+
+  // Callable methods for backend communication
+  private getConfiguration = callable<[], { success: boolean; data?: ConfigurationData; error?: string }>("get_configuration");
+  private setConfiguration = callable<[{ config_data: ConfigurationData }], { success: boolean; error?: string }>("set_configuration");
+  private resetConfiguration = callable<[], { success: boolean; data?: ConfigurationData; error?: string }>("reset_configuration");
+
+  private constructor() {}
+
+  static getInstance(): ConfigurationManager {
+    if (!ConfigurationManager.instance) {
+      ConfigurationManager.instance = new ConfigurationManager();
+    }
+    return ConfigurationManager.instance;
+  }
+
   /**
    * Get default configuration values
    */
   static getDefaults(): ConfigurationData {
-    const defaults = {} as ConfigurationData;
-    Object.values(CONFIG_SCHEMA).forEach(field => {
-      (defaults as any)[field.name] = field.default;
-    });
-    return defaults;
+    return getDefaults();
   }
 
   /**
-   * Get ordered list of configuration field names
+   * Create args array from config object for lsfg API calls
    */
-  static getFieldNames(): string[] {
-    return Object.keys(CONFIG_SCHEMA);
+  static createArgsFromConfig(config: ConfigurationData): [string, number, number, boolean, boolean, string, number, boolean, boolean] {
+    return [
+      config.dll,
+      config.multiplier,
+      config.flow_scale,
+      config.performance_mode,
+      config.hdr_mode,
+      config.experimental_present_mode,
+      config.dxvk_frame_rate,
+      config.enable_wow64,
+      config.disable_steamdeck_mode
+    ];
   }
 
   /**
-   * Get field type mapping
+   * Load configuration from backend
    */
-  static getFieldTypes(): Record<string, ConfigFieldType> {
-    return Object.values(CONFIG_SCHEMA).reduce((acc, field) => {
-      acc[field.name] = field.fieldType;
-      return acc;
-    }, {} as Record<string, ConfigFieldType>);
-  }
-
-  /**
-   * Create ordered arguments array from configuration object
-   */
-  static createArgsFromConfig(config: ConfigurationData): (boolean | number | string)[] {
-    return this.getFieldNames().map(fieldName => 
-      config[fieldName as keyof ConfigurationData]
-    );
-  }
-
-  /**
-   * Validate configuration object against schema
-   */
-  static validateConfig(config: Partial<ConfigurationData>): ConfigurationData {
-    const defaults = this.getDefaults();
-    const validated = { ...defaults };
-
-    Object.entries(CONFIG_SCHEMA).forEach(([fieldName, fieldDef]) => {
-      const value = config[fieldName as keyof ConfigurationData];
-      if (value !== undefined) {
-        // Type validation
-        if (fieldDef.fieldType === ConfigFieldType.BOOLEAN) {
-          (validated as any)[fieldName] = Boolean(value);
-        } else if (fieldDef.fieldType === ConfigFieldType.INTEGER) {
-          (validated as any)[fieldName] = parseInt(String(value), 10);
-        } else if (fieldDef.fieldType === ConfigFieldType.FLOAT) {
-          (validated as any)[fieldName] = parseFloat(String(value));
-        } else if (fieldDef.fieldType === ConfigFieldType.STRING) {
-          (validated as any)[fieldName] = String(value);
-        }
+  async loadConfig(): Promise<ConfigurationData> {
+    try {
+      const result = await this.getConfiguration();
+      if (result.success && result.data) {
+        this._config = result.data;
+        return this._config;
+      } else {
+        throw new Error(result.error || 'Failed to load configuration');
       }
-    });
-
-    return validated;
+    } catch (error) {
+      console.error('Error loading configuration:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get configuration field definition
+   * Save configuration to backend
    */
-  static getFieldDef(fieldName: string): ConfigField | undefined {
-    return CONFIG_SCHEMA[fieldName];
+  async saveConfig(config: ConfigurationData): Promise<void> {
+    try {
+      const result = await this.setConfiguration({ config_data: config });
+      if (result.success) {
+        this._config = config;
+      } else {
+        throw new Error(result.error || 'Failed to save configuration');
+      }
+    } catch (error) {
+      console.error('Error saving configuration:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get all field definitions
+   * Update a single configuration field
    */
-  static getAllFieldDefs(): ConfigField[] {
-    return Object.values(CONFIG_SCHEMA);
+  async updateField(fieldName: keyof ConfigurationData, value: any): Promise<void> {
+    if (!this._config) {
+      await this.loadConfig();
+    }
+    
+    const updatedConfig = {
+      ...this._config!,
+      [fieldName]: value
+    };
+    
+    await this.saveConfig(updatedConfig);
+  }
+
+  /**
+   * Get current configuration (cached)
+   */
+  getConfig(): ConfigurationData | null {
+    return this._config;
+  }
+
+  /**
+   * Reset configuration to defaults
+   */
+  async resetToDefaults(): Promise<ConfigurationData> {
+    try {
+      const result = await this.resetConfiguration();
+      if (result.success && result.data) {
+        this._config = result.data;
+        return this._config;
+      } else {
+        throw new Error(result.error || 'Failed to reset configuration');
+      }
+    } catch (error) {
+      console.error('Error resetting configuration:', error);
+      throw error;
+    }
   }
 }
+
+// Export singleton instance
+export const configManager = ConfigurationManager.getInstance();

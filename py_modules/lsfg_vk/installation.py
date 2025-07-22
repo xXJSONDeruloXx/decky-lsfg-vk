@@ -43,7 +43,7 @@ class InstallationService(BaseService):
             if not zip_path.exists():
                 error_msg = f"{ZIP_FILENAME} not found at {zip_path}"
                 self.log.error(error_msg)
-                return {"success": False, "error": error_msg, "message": ""}
+                return self._error_response(InstallationResponse, error_msg, message="")
             
             # Create directories if they don't exist
             self._ensure_directories()
@@ -58,17 +58,17 @@ class InstallationService(BaseService):
             self._create_lsfg_launch_script()
             
             self.log.info("lsfg-vk installed successfully")
-            return {"success": True, "message": "lsfg-vk installed successfully", "error": None}
+            return self._success_response(InstallationResponse, "lsfg-vk installed successfully")
             
         except (OSError, zipfile.BadZipFile, shutil.Error) as e:
             error_msg = f"Error installing lsfg-vk: {str(e)}"
             self.log.error(error_msg)
-            return {"success": False, "error": str(e), "message": ""}
+            return self._error_response(InstallationResponse, str(e), message="")
         except Exception as e:
             # Catch unexpected errors but log them separately
             error_msg = f"Unexpected error installing lsfg-vk: {str(e)}"
             self.log.error(error_msg)
-            return {"success": False, "error": str(e), "message": ""}
+            return self._error_response(InstallationResponse, str(e), message="")
     
     def _extract_and_install_files(self, zip_path: Path) -> None:
         """Extract zip file and install files to appropriate locations
@@ -209,30 +209,20 @@ class InstallationService(BaseService):
                 pass  # Directory not empty or other error, ignore
             
             if not removed_files:
-                return {
-                    "success": True, 
-                    "message": "No lsfg-vk files found to remove",
-                    "removed_files": None,
-                    "error": None
-                }
+                return self._success_response(UninstallationResponse,
+                                            "No lsfg-vk files found to remove",
+                                            removed_files=None)
             
             self.log.info("lsfg-vk uninstalled successfully")
-            return {
-                "success": True, 
-                "message": f"lsfg-vk uninstalled successfully. Removed {len(removed_files)} files.",
-                "removed_files": removed_files,
-                "error": None
-            }
+            return self._success_response(UninstallationResponse, 
+                                        f"lsfg-vk uninstalled successfully. Removed {len(removed_files)} files.",
+                                        removed_files=removed_files)
             
         except OSError as e:
             error_msg = f"Error uninstalling lsfg-vk: {str(e)}"
             self.log.error(error_msg)
-            return {
-                "success": False, 
-                "message": "",
-                "removed_files": None,
-                "error": str(e)
-            }
+            return self._error_response(UninstallationResponse, str(e), 
+                                      message="", removed_files=None)
     
     def cleanup_on_uninstall(self) -> None:
         """Clean up lsfg-vk files when the plugin is uninstalled"""

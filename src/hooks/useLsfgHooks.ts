@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { toaster } from "@decky/api";
 import {
   checkLsfgVkInstalled,
   checkLosslessScalingDll,
@@ -8,6 +7,7 @@ import {
   type ConfigUpdateResult
 } from "../api/lsfgApi";
 import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
+import { showErrorToast, ToastMessages } from "../utils/toastUtils";
 
 export function useInstallationStatus() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
@@ -95,17 +95,14 @@ export function useLsfgConfig() {
       if (result.success) {
         setConfig(newConfig);
       } else {
-        toaster.toast({
-          title: "Update Failed",
-          body: result.error || "Failed to update configuration"
-        });
+        showErrorToast(
+          ToastMessages.CONFIG_UPDATE_ERROR.title, 
+          result.error || ToastMessages.CONFIG_UPDATE_ERROR.body
+        );
       }
       return result;
     } catch (error) {
-      toaster.toast({
-        title: "Update Failed",
-        body: `Error: ${error}`
-      });
+      showErrorToast(ToastMessages.CONFIG_UPDATE_ERROR.title, String(error));
       return { success: false, error: String(error) };
     }
   }, []);

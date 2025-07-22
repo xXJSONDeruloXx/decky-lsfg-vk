@@ -43,22 +43,12 @@ class ConfigurationService(BaseService):
             # Merge TOML config with script values
             config = ConfigurationManager.merge_config_with_script(toml_config, script_values)
             
-            return {
-                "success": True,
-                "config": config,
-                "message": None,
-                "error": None
-            }
+            return self._success_response(ConfigurationResponse, config=config)
             
         except (OSError, IOError) as e:
             error_msg = f"Error reading lsfg config: {str(e)}"
             self.log.error(error_msg)
-            return {
-                "success": False,
-                "config": None,
-                "message": None,
-                "error": str(e)
-            }
+            return self._error_response(ConfigurationResponse, str(e), config=None)
         except Exception as e:
             error_msg = f"Error parsing config file: {str(e)}"
             self.log.error(error_msg)
@@ -66,12 +56,9 @@ class ConfigurationService(BaseService):
             from .dll_detection import DllDetectionService
             dll_service = DllDetectionService(self.log)
             config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
-            return {
-                "success": True,
-                "config": config,
-                "message": f"Using default configuration due to parse error: {str(e)}",
-                "error": None
-            }
+            return self._success_response(ConfigurationResponse, 
+                                        f"Using default configuration due to parse error: {str(e)}", 
+                                        config=config)
     
     def update_config(self, dll: str, multiplier: int, flow_scale: float, 
                      performance_mode: bool, hdr_mode: bool, 
@@ -123,31 +110,18 @@ class ConfigurationService(BaseService):
                          f"dxvk_frame_rate={dxvk_frame_rate}, "
                          f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}")
             
-            return {
-                "success": True,
-                "config": config,
-                "message": "lsfg configuration updated successfully",
-                "error": None
-            }
+            return self._success_response(ConfigurationResponse,
+                                        "lsfg configuration updated successfully",
+                                        config=config)
             
         except (OSError, IOError) as e:
             error_msg = f"Error updating lsfg config: {str(e)}"
             self.log.error(error_msg)
-            return {
-                "success": False,
-                "config": None,
-                "message": None,
-                "error": str(e)
-            }
+            return self._error_response(ConfigurationResponse, str(e), config=None)
         except ValueError as e:
             error_msg = f"Invalid configuration arguments: {str(e)}"
             self.log.error(error_msg)
-            return {
-                "success": False,
-                "config": None,
-                "message": None,
-                "error": str(e)
-            }
+            return self._error_response(ConfigurationResponse, str(e), config=None)
     
     def update_dll_path(self, dll_path: str) -> ConfigurationResponse:
         """Update just the DLL path in the configuration
@@ -183,22 +157,14 @@ class ConfigurationService(BaseService):
             
             self.log.info(f"Updated DLL path in lsfg configuration: '{dll_path}'")
             
-            return {
-                "success": True,
-                "config": config,
-                "message": f"DLL path updated to: {dll_path}",
-                "error": None
-            }
+            return self._success_response(ConfigurationResponse,
+                                        f"DLL path updated to: {dll_path}",
+                                        config=config)
             
         except Exception as e:
             error_msg = f"Error updating DLL path: {str(e)}"
             self.log.error(error_msg)
-            return {
-                "success": False,
-                "config": None,
-                "message": None,
-                "error": str(e)
-            }
+            return self._error_response(ConfigurationResponse, str(e), config=None)
     
     def update_lsfg_script(self, config: ConfigurationData) -> ConfigurationResponse:
         """Update the ~/lsfg launch script with current configuration
@@ -217,22 +183,14 @@ class ConfigurationService(BaseService):
             
             self.log.info(f"Updated lsfg launch script at {self.lsfg_script_path}")
             
-            return {
-                "success": True,
-                "config": config,
-                "message": "Launch script updated successfully",
-                "error": None
-            }
+            return self._success_response(ConfigurationResponse,
+                                        "Launch script updated successfully",
+                                        config=config)
             
         except Exception as e:
             error_msg = f"Error updating launch script: {str(e)}"
             self.log.error(error_msg)
-            return {
-                "success": False,
-                "config": None,
-                "message": None,
-                "error": str(e)
-            }
+            return self._error_response(ConfigurationResponse, str(e), config=None)
     
     def _generate_script_content(self, config: ConfigurationData) -> str:
         """Generate the content for the ~/lsfg launch script
