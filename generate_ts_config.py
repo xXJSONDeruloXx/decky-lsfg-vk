@@ -113,13 +113,13 @@ export function getDefaults(): ConfigurationData {
     ts_content += '''  };
 }
 
-export function getFieldTypes(): Record<string, string> {
+export function getFieldTypes(): Record<string, ConfigFieldType> {
   return {
 '''
     
     # Generate field types object
     for field_name, field_def in CONFIG_SCHEMA_DEF.items():
-        ts_content += f'    {field_name}: "{field_def["fieldType"]}",\n'
+        ts_content += f'    {field_name}: ConfigFieldType.{field_def["fieldType"].upper()},\n'
     
     ts_content += '''  };
 }

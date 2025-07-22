@@ -111,17 +111,17 @@ export function getDefaults(): ConfigurationData {
   };
 }
 
-export function getFieldTypes(): Record<string, string> {
+export function getFieldTypes(): Record<string, ConfigFieldType> {
   return {
-    dll: "ConfigFieldType.STRING",
-    multiplier: "ConfigFieldType.INTEGER",
-    flow_scale: "ConfigFieldType.FLOAT",
-    performance_mode: "ConfigFieldType.BOOLEAN",
-    hdr_mode: "ConfigFieldType.BOOLEAN",
-    experimental_present_mode: "ConfigFieldType.STRING",
-    dxvk_frame_rate: "ConfigFieldType.INTEGER",
-    enable_wow64: "ConfigFieldType.BOOLEAN",
-    disable_steamdeck_mode: "ConfigFieldType.BOOLEAN",
+    dll: ConfigFieldType.STRING,
+    multiplier: ConfigFieldType.INTEGER,
+    flow_scale: ConfigFieldType.FLOAT,
+    performance_mode: ConfigFieldType.BOOLEAN,
+    hdr_mode: ConfigFieldType.BOOLEAN,
+    experimental_present_mode: ConfigFieldType.STRING,
+    dxvk_frame_rate: ConfigFieldType.INTEGER,
+    enable_wow64: ConfigFieldType.BOOLEAN,
+    disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
   };
 }
 

@@ -33,19 +33,6 @@ class ConfigField:
         return value
 
 
-@dataclass
-class ConfigField:
-    """Configuration field definition"""
-    name: str
-    field_type: ConfigFieldType
-    default: Union[bool, int, float, str]
-    description: str
-    
-    def get_toml_value(self, value: Union[bool, int, float, str]) -> Union[bool, int, float, str]:
-        """Get the value for TOML output"""
-        return value
-
-
 # Use shared configuration schema as source of truth
 CONFIG_SCHEMA: Dict[str, ConfigField] = {
     field_name: ConfigField(
