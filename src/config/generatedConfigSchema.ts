@@ -83,18 +83,6 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
   },
-  foobar_toggle: {
-    name: "foobar_toggle",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "Test script-only toggle that exports FOOBAR=1 (for testing purposes)"
-  },
-  test_config_only: {
-    name: "test_config_only",
-    fieldType: ConfigFieldType.STRING,
-    default: "default_value",
-    description: "Test TOML-only configuration field (not in script)"
-  },
 };
 
 // Type-safe configuration data structure
@@ -110,8 +98,6 @@ export interface ConfigurationData {
   disable_steamdeck_mode: boolean;
   mangohud_workaround: boolean;
   disable_vkbasalt: boolean;
-  foobar_toggle: boolean;
-  test_config_only: string;
 }
 
 // Helper functions
@@ -132,8 +118,6 @@ export function getDefaults(): ConfigurationData {
     disable_steamdeck_mode: false,
     mangohud_workaround: false,
     disable_vkbasalt: false,
-    foobar_toggle: false,
-    test_config_only: "default_value",
   };
 }
 
@@ -150,8 +134,6 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
     mangohud_workaround: ConfigFieldType.BOOLEAN,
     disable_vkbasalt: ConfigFieldType.BOOLEAN,
-    foobar_toggle: ConfigFieldType.BOOLEAN,
-    test_config_only: ConfigFieldType.STRING,
   };
 }
 

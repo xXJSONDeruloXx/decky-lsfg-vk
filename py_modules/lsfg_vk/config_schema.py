@@ -19,6 +19,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType, get_field_names, get_defaults, get_field_types
 
+# Import auto-generated configuration components
+from .config_schema_generated import ConfigurationData, get_script_parsing_logic, get_script_generation_logic
+
 
 @dataclass
 class ConfigField:
@@ -68,19 +71,11 @@ SCRIPT_ONLY_FIELDS = {
 COMPLETE_CONFIG_SCHEMA = {**CONFIG_SCHEMA, **SCRIPT_ONLY_FIELDS}
 
 
-class ConfigurationData(TypedDict):
-    """Type-safe configuration data structure"""
-    dll: str
-    multiplier: int
-    flow_scale: float
-    performance_mode: bool
-    hdr_mode: bool
-    experimental_present_mode: str
-    dxvk_frame_rate: int
-    enable_wow64: bool
-    disable_steamdeck_mode: bool
-    mangohud_workaround: bool
-    disable_vkbasalt: bool
+# Import auto-generated configuration components
+from .config_schema_generated import ConfigurationData, get_script_parsing_logic, get_script_generation_logic
+
+# Note: ConfigurationData is now imported from generated file
+# No need to manually maintain the TypedDict anymore!
 
 
 class ConfigurationManager:
@@ -295,46 +290,9 @@ class ConfigurationManager:
         Returns:
             Dict containing parsed script-only field values
         """
-        script_values = {}
-        
-        try:
-            lines = script_content.split('\n')
-            
-            for line in lines:
-                line = line.strip()
-                
-                # Skip comments, empty lines, and non-export lines
-                if not line or line.startswith('#') or not line.startswith('export '):
-                    continue
-                
-                # Parse export statements: export VAR=value
-                if '=' in line:
-                    # Remove 'export ' prefix
-                    export_line = line[len('export '):]
-                    key, value = export_line.split('=', 1)
-                    key = key.strip()
-                    value = value.strip()
-                    
-                    # Map environment variables to config field names
-                    if key == "DXVK_FRAME_RATE":
-                        try:
-                            script_values["dxvk_frame_rate"] = int(value)
-                        except ValueError:
-                            pass
-                    elif key == "PROTON_USE_WOW64":
-                        script_values["enable_wow64"] = value == "1"
-                    elif key == "SteamDeck":
-                        script_values["disable_steamdeck_mode"] = value == "0"
-                    elif key == "MANGOHUD":
-                        script_values["mangohud_workaround"] = value == "1"
-                    elif key == "DISABLE_VKBASALT":
-                        script_values["disable_vkbasalt"] = value == "1"
-            
-        except (ValueError, KeyError, IndexError) as e:
-            # If parsing fails, log the error and return empty dict (will use defaults)
-            print(f"Error parsing script content: {e}")
-        
-        return script_values
+        # Use auto-generated parsing logic
+        parse_script_values = get_script_parsing_logic()
+        return parse_script_values(script_content.split('\n'))
     
     @staticmethod
     def merge_config_with_script(toml_config: ConfigurationData, script_values: Dict[str, Union[bool, int, str]]) -> ConfigurationData:

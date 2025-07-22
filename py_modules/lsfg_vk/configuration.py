@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Dict, Any
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, ConfigurationData, CONFIG_SCHEMA
+from .config_schema import ConfigurationManager, CONFIG_SCHEMA
+from .config_schema_generated import ConfigurationData, get_script_generation_logic
+from .configuration_helpers_generated import log_configuration_update
 from .types import ConfigurationResponse
 
 
@@ -149,13 +151,8 @@ class ConfigurationService(BaseService):
             if not script_result["success"]:
                 self.log.warning(f"Failed to update launch script: {script_result['error']}")
             
-            self.log.info(f"Updated lsfg TOML configuration: "
-                         f"dll='{dll}', multiplier={multiplier}, flow_scale={flow_scale}, "
-                         f"performance_mode={performance_mode}, hdr_mode={hdr_mode}, "
-                         f"experimental_present_mode='{experimental_present_mode}', "
-                         f"dxvk_frame_rate={dxvk_frame_rate}, "
-                         f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}, "
-                         f"mangohud_workaround={mangohud_workaround}, disable_vkbasalt={disable_vkbasalt}")
+            # Use auto-generated logging
+            log_configuration_update(self.log, config)
             
             return self._success_response(ConfigurationResponse,
                                         "lsfg configuration updated successfully",
@@ -254,29 +251,14 @@ class ConfigurationService(BaseService):
             "# This script sets up the environment for lsfg-vk to work with the plugin configuration"
         ]
         
-        # Add optional export statements based on configuration
-        if config.get("enable_wow64", False):
-            lines.append("export PROTON_USE_WOW64=1")
+        # Use auto-generated script generation logic
+        generate_script_lines = get_script_generation_logic()
+        lines.extend(generate_script_lines(config))
         
-        if config.get("disable_steamdeck_mode", False):
-            lines.append("export SteamDeck=0")
-        
-        if config.get("mangohud_workaround", False):
-            lines.append("export MANGOHUD=1")
-            lines.append("export MANGOHUD_CONFIG=alpha=0.001,background_alpha=0.001")
-        
-        if config.get("disable_vkbasalt", False):
-            lines.append("export DISABLE_VKBASALT=1")
-        
-        # Add DXVK_FRAME_RATE if dxvk_frame_rate is set
-        dxvk_frame_rate = config.get("dxvk_frame_rate", 0)
-        if dxvk_frame_rate > 0:
-            lines.append(f"export DXVK_FRAME_RATE={dxvk_frame_rate}")
-        
-        # Always add the LSFG_PROCESS export
-        lines.append("export LSFG_PROCESS=decky-lsfg-vk")
-        
-        # Add the execution line
-        lines.append('exec "$@"')
+        # Always add the LSFG_PROCESS export and execution line
+        lines.extend([
+            "export LSFG_PROCESS=decky-lsfg-vk",
+            'exec "$@"'
+        ])
         
         return "\n".join(lines) + "\n"
