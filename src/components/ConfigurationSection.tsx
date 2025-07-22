@@ -3,11 +3,13 @@ import { ConfigurationData } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
   config: ConfigurationData;
-  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string) => Promise<void>;
+  activeProfile: string;
+  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string, profile: string) => Promise<void>;
 }
 
 export function ConfigurationSection({
   config,
+  activeProfile,
   onConfigChange
 }: ConfigurationSectionProps) {
   return (
@@ -45,7 +47,7 @@ export function ConfigurationSection({
           ]}
           showValue={false}
           notchTicksVisible={true}
-          onChange={(value) => onConfigChange('multiplier', value)}
+          onChange={(value) => onConfigChange('multiplier', value, activeProfile)}
         />
       </PanelSectionRow>
 
@@ -57,7 +59,7 @@ export function ConfigurationSection({
           min={0.25}
           max={1.0}
           step={0.01}
-          onChange={(value) => onConfigChange('flow_scale', value)}
+          onChange={(value) => onConfigChange('flow_scale', value, activeProfile)}
         />
       </PanelSectionRow>
 
@@ -66,7 +68,7 @@ export function ConfigurationSection({
           label="Performance Mode"
           description="Uses a lighter model for FG (Recommended for most games)"
           checked={config.performance_mode}
-          onChange={(value) => onConfigChange('performance_mode', value)}
+          onChange={(value) => onConfigChange('performance_mode', value, activeProfile)}
         />
       </PanelSectionRow>
 
@@ -75,7 +77,7 @@ export function ConfigurationSection({
           label="HDR Mode"
           description="Enables HDR mode (only for games that support HDR)"
           checked={config.hdr_mode}
-          onChange={(value) => onConfigChange('hdr_mode', value)}
+          onChange={(value) => onConfigChange('hdr_mode', value, activeProfile)}
         />
       </PanelSectionRow>
 
@@ -101,7 +103,7 @@ export function ConfigurationSection({
           description="Select a specific Vulkan presentation mode for better performance or compatibility (May cause crashes)"
           menuLabel="Select presentation mode"
           selectedOption={config.experimental_present_mode || "fifo"}
-          onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
+          onChange={(value) => onConfigChange('experimental_present_mode', value.data, activeProfile)}
           rgOptions={[
             { data: "fifo", label: "FIFO (VSync) - Default" },
             { data: "mailbox", label: "Mailbox" }
@@ -133,7 +135,7 @@ export function ConfigurationSection({
           min={0}
           max={60}
           step={1}
-          onChange={(value) => onConfigChange('dxvk_frame_rate', value)}
+          onChange={(value) => onConfigChange('dxvk_frame_rate', value, activeProfile)}
         />
       </PanelSectionRow>
 
@@ -142,7 +144,7 @@ export function ConfigurationSection({
           label="Enable WOW64 for 32-bit games"
           description="Enables PROTON_USE_WOW64=1 for 32-bit games (Use with ProtonGE to fix crashing)"
           checked={config.enable_wow64}
-          onChange={(value) => onConfigChange('enable_wow64', value)}
+          onChange={(value) => onConfigChange('enable_wow64', value, activeProfile)}
         />
       </PanelSectionRow>
 
@@ -151,7 +153,7 @@ export function ConfigurationSection({
           label="Disable Steam Deck Mode"
           description="Disables Steam Deck mode (Unlocks hidden settings in some games)"
           checked={config.disable_steamdeck_mode}
-          onChange={(value) => onConfigChange('disable_steamdeck_mode', value)}
+          onChange={(value) => onConfigChange('disable_steamdeck_mode', value, activeProfile)}
         />
       </PanelSectionRow>
     </>

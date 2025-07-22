@@ -164,13 +164,16 @@ class Plugin:
             }
 
     # Configuration methods
-    async def get_lsfg_config(self) -> Dict[str, Any]:
-        """Read current lsfg script configuration
+    async def get_lsfg_config(self, profile: str = "default") -> Dict[str, Any]:
+        """Read current lsfg script configuration for a specific profile
+        
+        Args:
+            profile: Profile name ("default" or "second")
         
         Returns:
             ConfigurationResponse dict with current configuration or error
         """
-        return self.configuration_service.get_config()
+        return self.configuration_service.get_config(profile)
 
     async def get_config_schema(self) -> Dict[str, Any]:
         """Get configuration schema information for frontend
@@ -184,13 +187,71 @@ class Plugin:
             "defaults": ConfigurationManager.get_defaults()
         }
 
+    async def update_lsfg_config_profile(self, dll: str, multiplier: int, flow_scale: float, 
+                                        performance_mode: bool, hdr_mode: bool, 
+                                        experimental_present_mode: str = "fifo", 
+                                        dxvk_frame_rate: int = 0,
+                                        enable_wow64: bool = False,
+                                        disable_steamdeck_mode: bool = False,
+                                        profile: str = "default") -> Dict[str, Any]:
+        """Update lsfg TOML configuration for a specific profile
+        
+        Args:
+            dll: Path to Lossless.dll
+            multiplier: LSFG multiplier value
+            flow_scale: LSFG flow scale value
+            performance_mode: Whether to enable performance mode
+            hdr_mode: Whether to enable HDR mode
+            experimental_present_mode: Experimental Vulkan present mode override
+            dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
+            enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
+            disable_steamdeck_mode: Whether to disable Steam Deck mode
+            profile: Profile name ("default" or "second")
+            
+        Returns:
+            ConfigurationResponse dict with success status
+        """
+        return self.configuration_service.update_config_profile(
+            dll, multiplier, flow_scale, performance_mode, hdr_mode,
+            experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode, profile
+        )
+
+    async def get_active_profile(self) -> Dict[str, Any]:
+        """Get the currently active profile name from launch script
+        
+        Returns:
+            Dict with active profile information
+        """
+        try:
+            script_path = self.configuration_service.lsfg_script_path
+            if not script_path.exists():
+                return {"success": True, "profile": "default", "message": "No script found, using default profile"}
+            
+            content = script_path.read_text(encoding='utf-8')
+            
+            # Parse the LSFG_PROCESS line to determine active profile
+            for line in content.split('\n'):
+                line = line.strip()
+                if line.startswith('export LSFG_PROCESS='):
+                    lsfg_process = line.split('=', 1)[1]
+                    if lsfg_process == "decky-lsfg-vk-default":
+                        return {"success": True, "profile": "default"}
+                    elif lsfg_process == "decky-lsfg-vk-second":
+                        return {"success": True, "profile": "second"}
+            
+            # Default fallback
+            return {"success": True, "profile": "default", "message": "Could not determine profile from script, using default"}
+            
+        except Exception as e:
+            return {"success": False, "error": f"Error reading active profile: {str(e)}", "profile": "default"}
+
     async def update_lsfg_config(self, dll: str, multiplier: int, flow_scale: float, 
                           performance_mode: bool, hdr_mode: bool, 
                           experimental_present_mode: str = "fifo", 
                           dxvk_frame_rate: int = 0,
                           enable_wow64: bool = False,
                           disable_steamdeck_mode: bool = False) -> Dict[str, Any]:
-        """Update lsfg TOML configuration
+        """Update lsfg TOML configuration (legacy method for backward compatibility)
         
         Args:
             dll: Path to Lossless.dll

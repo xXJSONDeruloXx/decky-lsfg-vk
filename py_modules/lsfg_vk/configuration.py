@@ -13,8 +13,11 @@ from .types import ConfigurationResponse
 class ConfigurationService(BaseService):
     """Service for managing TOML-based lsfg configuration"""
     
-    def get_config(self) -> ConfigurationResponse:
-        """Read current TOML configuration merged with launch script environment variables
+    def get_config(self, profile: str = "default") -> ConfigurationResponse:
+        """Read current TOML configuration for a specific profile merged with launch script environment variables
+        
+        Args:
+            profile: Profile name ("default" or "second")
         
         Returns:
             ConfigurationResponse with current configuration or error
@@ -28,7 +31,7 @@ class ConfigurationService(BaseService):
                 toml_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
             else:
                 content = self.config_file_path.read_text(encoding='utf-8')
-                toml_config = ConfigurationManager.parse_toml_content(content)
+                toml_config = ConfigurationManager.parse_toml_content(content, profile)
             
             # Get script environment variables (if script exists)
             script_values = {}
@@ -60,13 +63,14 @@ class ConfigurationService(BaseService):
                                         f"Using default configuration due to parse error: {str(e)}", 
                                         config=config)
     
-    def update_config(self, dll: str, multiplier: int, flow_scale: float, 
-                     performance_mode: bool, hdr_mode: bool, 
-                     experimental_present_mode: str = "fifo", 
-                     dxvk_frame_rate: int = 0,
-                     enable_wow64: bool = False,
-                     disable_steamdeck_mode: bool = False) -> ConfigurationResponse:
-        """Update TOML configuration
+    def update_config_profile(self, dll: str, multiplier: int, flow_scale: float, 
+                             performance_mode: bool, hdr_mode: bool, 
+                             experimental_present_mode: str = "fifo", 
+                             dxvk_frame_rate: int = 0,
+                             enable_wow64: bool = False,
+                             disable_steamdeck_mode: bool = False,
+                             profile: str = "default") -> ConfigurationResponse:
+        """Update TOML configuration for a specific profile
         
         Args:
             dll: Path to Lossless.dll
@@ -78,6 +82,7 @@ class ConfigurationService(BaseService):
             dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
             enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
             disable_steamdeck_mode: Whether to disable Steam Deck mode
+            profile: Profile name ("default" or "second")
             
         Returns:
             ConfigurationResponse with success status
@@ -89,8 +94,14 @@ class ConfigurationService(BaseService):
                 experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
             )
             
-            # Generate TOML content using centralized manager
-            toml_content = ConfigurationManager.generate_toml_content(config)
+            # Generate TOML content with profile support using smart updating
+            if self.config_file_path.exists():
+                # Read existing content and update only the target profile
+                existing_content = self.config_file_path.read_text(encoding='utf-8')
+                toml_content = ConfigurationManager.update_single_profile_in_toml(existing_content, config, profile)
+            else:
+                # Create new TOML with both profiles
+                toml_content = ConfigurationManager.generate_toml_content_with_profiles(config, profile)
             
             # Ensure config directory exists
             self.config_dir.mkdir(parents=True, exist_ok=True)
@@ -98,12 +109,12 @@ class ConfigurationService(BaseService):
             # Write the updated config directly to preserve inode for file watchers
             self._write_file(self.config_file_path, toml_content, 0o644)
             
-            # Update the launch script with the new configuration
-            script_result = self.update_lsfg_script(config)
+            # Update the launch script with the new configuration (script includes active profile info)
+            script_result = self.update_lsfg_script(config, profile)
             if not script_result["success"]:
                 self.log.warning(f"Failed to update launch script: {script_result['error']}")
             
-            self.log.info(f"Updated lsfg TOML configuration: "
+            self.log.info(f"Updated lsfg TOML configuration for profile '{profile}': "
                          f"dll='{dll}', multiplier={multiplier}, flow_scale={flow_scale}, "
                          f"performance_mode={performance_mode}, hdr_mode={hdr_mode}, "
                          f"experimental_present_mode='{experimental_present_mode}', "
@@ -111,17 +122,24 @@ class ConfigurationService(BaseService):
                          f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}")
             
             return self._success_response(ConfigurationResponse,
-                                        "lsfg configuration updated successfully",
+                                        f"lsfg configuration updated successfully for profile '{profile}'",
                                         config=config)
             
         except (OSError, IOError) as e:
             error_msg = f"Error updating lsfg config: {str(e)}"
             self.log.error(error_msg)
             return self._error_response(ConfigurationResponse, str(e), config=None)
-        except ValueError as e:
-            error_msg = f"Invalid configuration arguments: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
+    
+    def update_config(self, dll: str, multiplier: int, flow_scale: float, 
+                     performance_mode: bool, hdr_mode: bool, 
+                     experimental_present_mode: str = "fifo", 
+                     dxvk_frame_rate: int = 0,
+                     enable_wow64: bool = False,
+                     disable_steamdeck_mode: bool = False) -> ConfigurationResponse:
+        """Update TOML configuration (legacy method for backward compatibility)"""
+        return self.update_config_profile(dll, multiplier, flow_scale, performance_mode, hdr_mode,
+                                         experimental_present_mode, dxvk_frame_rate, enable_wow64, 
+                                         disable_steamdeck_mode, "default")
     
     def update_dll_path(self, dll_path: str) -> ConfigurationResponse:
         """Update just the DLL path in the configuration
@@ -166,22 +184,23 @@ class ConfigurationService(BaseService):
             self.log.error(error_msg)
             return self._error_response(ConfigurationResponse, str(e), config=None)
     
-    def update_lsfg_script(self, config: ConfigurationData) -> ConfigurationResponse:
+    def update_lsfg_script(self, config: ConfigurationData, profile: str = "default") -> ConfigurationResponse:
         """Update the ~/lsfg launch script with current configuration
         
         Args:
             config: Configuration data to apply to the script
+            profile: Profile name to use for LSFG_PROCESS variable
             
         Returns:
             ConfigurationResponse indicating success or failure
         """
         try:
-            script_content = self._generate_script_content(config)
+            script_content = self._generate_script_content(config, profile)
             
             # Write the script file
             self._write_file(self.lsfg_script_path, script_content, 0o755)
             
-            self.log.info(f"Updated lsfg launch script at {self.lsfg_script_path}")
+            self.log.info(f"Updated lsfg launch script at {self.lsfg_script_path} for profile '{profile}'")
             
             return self._success_response(ConfigurationResponse,
                                         "Launch script updated successfully",
@@ -192,11 +211,12 @@ class ConfigurationService(BaseService):
             self.log.error(error_msg)
             return self._error_response(ConfigurationResponse, str(e), config=None)
     
-    def _generate_script_content(self, config: ConfigurationData) -> str:
+    def _generate_script_content(self, config: ConfigurationData, profile: str = "default") -> str:
         """Generate the content for the ~/lsfg launch script
         
         Args:
             config: Configuration data to apply to the script
+            profile: Profile name to use for LSFG_PROCESS variable
             
         Returns:
             The complete script content as a string
@@ -219,8 +239,13 @@ class ConfigurationService(BaseService):
         if dxvk_frame_rate > 0:
             lines.append(f"export DXVK_FRAME_RATE={dxvk_frame_rate}")
         
-        # Always add the LSFG_PROCESS export
-        lines.append("export LSFG_PROCESS=decky-lsfg-vk")
+        # Add profile-specific LSFG_PROCESS export
+        profile_exe_map = {
+            "default": "decky-lsfg-vk-default",
+            "second": "decky-lsfg-vk-second"
+        }
+        lsfg_process = profile_exe_map.get(profile, "decky-lsfg-vk-default")
+        lines.append(f"export LSFG_PROCESS={lsfg_process}")
         
         # Add the execution line
         lines.append('exec "$@"')

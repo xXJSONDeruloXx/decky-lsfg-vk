@@ -4,6 +4,7 @@ import {
   checkLosslessScalingDll,
   getLsfgConfig,
   updateLsfgConfigFromObject,
+  getActiveProfile,
   type ConfigUpdateResult
 } from "../api/lsfgApi";
 import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
@@ -74,9 +75,9 @@ export function useLsfgConfig() {
   // Use centralized configuration for initial state
   const [config, setConfig] = useState<ConfigurationData>(() => ConfigurationManager.getDefaults());
 
-  const loadLsfgConfig = useCallback(async () => {
+  const loadLsfgConfig = useCallback(async (profile: string = "default") => {
     try {
-      const result = await getLsfgConfig();
+      const result = await getLsfgConfig(profile);
       if (result.success && result.config) {
         setConfig(result.config);
       } else {
@@ -89,9 +90,9 @@ export function useLsfgConfig() {
     }
   }, []);
 
-  const updateConfig = useCallback(async (newConfig: ConfigurationData): Promise<ConfigUpdateResult> => {
+  const updateConfig = useCallback(async (newConfig: ConfigurationData, profile: string = "default"): Promise<ConfigUpdateResult> => {
     try {
-      const result = await updateLsfgConfigFromObject(newConfig);
+      const result = await updateLsfgConfigFromObject(newConfig, profile);
       if (result.success) {
         setConfig(newConfig);
       } else {
@@ -107,9 +108,9 @@ export function useLsfgConfig() {
     }
   }, []);
 
-  const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number | string): Promise<ConfigUpdateResult> => {
+  const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number | string, profile: string = "default"): Promise<ConfigUpdateResult> => {
     const newConfig = { ...config, [fieldName]: value };
-    return updateConfig(newConfig);
+    return updateConfig(newConfig, profile);
   }, [config, updateConfig]);
 
   useEffect(() => {
@@ -122,5 +123,45 @@ export function useLsfgConfig() {
     loadLsfgConfig,
     updateConfig,
     updateField
+  };
+}
+
+export function useProfileManager() {
+  const [activeProfile, setActiveProfile] = useState<string>("default");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadActiveProfile = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const result = await getActiveProfile();
+      if (result.success) {
+        setActiveProfile(result.profile);
+      } else {
+        console.warn("Failed to get active profile:", result.error);
+        setActiveProfile("default");
+      }
+    } catch (error) {
+      console.error("Error loading active profile:", error);
+      setActiveProfile("default");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const changeProfile = useCallback(async (newProfile: string) => {
+    setActiveProfile(newProfile);
+    // The profile change will take effect on the next game launch
+    // We don't need to update the script immediately
+  }, []);
+
+  useEffect(() => {
+    loadActiveProfile();
+  }, [loadActiveProfile]);
+
+  return {
+    activeProfile,
+    isLoading,
+    loadActiveProfile,
+    changeProfile
   };
 }

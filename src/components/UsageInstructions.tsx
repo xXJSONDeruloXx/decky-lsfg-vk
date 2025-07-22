@@ -33,23 +33,23 @@ export function UsageInstructions({ config: _config }: UsageInstructionsProps) {
             whiteSpace: "pre-wrap"
           }}
         >
-          Click "Copy Launch Option" button, then paste it into your Steam game's launch options to enable frame generation.
+          Click "Copy Launch Option" button above, then paste it into your Steam game's launch options to enable frame generation with the currently selected profile.
         </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
         <div
           style={{
-        fontSize: "12px",
-        lineHeight: "1.4",
-        opacity: "0.8",
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
-        padding: "8px",
-        borderRadius: "4px",
-        fontFamily: "monospace",
-        marginTop: "8px",
-        marginBottom: "8px",
-        textAlign: "center"
+            fontSize: "12px",
+            lineHeight: "1.4",
+            opacity: "0.8",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            padding: "8px",
+            borderRadius: "4px",
+            fontFamily: "monospace",
+            marginTop: "8px",
+            marginBottom: "8px",
+            textAlign: "center"
           }}
         >
           <strong>~/lsfg %command%</strong>
@@ -65,7 +65,7 @@ export function UsageInstructions({ config: _config }: UsageInstructionsProps) {
             marginTop: "8px"
           }}
         >
-The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
+The configuration is stored in ~/.config/lsfg-vk/conf.toml with separate profiles for different settings. The active profile is determined by the "Profile Selection" above and will be used when launching games.
         </div>
       </PanelSectionRow>
     </>

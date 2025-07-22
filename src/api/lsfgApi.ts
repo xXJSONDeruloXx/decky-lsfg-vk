@@ -87,26 +87,47 @@ export interface FileContentResult {
   error?: string;
 }
 
+export interface ActiveProfileResult {
+  success: boolean;
+  profile: string;
+  message?: string;
+  error?: string;
+}
+
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
 export const getDllStats = callable<[], DllStatsResult>("get_dll_stats");
-export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
-export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
-export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
-export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
 
-// Updated config function using centralized configuration
+// Profile-aware configuration methods
+export const getLsfgConfig = callable<[string?], ConfigResult>("get_lsfg_config");
+export const updateLsfgConfigProfile = callable<
+  [string, number, number, boolean, boolean, string, number, boolean, boolean, string],
+  ConfigUpdateResult
+>("update_lsfg_config_profile");
+export const getActiveProfile = callable<[], ActiveProfileResult>("get_active_profile");
+
+// Legacy config function for backward compatibility
 export const updateLsfgConfig = callable<
   [string, number, number, boolean, boolean, string, number, boolean, boolean],
   ConfigUpdateResult
 >("update_lsfg_config");
 
-// Helper function to create config update from configuration object
-export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
+export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
+export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
+export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
+export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
+
+// Helper function to create config update from configuration object  
+export const updateLsfgConfigFromObject = async (config: ConfigurationData, profile: string = "default"): Promise<ConfigUpdateResult> => {
+  const args = ConfigurationManager.createArgsFromConfig(config);
+  return updateLsfgConfigProfile(...args as [string, number, number, boolean, boolean, string, number, boolean, boolean], profile);
+};
+
+// Legacy helper function
+export const updateLsfgConfigFromObjectLegacy = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
   const args = ConfigurationManager.createArgsFromConfig(config);
   return updateLsfgConfig(...args as [string, number, number, boolean, boolean, string, number, boolean, boolean]);
 };

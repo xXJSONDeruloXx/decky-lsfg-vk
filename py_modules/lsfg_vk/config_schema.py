@@ -178,7 +178,112 @@ class ConfigurationManager:
     
     @staticmethod
     def generate_toml_content(config: ConfigurationData) -> str:
-        """Generate TOML configuration file content using the new game-specific format"""
+        """Generate TOML configuration file content (legacy method for backward compatibility)"""
+        return ConfigurationManager.generate_toml_content_with_profiles(config, "default")
+        
+    @staticmethod  
+    def update_profile_in_toml(config: ConfigurationData, profile: str = "default") -> str:
+        """Update a specific profile in existing TOML content, preserving other profiles"""
+        # For now, always generate a complete TOML with both profiles
+        # In the future, this could be enhanced to read existing TOML and only update the target profile
+        return ConfigurationManager.generate_toml_content_with_profiles(config, profile)
+    
+    @staticmethod
+    def read_existing_profiles(content: str) -> Dict[str, ConfigurationData]:
+        """Read all existing profiles from TOML content
+        
+        Returns:
+            Dict mapping profile names to their configurations
+        """
+        profiles = {}
+        
+        try:
+            profile_exe_map = {
+                "decky-lsfg-vk-default": "default",
+                "decky-lsfg-vk-second": "second"
+            }
+            
+            # Parse the TOML for all profiles
+            for exe_id, profile_name in profile_exe_map.items():
+                profile_config = ConfigurationManager.parse_toml_content(content, profile_name)
+                profiles[profile_name] = profile_config
+                
+            return profiles
+            
+        except Exception:
+            # If parsing fails, return defaults for both profiles
+            return {
+                "default": ConfigurationManager.get_defaults(),
+                "second": ConfigurationManager.get_defaults()
+            }
+        
+    @staticmethod
+    def update_single_profile_in_toml(existing_content: str, config: ConfigurationData, target_profile: str) -> str:
+        """Update only the target profile while preserving others"""
+        try:
+            # Read existing profiles
+            existing_profiles = ConfigurationManager.read_existing_profiles(existing_content)
+            
+            # Update the target profile
+            existing_profiles[target_profile] = config
+            
+            # Generate new TOML with updated profile
+            lines = ["version = 1"]
+            lines.append("")
+            
+            # Add global section with DLL path (get from any profile that has it)
+            dll_path = config.get("dll") or existing_profiles.get("default", {}).get("dll") or existing_profiles.get("second", {}).get("dll")
+            if dll_path:
+                lines.append("[global]")
+                lines.append(f"# specify where Lossless.dll is stored")
+                lines.append(f'dll = "{dll_path}"')
+                lines.append("")
+            
+            # Add both profiles
+            profile_exe_map = {
+                "default": "decky-lsfg-vk-default",
+                "second": "decky-lsfg-vk-second"
+            }
+            
+            for profile_name in ["default", "second"]:
+                profile_config = existing_profiles.get(profile_name, ConfigurationManager.get_defaults())
+                exe_name = profile_exe_map[profile_name]
+                
+                lines.append("[[game]]")
+                lines.append(f"# {profile_name.title()} profile (uses LSFG_PROCESS={exe_name})")
+                lines.append(f'exe = "{exe_name}"')
+                lines.append("")
+                
+                # Add all configuration fields to this profile
+                for field_name, field_def in CONFIG_SCHEMA.items():
+                    # Skip dll field - dll goes in global section
+                    if field_name == "dll":
+                        continue
+                        
+                    value = profile_config[field_name]
+                    
+                    # Add field description comment
+                    lines.append(f"# {field_def.description}")
+                    
+                    # Format value based on type
+                    if isinstance(value, bool):
+                        lines.append(f"{field_name} = {str(value).lower()}")
+                    elif isinstance(value, str) and value:  # Only add non-empty strings
+                        lines.append(f'{field_name} = "{value}"')
+                    elif isinstance(value, (int, float)):  # Always include numbers, even if 0 or 1
+                        lines.append(f"{field_name} = {value}")
+                    
+                    lines.append("")  # Empty line for readability
+                
+            return "\n".join(lines)
+            
+        except Exception:
+            # If anything fails, fall back to generating fresh TOML
+            return ConfigurationManager.generate_toml_content_with_profiles(config, target_profile)
+        
+    @staticmethod
+    def generate_toml_content_with_profiles(config: ConfigurationData, target_profile: str = "default") -> str:
+        """Generate TOML configuration file content with profile support"""
         lines = ["version = 1"]
         lines.append("")
         
@@ -189,46 +294,69 @@ class ConfigurationManager:
             lines.append(f'dll = "{config["dll"]}"')
             lines.append("")
         
-        # Add game section with process name for LSFG_PROCESS approach
-        lines.append("[[game]]")
-        lines.append("# Plugin-managed game entry (uses LSFG_PROCESS=decky-lsfg-vk)")
-        lines.append('exe = "decky-lsfg-vk"')
-        lines.append("")
-        
-        # Add all configuration fields to the game section
-        for field_name, field_def in CONFIG_SCHEMA.items():
-            # Skip dll field - dll goes in global section
-            if field_name == "dll":
-                continue
+        # Helper function to add profile section
+        def add_profile_section(profile_name: str, profile_config: ConfigurationData):
+            profile_exe_map = {
+                "default": "decky-lsfg-vk-default", 
+                "second": "decky-lsfg-vk-second"
+            }
+            
+            lines.append("[[game]]")
+            lines.append(f"# {profile_name.title()} profile (uses LSFG_PROCESS={profile_exe_map[profile_name]})")
+            lines.append(f'exe = "{profile_exe_map[profile_name]}"')
+            lines.append("")
+            
+            # Add all configuration fields to this profile
+            for field_name, field_def in CONFIG_SCHEMA.items():
+                # Skip dll field - dll goes in global section
+                if field_name == "dll":
+                    continue
+                    
+                value = profile_config[field_name]
                 
-            value = config[field_name]
-            
-            # Add field description comment
-            lines.append(f"# {field_def.description}")
-            
-            # Format value based on type
-            if isinstance(value, bool):
-                lines.append(f"{field_name} = {str(value).lower()}")
-            elif isinstance(value, str) and value:  # Only add non-empty strings
-                lines.append(f'{field_name} = "{value}"')
-            elif isinstance(value, (int, float)):  # Always include numbers, even if 0 or 1
-                lines.append(f"{field_name} = {value}")
-            
-            lines.append("")  # Empty line for readability
+                # Add field description comment
+                lines.append(f"# {field_def.description}")
+                
+                # Format value based on type
+                if isinstance(value, bool):
+                    lines.append(f"{field_name} = {str(value).lower()}")
+                elif isinstance(value, str) and value:  # Only add non-empty strings
+                    lines.append(f'{field_name} = "{value}"')
+                elif isinstance(value, (int, float)):  # Always include numbers, even if 0 or 1
+                    lines.append(f"{field_name} = {value}")
+                
+                lines.append("")  # Empty line for readability
+        
+        # Add default profile 
+        default_config = config if target_profile == "default" else ConfigurationManager.get_defaults()
+        add_profile_section("default", default_config)
+        
+        # Add second profile
+        second_config = config if target_profile == "second" else ConfigurationManager.get_defaults()
+        add_profile_section("second", second_config)
         
         return "\n".join(lines)
     
     @staticmethod
-    def parse_toml_content(content: str) -> ConfigurationData:
-        """Parse TOML content into configuration data using simple regex parsing"""
+    def parse_toml_content(content: str, profile: str = "default") -> ConfigurationData:
+        """Parse TOML content into configuration data for a specific profile"""
         config = ConfigurationManager.get_defaults()
         
         try:
+            # Map profile names to exe identifiers
+            profile_exe_map = {
+                "default": "decky-lsfg-vk-default",
+                "second": "decky-lsfg-vk-second"
+            }
+            
+            target_exe = profile_exe_map.get(profile, "decky-lsfg-vk-default")
+            
             # Look for both [global] and [[game]] sections
             lines = content.split('\n')
             in_global_section = False
             in_game_section = False
             current_game_exe = None
+            found_profile_config = False
             
             for line in lines:
                 line = line.strip()
@@ -272,8 +400,9 @@ class ConfigurationManager:
                         # Track the exe for this game section
                         if key == "exe":
                             current_game_exe = value
-                        # Only parse config for our plugin-managed game entry
-                        elif current_game_exe == "decky-lsfg-vk" and key in CONFIG_SCHEMA:
+                        # Parse config for our target profile, OR legacy single profile
+                        elif ((current_game_exe == target_exe) or 
+                              (current_game_exe == "decky-lsfg-vk" and profile == "default")) and key in CONFIG_SCHEMA:
                             field_def = CONFIG_SCHEMA[key]
                             try:
                                 if field_def.field_type == ConfigFieldType.BOOLEAN:
@@ -285,9 +414,15 @@ class ConfigurationManager:
                                     config[key] = float(value)
                                 elif field_def.field_type == ConfigFieldType.STRING:
                                     config[key] = value
+                                found_profile_config = True
                             except (ValueError, TypeError):
                                 # If conversion fails, keep default value
                                 pass
+            
+            # If we didn't find any profile-specific config and we're looking for "second", 
+            # return defaults (this handles the case where the TOML doesn't have the second profile yet)
+            if not found_profile_config and profile == "second":
+                return ConfigurationManager.get_defaults()
             
             return config
             

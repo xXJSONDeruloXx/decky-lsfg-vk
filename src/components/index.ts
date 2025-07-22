@@ -2,6 +2,7 @@ export { Content } from "./Content";
 export { StatusDisplay } from "./StatusDisplay";
 export { InstallationButton } from "./InstallationButton";
 export { ConfigurationSection } from "./ConfigurationSection";
+export { ProfileSelector } from "./ProfileSelector";
 export { UsageInstructions } from "./UsageInstructions";
 export { WikiButton } from "./WikiButton";
 export { SmartClipboardButton } from "./SmartClipboardButton";
