@@ -1,4 +1,4 @@
-import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, DropdownItem, ButtonItem, Field, DialogButton, Focusable } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import {
   MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
@@ -34,21 +34,85 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <DropdownItem
-          label="FPS Multiplier"
-          description="Traditional FPS multiplier value"
-          menuLabel="Select FPS multiplier"
-          selectedOption={config.multiplier}
-          onChange={(value) => onConfigChange(MULTIPLIER, value.data)}
-          rgOptions={[
-            { data: 1, label: "OFF" },
-            { data: 2, label: "2X" },
-            { data: 3, label: "3X" },
-            { data: 4, label: "4X" },
-            { data: 5, label: "5X" },
-            { data: 6, label: "6X" },
-          ]}
-        />
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "16px",
+            marginBottom: "8px",
+            color: "white"
+          }}
+        >
+          FPS Multiplier
+        </div>
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#cccccc",
+            marginBottom: "8px"
+          }}
+        >
+          Traditional FPS multiplier value
+        </div>
+        <Focusable
+          style={{ 
+            marginTop: "10px", 
+            marginBottom: "10px", 
+            display: "flex",
+            justifyContent: "center"
+          }}
+          flow-children="horizontal"
+        >
+          <DialogButton
+            style={{
+              marginLeft: "0px",
+              height: "30px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "5px 0px 0px 0px",
+              minWidth: "40px",
+            }}
+            onClick={() => onConfigChange(MULTIPLIER, Math.max(1, config.multiplier - 1))}
+            disabled={config.multiplier <= 1}
+          >
+            −
+          </DialogButton>
+          <div
+            style={{
+              marginLeft: "5px",
+              marginRight: "5px",
+              height: "30px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "5px 0px 0px 0px",
+              minWidth: "60px",
+              fontWeight: "bold",
+              color: "white",
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              borderRadius: "3px",
+              border: "1px solid rgba(255, 255, 255, 0.2)"
+            }}
+          >
+            {config.multiplier < 2 ? "OFF" : `${config.multiplier}X`}
+          </div>
+          <DialogButton
+            style={{
+              marginLeft: "0px",
+              height: "30px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "5px 0px 0px 0px",
+              minWidth: "40px",
+            }}
+            onClick={() => onConfigChange(MULTIPLIER, Math.min(6, config.multiplier + 1))}
+            disabled={config.multiplier >= 6}
+          >
+            +
+          </DialogButton>
+        </Focusable>
       </PanelSectionRow>
 
       <PanelSectionRow>
