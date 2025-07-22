@@ -222,7 +222,7 @@ class ConfigurationService(BaseService):
         
         if config.get("mangohud_workaround", False):
             lines.append("export MANGOHUD=1")
-            lines.append("export MANGOHUD_CONFIG=alpha=0.01,background_alpha=0.01")
+            lines.append("export MANGOHUD_CONFIG=alpha=0.001,background_alpha=0.001")
         
         if config.get("disable_vkbasalt", False):
             lines.append("export DISABLE_VKBASALT=1")

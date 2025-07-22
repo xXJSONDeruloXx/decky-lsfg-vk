@@ -1,5 +1,5 @@
 import { callable } from "@decky/api";
-import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
+import { ConfigurationData } from "../config/configSchema";
 
 // Type definitions for API responses
 export interface InstallationResult {
@@ -99,16 +99,15 @@ export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_opti
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
 
-// Updated config function using centralized configuration
+// Updated config function using object-based configuration (single source of truth)
 export const updateLsfgConfig = callable<
-  [string, number, number, boolean, boolean, string, number, boolean, boolean, boolean, boolean],
+  [ConfigurationData],
   ConfigUpdateResult
 >("update_lsfg_config");
 
-// Helper function to create config update from configuration object
+// Legacy helper function for backward compatibility
 export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
-  const args = ConfigurationManager.createArgsFromConfig(config);
-  return updateLsfgConfig(...args as [string, number, number, boolean, boolean, string, number, boolean, boolean, boolean, boolean]);
+  return updateLsfgConfig(config);
 };
 
 // Self-updater API functions

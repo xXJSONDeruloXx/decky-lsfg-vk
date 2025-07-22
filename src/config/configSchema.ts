@@ -8,6 +8,7 @@
 import { callable } from "@decky/api";
 import type { ConfigurationData } from './generatedConfigSchema';
 import { getDefaults } from './generatedConfigSchema';
+import { updateLsfgConfig } from "../api/lsfgApi";
 
 // Re-export all auto-generated configuration constants
 export {
@@ -30,7 +31,6 @@ export class ConfigurationManager {
 
   // Callable methods for backend communication
   private getConfiguration = callable<[], { success: boolean; data?: ConfigurationData; error?: string }>("get_configuration");
-  private setConfiguration = callable<[{ config_data: ConfigurationData }], { success: boolean; error?: string }>("set_configuration");
   private resetConfiguration = callable<[], { success: boolean; data?: ConfigurationData; error?: string }>("reset_configuration");
 
   private constructor() {}
@@ -47,25 +47,6 @@ export class ConfigurationManager {
    */
   static getDefaults(): ConfigurationData {
     return getDefaults();
-  }
-
-  /**
-   * Create args array from config object for lsfg API calls
-   */
-  static createArgsFromConfig(config: ConfigurationData): [string, number, number, boolean, boolean, string, number, boolean, boolean, boolean, boolean] {
-    return [
-      config.dll,
-      config.multiplier,
-      config.flow_scale,
-      config.performance_mode,
-      config.hdr_mode,
-      config.experimental_present_mode,
-      config.dxvk_frame_rate,
-      config.enable_wow64,
-      config.disable_steamdeck_mode,
-      config.mangohud_workaround,
-      config.disable_vkbasalt
-    ];
   }
 
   /**
@@ -91,7 +72,7 @@ export class ConfigurationManager {
    */
   async saveConfig(config: ConfigurationData): Promise<void> {
     try {
-      const result = await this.setConfiguration({ config_data: config });
+      const result = await updateLsfgConfig(config);
       if (result.success) {
         this._config = config;
       } else {
