@@ -59,7 +59,8 @@ export function ConfigurationSection({
             marginTop: "10px", 
             marginBottom: "10px", 
             display: "flex",
-            justifyContent: "center"
+            justifyContent: "center",
+            alignItems: "center"
           }}
           flow-children="horizontal"
         >
@@ -80,19 +81,13 @@ export function ConfigurationSection({
           </DialogButton>
           <div
             style={{
-              marginLeft: "5px",
-              marginRight: "5px",
-              height: "30px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "5px 0px 0px 0px",
-              minWidth: "60px",
+              marginLeft: "20px",
+              marginRight: "20px",
+              fontSize: "16px",
               fontWeight: "bold",
               color: "white",
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              borderRadius: "3px",
-              border: "1px solid rgba(255, 255, 255, 0.2)"
+              minWidth: "60px",
+              textAlign: "center"
             }}
           >
             {config.multiplier < 2 ? "OFF" : `${config.multiplier}X`}
