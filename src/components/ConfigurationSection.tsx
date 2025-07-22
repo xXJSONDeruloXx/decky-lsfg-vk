@@ -1,4 +1,4 @@
-import { PanelSectionRow, ToggleField, SliderField, DropdownItem, ButtonItem, Field, DialogButton, Focusable } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, DropdownItem, DialogButton, Focusable } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import {
   MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
@@ -23,7 +23,7 @@ export function ConfigurationSection({
             fontSize: "14px",
             fontWeight: "bold",
             marginTop: "16px",
-            marginBottom: "8px",
+            marginBottom: "16px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
             paddingBottom: "4px",
             color: "white"
@@ -33,31 +33,13 @@ export function ConfigurationSection({
         </div>
       </PanelSectionRow>
 
+      {/* FPS Multiplier */}
+
       <PanelSectionRow>
-        <div
-          style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
-            color: "white"
-          }}
-        >
-          FPS Multiplier
-        </div>
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#cccccc",
-            marginBottom: "8px"
-          }}
-        >
-          Traditional FPS multiplier value
-        </div>
         <Focusable
-          style={{ 
-            marginTop: "10px", 
-            marginBottom: "10px", 
+          style={{
+            marginTop: "10px",
+            marginBottom: "10px",
             display: "flex",
             justifyContent: "center",
             alignItems: "center"
