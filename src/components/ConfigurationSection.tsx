@@ -182,38 +182,6 @@ export function ConfigurationSection({
           onChange={(value) => onConfigChange('disable_vkbasalt', value)}
         />
       </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="Foobar Toggle (Test)"
-          description="Test script-only toggle that exports FOOBAR=1 (for testing purposes)"
-          checked={config.foobar_toggle}
-          onChange={(value) => onConfigChange('foobar_toggle', value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <div>
-          <div style={{ marginBottom: "8px", fontSize: "14px" }}>Test Config Only Field</div>
-          <input
-            type="text"
-            value={config.test_config_only}
-            onChange={(e) => onConfigChange('test_config_only', e.target.value)}
-            placeholder="Enter test value"
-            style={{
-              width: "100%",
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #4c4c4c",
-              backgroundColor: "#2d2d2d",
-              color: "#ffffff"
-            }}
-          />
-          <div style={{ fontSize: "12px", color: "#999", marginTop: "4px" }}>
-            Test TOML-only configuration field (not in script)
-          </div>
-        </div>
-      </PanelSectionRow>
     </>
   );
 }
