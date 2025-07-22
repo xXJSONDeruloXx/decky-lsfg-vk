@@ -101,14 +101,14 @@ export const getLaunchScriptContent = callable<[], FileContentResult>("get_launc
 
 // Updated config function using centralized configuration
 export const updateLsfgConfig = callable<
-  [string, number, number, boolean, boolean, string, number, boolean, boolean],
+  [string, number, number, boolean, boolean, string, number, boolean, boolean, boolean, boolean],
   ConfigUpdateResult
 >("update_lsfg_config");
 
 // Helper function to create config update from configuration object
 export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
   const args = ConfigurationManager.createArgsFromConfig(config);
-  return updateLsfgConfig(...args as [string, number, number, boolean, boolean, string, number, boolean, boolean]);
+  return updateLsfgConfig(...args as [string, number, number, boolean, boolean, string, number, boolean, boolean, boolean, boolean]);
 };
 
 // Self-updater API functions

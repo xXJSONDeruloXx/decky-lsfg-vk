@@ -65,7 +65,9 @@ class ConfigurationService(BaseService):
                      experimental_present_mode: str = "fifo", 
                      dxvk_frame_rate: int = 0,
                      enable_wow64: bool = False,
-                     disable_steamdeck_mode: bool = False) -> ConfigurationResponse:
+                     disable_steamdeck_mode: bool = False,
+                     mangohud_workaround: bool = False,
+                     disable_vkbasalt: bool = False) -> ConfigurationResponse:
         """Update TOML configuration
         
         Args:
@@ -78,6 +80,8 @@ class ConfigurationService(BaseService):
             dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
             enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
             disable_steamdeck_mode: Whether to disable Steam Deck mode
+            mangohud_workaround: Whether to enable MangoHud workaround with transparent overlay
+            disable_vkbasalt: Whether to disable vkBasalt layer
             
         Returns:
             ConfigurationResponse with success status
@@ -86,7 +90,8 @@ class ConfigurationService(BaseService):
             # Create configuration from individual arguments
             config = ConfigurationManager.create_config_from_args(
                 dll, multiplier, flow_scale, performance_mode, hdr_mode,
-                experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
+                experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
+                mangohud_workaround, disable_vkbasalt
             )
             
             # Generate TOML content using centralized manager
@@ -108,7 +113,8 @@ class ConfigurationService(BaseService):
                          f"performance_mode={performance_mode}, hdr_mode={hdr_mode}, "
                          f"experimental_present_mode='{experimental_present_mode}', "
                          f"dxvk_frame_rate={dxvk_frame_rate}, "
-                         f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}")
+                         f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}, "
+                         f"mangohud_workaround={mangohud_workaround}, disable_vkbasalt={disable_vkbasalt}")
             
             return self._success_response(ConfigurationResponse,
                                         "lsfg configuration updated successfully",
@@ -213,6 +219,13 @@ class ConfigurationService(BaseService):
         
         if config.get("disable_steamdeck_mode", False):
             lines.append("export SteamDeck=0")
+        
+        if config.get("mangohud_workaround", False):
+            lines.append("export MANGOHUD=1")
+            lines.append("export MANGOHUD_CONFIG=alpha=0.01,background_alpha=0.01")
+        
+        if config.get("disable_vkbasalt", False):
+            lines.append("export DISABLE_VKBASALT=1")
         
         # Add DXVK_FRAME_RATE if dxvk_frame_rate is set
         dxvk_frame_rate = config.get("dxvk_frame_rate", 0)

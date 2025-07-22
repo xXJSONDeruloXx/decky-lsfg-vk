@@ -73,6 +73,20 @@ SCRIPT_ONLY_FIELDS = {
         field_type=ConfigFieldType.BOOLEAN,
         default=False,
         description="disable Steam Deck mode (unlocks hidden settings in some games)"
+    ),
+    
+    "mangohud_workaround": ConfigField(
+        name="mangohud_workaround",
+        field_type=ConfigFieldType.BOOLEAN,
+        default=False,
+        description="Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+    ),
+    
+    "disable_vkbasalt": ConfigField(
+        name="disable_vkbasalt",
+        field_type=ConfigFieldType.BOOLEAN,
+        default=False,
+        description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
     )
 }
 
@@ -91,6 +105,8 @@ class ConfigurationData(TypedDict):
     dxvk_frame_rate: int
     enable_wow64: bool
     disable_steamdeck_mode: bool
+    mangohud_workaround: bool
+    disable_vkbasalt: bool
 
 
 class ConfigurationManager:
@@ -335,6 +351,10 @@ class ConfigurationManager:
                         script_values["enable_wow64"] = value == "1"
                     elif key == "SteamDeck":
                         script_values["disable_steamdeck_mode"] = value == "0"
+                    elif key == "MANGOHUD":
+                        script_values["mangohud_workaround"] = value == "1"
+                    elif key == "DISABLE_VKBASALT":
+                        script_values["disable_vkbasalt"] = value == "1"
             
         except (ValueError, KeyError, IndexError) as e:
             # If parsing fails, log the error and return empty dict (will use defaults)
@@ -368,7 +388,9 @@ class ConfigurationManager:
                                experimental_present_mode: str = "fifo", 
                                dxvk_frame_rate: int = 0,
                                enable_wow64: bool = False,
-                               disable_steamdeck_mode: bool = False) -> ConfigurationData:
+                               disable_steamdeck_mode: bool = False,
+                               mangohud_workaround: bool = False,
+                               disable_vkbasalt: bool = False) -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
             "dll": dll,
@@ -379,5 +401,7 @@ class ConfigurationManager:
             "experimental_present_mode": experimental_present_mode,
             "dxvk_frame_rate": dxvk_frame_rate,
             "enable_wow64": enable_wow64,
-            "disable_steamdeck_mode": disable_steamdeck_mode
+            "disable_steamdeck_mode": disable_steamdeck_mode,
+            "mangohud_workaround": mangohud_workaround,
+            "disable_vkbasalt": disable_vkbasalt
         })

@@ -71,6 +71,18 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "disable Steam Deck mode (unlocks hidden settings in some games)"
   },
+  mangohud_workaround: {
+    name: "mangohud_workaround",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+  },
+  disable_vkbasalt: {
+    name: "disable_vkbasalt",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+  },
 };
 
 // Type-safe configuration data structure
@@ -84,6 +96,8 @@ export interface ConfigurationData {
   dxvk_frame_rate: number;
   enable_wow64: boolean;
   disable_steamdeck_mode: boolean;
+  mangohud_workaround: boolean;
+  disable_vkbasalt: boolean;
 }
 
 // Helper functions
@@ -102,6 +116,8 @@ export function getDefaults(): ConfigurationData {
     dxvk_frame_rate: 0,
     enable_wow64: false,
     disable_steamdeck_mode: false,
+    mangohud_workaround: false,
+    disable_vkbasalt: false,
   };
 }
 
@@ -116,6 +132,8 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     dxvk_frame_rate: ConfigFieldType.INTEGER,
     enable_wow64: ConfigFieldType.BOOLEAN,
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
+    mangohud_workaround: ConfigFieldType.BOOLEAN,
+    disable_vkbasalt: ConfigFieldType.BOOLEAN,
   };
 }
 
