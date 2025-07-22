@@ -106,22 +106,6 @@ CONFIG_SCHEMA_DEF = {
         "default": False,
         "description": "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)",
         "location": "script"
-    },
-    
-    "foobar_toggle": {
-        "name": "foobar_toggle",
-        "fieldType": ConfigFieldType.BOOLEAN,
-        "default": False,
-        "description": "Test script-only toggle that exports FOOBAR=1 (for testing purposes)",
-        "location": "script"
-    },
-    
-    "test_config_only": {
-        "name": "test_config_only",
-        "fieldType": ConfigFieldType.STRING,
-        "default": "default_value",
-        "description": "Test TOML-only configuration field (not in script)",
-        "location": "toml"
     }
 }
 

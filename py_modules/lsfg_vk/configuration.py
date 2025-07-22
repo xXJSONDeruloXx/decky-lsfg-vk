@@ -108,9 +108,7 @@ class ConfigurationService(BaseService):
                      enable_wow64: bool = False,
                      disable_steamdeck_mode: bool = False,
                      mangohud_workaround: bool = False,
-                     disable_vkbasalt: bool = False,
-                     foobar_toggle: bool = False,
-                     test_config_only: str = "default_value") -> ConfigurationResponse:
+                     disable_vkbasalt: bool = False) -> ConfigurationResponse:
         """Update TOML configuration
         
         Args:
@@ -125,8 +123,6 @@ class ConfigurationService(BaseService):
             disable_steamdeck_mode: Whether to disable Steam Deck mode
             mangohud_workaround: Whether to enable MangoHud workaround with transparent overlay
             disable_vkbasalt: Whether to disable vkBasalt layer
-            foobar_toggle: Test script-only toggle that exports FOOBAR=1
-            test_config_only: Test TOML-only configuration field
             
         Returns:
             ConfigurationResponse with success status
@@ -136,7 +132,7 @@ class ConfigurationService(BaseService):
             config = ConfigurationManager.create_config_from_args(
                 dll, multiplier, flow_scale, performance_mode, hdr_mode,
                 experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
-                mangohud_workaround, disable_vkbasalt, foobar_toggle, test_config_only
+                mangohud_workaround, disable_vkbasalt
             )
             
             # Generate TOML content using centralized manager
@@ -159,8 +155,7 @@ class ConfigurationService(BaseService):
                          f"experimental_present_mode='{experimental_present_mode}', "
                          f"dxvk_frame_rate={dxvk_frame_rate}, "
                          f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}, "
-                         f"mangohud_workaround={mangohud_workaround}, disable_vkbasalt={disable_vkbasalt}, "
-                         f"foobar_toggle={foobar_toggle}, test_config_only='{test_config_only}'")
+                         f"mangohud_workaround={mangohud_workaround}, disable_vkbasalt={disable_vkbasalt}")
             
             return self._success_response(ConfigurationResponse,
                                         "lsfg configuration updated successfully",
@@ -272,9 +267,6 @@ class ConfigurationService(BaseService):
         
         if config.get("disable_vkbasalt", False):
             lines.append("export DISABLE_VKBASALT=1")
-        
-        if config.get("foobar_toggle", False):
-            lines.append("export FOOBAR=1")
         
         # Add DXVK_FRAME_RATE if dxvk_frame_rate is set
         dxvk_frame_rate = config.get("dxvk_frame_rate", 0)

@@ -81,8 +81,6 @@ class ConfigurationData(TypedDict):
     disable_steamdeck_mode: bool
     mangohud_workaround: bool
     disable_vkbasalt: bool
-    foobar_toggle: bool
-    test_config_only: str
 
 
 class ConfigurationManager:
@@ -331,8 +329,6 @@ class ConfigurationManager:
                         script_values["mangohud_workaround"] = value == "1"
                     elif key == "DISABLE_VKBASALT":
                         script_values["disable_vkbasalt"] = value == "1"
-                    elif key == "FOOBAR":
-                        script_values["foobar_toggle"] = value == "1"
             
         except (ValueError, KeyError, IndexError) as e:
             # If parsing fails, log the error and return empty dict (will use defaults)
@@ -368,9 +364,7 @@ class ConfigurationManager:
                                enable_wow64: bool = False,
                                disable_steamdeck_mode: bool = False,
                                mangohud_workaround: bool = False,
-                               disable_vkbasalt: bool = False,
-                               foobar_toggle: bool = False,
-                               test_config_only: str = "default_value") -> ConfigurationData:
+                               disable_vkbasalt: bool = False) -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
             "dll": dll,
@@ -383,7 +377,5 @@ class ConfigurationManager:
             "enable_wow64": enable_wow64,
             "disable_steamdeck_mode": disable_steamdeck_mode,
             "mangohud_workaround": mangohud_workaround,
-            "disable_vkbasalt": disable_vkbasalt,
-            "foobar_toggle": foobar_toggle,
-            "test_config_only": test_config_only
+            "disable_vkbasalt": disable_vkbasalt
         })
