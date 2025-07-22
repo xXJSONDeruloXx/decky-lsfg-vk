@@ -9,18 +9,15 @@ This module defines the complete configuration structure for lsfg-vk, managing T
 """
 
 import re
+import sys
 from typing import TypedDict, Dict, Any, Union, cast
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-
-class ConfigFieldType(Enum):
-    """Supported configuration field types"""
-    BOOLEAN = "boolean"
-    INTEGER = "integer"
-    FLOAT = "float"
-    STRING = "string"
+# Import shared configuration constants
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType, get_field_names, get_defaults, get_field_types
 
 
 @dataclass
@@ -36,50 +33,24 @@ class ConfigField:
         return value
 
 
-# Configuration schema definition
+# Use shared configuration schema as source of truth
 CONFIG_SCHEMA: Dict[str, ConfigField] = {
-    "dll": ConfigField(
-        name="dll",
-        field_type=ConfigFieldType.STRING,
-        default="",  # Will be populated dynamically based on detection
-        description="specify where Lossless.dll is stored"
-    ),
-    
-    "multiplier": ConfigField(
-        name="multiplier",
-        field_type=ConfigFieldType.INTEGER,
-        default=1,
-        description="change the fps multiplier"
-    ),
-    
-    "flow_scale": ConfigField(
-        name="flow_scale",
-        field_type=ConfigFieldType.FLOAT,
-        default=0.8,
-        description="change the flow scale"
-    ),
-    
-    "performance_mode": ConfigField(
-        name="performance_mode",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=True,
-        description="toggle performance mode"
-    ),
-    
-    "hdr_mode": ConfigField(
-        name="hdr_mode",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=False,
-        description="enable hdr mode"
-    ),
-    
-    "experimental_present_mode": ConfigField(
-        name="experimental_present_mode",
-        field_type=ConfigFieldType.STRING,
-        default="fifo",
-        description="experimental: override vulkan present mode (fifo/mailbox/immediate)"
-    ),
+    field_name: ConfigField(
+        name=field_def["name"],
+        field_type=ConfigFieldType(field_def["fieldType"]),
+        default=field_def["default"],
+        description=field_def["description"]
+    )
+    for field_name, field_def in CONFIG_SCHEMA_DEF.items()
 }
+
+# Override DLL default to empty (will be populated dynamically)
+CONFIG_SCHEMA["dll"] = ConfigField(
+    name="dll",
+    field_type=ConfigFieldType.STRING,
+    default="",  # Will be populated dynamically based on detection
+    description="specify where Lossless.dll is stored"
+)
 
 # Fields that should ONLY be in the lsfg script, not in TOML config
 SCRIPT_ONLY_FIELDS = {
@@ -128,10 +99,16 @@ class ConfigurationManager:
     @staticmethod
     def get_defaults() -> ConfigurationData:
         """Get default configuration values"""
-        return cast(ConfigurationData, {
+        # Use shared defaults and add script-only fields
+        shared_defaults = get_defaults()
+        
+        # Add script-only fields that aren't in the shared schema
+        script_defaults = {
             field.name: field.default 
-            for field in COMPLETE_CONFIG_SCHEMA.values()
-        })
+            for field in SCRIPT_ONLY_FIELDS.values()
+        }
+        
+        return cast(ConfigurationData, {**shared_defaults, **script_defaults})
     
     @staticmethod
     def get_defaults_with_dll_detection(dll_detection_service=None) -> ConfigurationData:
@@ -164,15 +141,18 @@ class ConfigurationManager:
     @staticmethod
     def get_field_names() -> list[str]:
         """Get ordered list of configuration field names"""
-        return list(COMPLETE_CONFIG_SCHEMA.keys())
+        # Use shared field names and add script-only fields
+        shared_names = get_field_names()
+        script_names = list(SCRIPT_ONLY_FIELDS.keys())
+        return shared_names + script_names
     
     @staticmethod
     def get_field_types() -> Dict[str, ConfigFieldType]:
         """Get field type mapping"""
-        return {
-            field.name: field.field_type 
-            for field in CONFIG_SCHEMA.values()
-        }
+        # Use shared field types and add script-only field types
+        shared_types = {name: ConfigFieldType(type_str) for name, type_str in get_field_types().items()}
+        script_types = {field.name: field.field_type for field in SCRIPT_ONLY_FIELDS.values()}
+        return {**shared_types, **script_types}
     
     @staticmethod
     def validate_config(config: Dict[str, Any]) -> ConfigurationData:

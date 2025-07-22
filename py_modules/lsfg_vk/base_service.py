@@ -5,9 +5,12 @@ Base service class with common functionality.
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar, Dict
 
 from .constants import LOCAL_LIB, LOCAL_SHARE_BASE, VULKAN_LAYER_DIR, SCRIPT_NAME, CONFIG_DIR, CONFIG_FILENAME
+
+# Generic type for response dictionaries
+ResponseType = TypeVar('ResponseType', bound=Dict[str, Any])
 
 
 class BaseService:
@@ -90,3 +93,42 @@ class BaseService:
         except Exception:
             self.log.error(f"Failed to write to {path}")
             raise
+
+    def _success_response(self, response_type: type, message: str = "", **kwargs) -> Any:
+        """Create a standardized success response
+        
+        Args:
+            response_type: The TypedDict response type to create
+            message: Success message
+            **kwargs: Additional response fields
+            
+        Returns:
+            Success response dict
+        """
+        response = {
+            "success": True,
+            "message": message,
+            "error": None
+        }
+        response.update(kwargs)
+        return response
+    
+    def _error_response(self, response_type: type, error: str, message: str = "", **kwargs) -> Any:
+        """Create a standardized error response
+        
+        Args:
+            response_type: The TypedDict response type to create
+            error: Error description
+            message: Optional message
+            **kwargs: Additional response fields
+            
+        Returns:
+            Error response dict
+        """
+        response = {
+            "success": False,
+            "message": message,
+            "error": error
+        }
+        response.update(kwargs)
+        return response

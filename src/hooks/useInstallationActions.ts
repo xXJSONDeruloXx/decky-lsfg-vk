@@ -1,6 +1,11 @@
 import { useState } from "react";
-import { toaster } from "@decky/api";
 import { installLsfgVk, uninstallLsfgVk } from "../api/lsfgApi";
+import { 
+  showInstallSuccessToast, 
+  showInstallErrorToast,
+  showUninstallSuccessToast, 
+  showUninstallErrorToast 
+} from "../utils/toastUtils";
 
 export function useInstallationActions() {
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
@@ -19,10 +24,7 @@ export function useInstallationActions() {
       if (result.success) {
         setIsInstalled(true);
         setInstallationStatus("lsfg-vk installed successfully!");
-        toaster.toast({
-          title: "Installation Complete",
-          body: "lsfg-vk has been installed successfully"
-        });
+        showInstallSuccessToast();
 
         // Reload lsfg config after installation
         if (reloadConfig) {
@@ -30,17 +32,11 @@ export function useInstallationActions() {
         }
       } else {
         setInstallationStatus(`Installation failed: ${result.error}`);
-        toaster.toast({
-          title: "Installation Failed",
-          body: result.error || "Unknown error occurred"
-        });
+        showInstallErrorToast(result.error);
       }
     } catch (error) {
       setInstallationStatus(`Installation failed: ${error}`);
-      toaster.toast({
-        title: "Installation Failed",
-        body: `Error: ${error}`
-      });
+      showInstallErrorToast(String(error));
     } finally {
       setIsInstalling(false);
     }
@@ -58,23 +54,14 @@ export function useInstallationActions() {
       if (result.success) {
         setIsInstalled(false);
         setInstallationStatus("lsfg-vk uninstalled successfully!");
-        toaster.toast({
-          title: "Uninstallation Complete",
-          body: result.message || "lsfg-vk has been uninstalled successfully"
-        });
+        showUninstallSuccessToast();
       } else {
         setInstallationStatus(`Uninstallation failed: ${result.error}`);
-        toaster.toast({
-          title: "Uninstallation Failed",
-          body: result.error || "Unknown error occurred"
-        });
+        showUninstallErrorToast(result.error);
       }
     } catch (error) {
       setInstallationStatus(`Uninstallation failed: ${error}`);
-      toaster.toast({
-        title: "Uninstallation Failed",
-        body: `Error: ${error}`
-      });
+      showUninstallErrorToast(String(error));
     } finally {
       setIsUninstalling(false);
     }

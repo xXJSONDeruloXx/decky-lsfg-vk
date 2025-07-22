@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { PanelSectionRow, ButtonItem } from "@decky/ui";
 import { FaClipboard } from "react-icons/fa";
-import { toaster } from "@decky/api";
 import { getLaunchOption } from "../api/lsfgApi";
+import { showClipboardSuccessToast, showClipboardErrorToast, showSuccessToast } from "../utils/toastUtils";
+import { copyWithVerification } from "../utils/clipboardUtils";
 
 export function SmartClipboardButton() {
   const [isLoading, setIsLoading] = useState(false);
@@ -22,72 +23,20 @@ export function SmartClipboardButton() {
     setIsLoading(true);
     try {
       const text = await getLaunchOptionText();
+      const { success, verified } = await copyWithVerification(text);
       
-      // Use the proven input simulation method
-      const tempInput = document.createElement('input');
-      tempInput.value = text;
-      tempInput.style.position = 'absolute';
-      tempInput.style.left = '-9999px';
-      document.body.appendChild(tempInput);
-      
-      // Focus and select the text
-      tempInput.focus();
-      tempInput.select();
-      
-      // Try copying using execCommand first (most reliable in gaming mode)
-      let copySuccess = false;
-      try {
-        if (document.execCommand('copy')) {
-          copySuccess = true;
-        }
-      } catch (e) {
-        // If execCommand fails, try navigator.clipboard as fallback
-        try {
-          await navigator.clipboard.writeText(text);
-          copySuccess = true;
-        } catch (clipboardError) {
-          console.error('Both copy methods failed:', e, clipboardError);
-        }
-      }
-      
-      // Clean up
-      document.body.removeChild(tempInput);
-      
-      if (copySuccess) {
-        // Verify the copy worked by reading back
-        try {
-          const readBack = await navigator.clipboard.readText();
-          if (readBack === text) {
-            toaster.toast({
-              title: "Copied to Clipboard!",
-              body: "Launch option ready to paste"
-            });
-          } else {
-            // Copy worked but verification failed - still consider it success
-            toaster.toast({
-              title: "Copied to Clipboard!",
-              body: "Launch option copied (verification unavailable)"
-            });
-          }
-        } catch (e) {
-          // Verification failed but copy likely worked
-          toaster.toast({
-            title: "Copied to Clipboard!",
-            body: "Launch option copied successfully"
-          });
+      if (success) {
+        if (verified) {
+          showClipboardSuccessToast();
+        } else {
+          showSuccessToast("Copied to Clipboard!", "Launch option copied (verification unavailable)");
         }
       } else {
-        toaster.toast({
-          title: "Copy Failed",
-          body: "Unable to copy to clipboard"
-        });
+        showClipboardErrorToast();
       }
 
     } catch (error) {
-      toaster.toast({
-        title: "Copy Failed",
-        body: `Error: ${String(error)}`
-      });
+      showClipboardErrorToast();
     } finally {
       setIsLoading(false);
     }
