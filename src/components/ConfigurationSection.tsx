@@ -112,16 +112,26 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <div
           style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
-            color: "white"
+        fontSize: "14px",
+        fontWeight: "bold",
+        marginTop: "16px",
+        marginBottom: "2px",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+        paddingBottom: "2px",
+        color: "white"
           }}
         >
-          Environment Variables (Requires re-launch)
+          Environment Variables
+        </div>
+        <div
+          style={{
+        fontSize: "12px",
+        color: "#cccccc",
+        marginTop: "2px",
+        marginBottom: "8px"
+          }}
+        >
+          Must be toggled before game start or restart game to take effect
         </div>
       </PanelSectionRow>
 
