@@ -81,6 +81,20 @@ CONFIG_SCHEMA_DEF = {
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
         "description": "disable Steam Deck mode (unlocks hidden settings in some games)"
+    },
+    
+    "mangohud_workaround": {
+        "name": "mangohud_workaround",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+    },
+    
+    "disable_vkbasalt": {
+        "name": "disable_vkbasalt",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
     }
 }
 

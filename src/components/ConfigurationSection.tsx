@@ -154,6 +154,24 @@ export function ConfigurationSection({
           onChange={(value) => onConfigChange('disable_steamdeck_mode', value)}
         />
       </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="MangoHud Workaround"
+          description="Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+          checked={config.mangohud_workaround}
+          onChange={(value) => onConfigChange('mangohud_workaround', value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Disable vkBasalt"
+          description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+          checked={config.disable_vkbasalt}
+          onChange={(value) => onConfigChange('disable_vkbasalt', value)}
+        />
+      </PanelSectionRow>
     </>
   );
 }

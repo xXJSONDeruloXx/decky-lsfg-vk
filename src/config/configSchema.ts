@@ -52,7 +52,7 @@ export class ConfigurationManager {
   /**
    * Create args array from config object for lsfg API calls
    */
-  static createArgsFromConfig(config: ConfigurationData): [string, number, number, boolean, boolean, string, number, boolean, boolean] {
+  static createArgsFromConfig(config: ConfigurationData): [string, number, number, boolean, boolean, string, number, boolean, boolean, boolean, boolean] {
     return [
       config.dll,
       config.multiplier,
@@ -62,7 +62,9 @@ export class ConfigurationManager {
       config.experimental_present_mode,
       config.dxvk_frame_rate,
       config.enable_wow64,
-      config.disable_steamdeck_mode
+      config.disable_steamdeck_mode,
+      config.mangohud_workaround,
+      config.disable_vkbasalt
     ];
   }
 

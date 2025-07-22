@@ -189,7 +189,9 @@ class Plugin:
                           experimental_present_mode: str = "fifo", 
                           dxvk_frame_rate: int = 0,
                           enable_wow64: bool = False,
-                          disable_steamdeck_mode: bool = False) -> Dict[str, Any]:
+                          disable_steamdeck_mode: bool = False,
+                          mangohud_workaround: bool = False,
+                          disable_vkbasalt: bool = False) -> Dict[str, Any]:
         """Update lsfg TOML configuration
         
         Args:
@@ -202,13 +204,16 @@ class Plugin:
             dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
             enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
             disable_steamdeck_mode: Whether to disable Steam Deck mode
+            mangohud_workaround: Whether to enable MangoHud workaround with transparent overlay
+            disable_vkbasalt: Whether to disable vkBasalt layer
             
         Returns:
             ConfigurationResponse dict with success status
         """
         return self.configuration_service.update_config(
             dll, multiplier, flow_scale, performance_mode, hdr_mode,
-            experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
+            experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode,
+            mangohud_workaround, disable_vkbasalt
         )
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
