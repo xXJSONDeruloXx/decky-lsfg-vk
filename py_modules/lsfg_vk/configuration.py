@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Dict, Any
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, ConfigurationData, CONFIG_SCHEMA
+from .config_schema import ConfigurationManager, CONFIG_SCHEMA
+from .config_schema_generated import ConfigurationData, get_script_generation_logic
+from .configuration_helpers_generated import log_configuration_update
 from .types import ConfigurationResponse
 
 
@@ -60,34 +62,59 @@ class ConfigurationService(BaseService):
                                         f"Using default configuration due to parse error: {str(e)}", 
                                         config=config)
     
-    def update_config(self, dll: str, multiplier: int, flow_scale: float, 
-                     performance_mode: bool, hdr_mode: bool, 
-                     experimental_present_mode: str = "fifo", 
-                     dxvk_frame_rate: int = 0,
-                     enable_wow64: bool = False,
-                     disable_steamdeck_mode: bool = False) -> ConfigurationResponse:
-        """Update TOML configuration
+    def update_config_from_dict(self, config: ConfigurationData) -> ConfigurationResponse:
+        """Update TOML configuration from configuration dictionary (eliminates parameter duplication)
         
         Args:
-            dll: Path to Lossless.dll
-            multiplier: LSFG multiplier value
-            flow_scale: LSFG flow scale value
-            performance_mode: Whether to enable performance mode
-            hdr_mode: Whether to enable HDR mode
-            experimental_present_mode: Experimental Vulkan present mode override
-            dxvk_frame_rate: Frame rate cap for DirectX games, before frame multiplier (0 = disabled)
-            enable_wow64: Whether to enable PROTON_USE_WOW64=1 for 32-bit games
-            disable_steamdeck_mode: Whether to disable Steam Deck mode
+            config: Complete configuration data dictionary
             
         Returns:
             ConfigurationResponse with success status
         """
         try:
-            # Create configuration from individual arguments
-            config = ConfigurationManager.create_config_from_args(
-                dll, multiplier, flow_scale, performance_mode, hdr_mode,
-                experimental_present_mode, dxvk_frame_rate, enable_wow64, disable_steamdeck_mode
-            )
+            # Generate TOML content using centralized manager
+            toml_content = ConfigurationManager.generate_toml_content(config)
+            
+            # Ensure config directory exists
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Write the updated config directly to preserve inode for file watchers
+            self._write_file(self.config_file_path, toml_content, 0o644)
+            
+            # Update the launch script with the new configuration
+            script_result = self.update_lsfg_script(config)
+            if not script_result["success"]:
+                self.log.warning(f"Failed to update launch script: {script_result['error']}")
+            
+            # Log with dynamic field listing
+            field_values = ", ".join(f"{k}={repr(v)}" for k, v in config.items())
+            self.log.info(f"Updated lsfg configuration: {field_values}")
+            
+            return self._success_response(ConfigurationResponse,
+                                        "lsfg configuration updated successfully",
+                                        config=config)
+            
+        except (OSError, IOError) as e:
+            error_msg = f"Error updating lsfg config: {str(e)}"
+            self.log.error(error_msg)
+            return self._error_response(ConfigurationResponse, str(e), config=None)
+        except ValueError as e:
+            error_msg = f"Invalid configuration arguments: {str(e)}"
+            self.log.error(error_msg)
+            return self._error_response(ConfigurationResponse, str(e), config=None)
+    
+    def update_config(self, **kwargs) -> ConfigurationResponse:
+        """Update TOML configuration using generated schema - SIMPLIFIED WITH GENERATED CODE
+        
+        Args:
+            **kwargs: Configuration field values (see shared_config.py for available fields)
+            
+        Returns:
+            ConfigurationResponse with success status
+        """
+        try:
+            # Create configuration from keyword arguments using generated function
+            config = ConfigurationManager.create_config_from_args(**kwargs)
             
             # Generate TOML content using centralized manager
             toml_content = ConfigurationManager.generate_toml_content(config)
@@ -103,12 +130,8 @@ class ConfigurationService(BaseService):
             if not script_result["success"]:
                 self.log.warning(f"Failed to update launch script: {script_result['error']}")
             
-            self.log.info(f"Updated lsfg TOML configuration: "
-                         f"dll='{dll}', multiplier={multiplier}, flow_scale={flow_scale}, "
-                         f"performance_mode={performance_mode}, hdr_mode={hdr_mode}, "
-                         f"experimental_present_mode='{experimental_present_mode}', "
-                         f"dxvk_frame_rate={dxvk_frame_rate}, "
-                         f"enable_wow64={enable_wow64}, disable_steamdeck_mode={disable_steamdeck_mode}")
+            # Use auto-generated logging
+            log_configuration_update(self.log, config)
             
             return self._success_response(ConfigurationResponse,
                                         "lsfg configuration updated successfully",
@@ -143,8 +166,9 @@ class ConfigurationService(BaseService):
             else:
                 config = current_response["config"]
             
-            # Update just the DLL path
-            config["dll"] = dll_path
+            # Update just the DLL path - USE GENERATED CONSTANTS
+            from .config_schema_generated import DLL
+            config[DLL] = dll_path
             
             # Generate TOML content and write it
             toml_content = ConfigurationManager.generate_toml_content(config)
@@ -207,22 +231,14 @@ class ConfigurationService(BaseService):
             "# This script sets up the environment for lsfg-vk to work with the plugin configuration"
         ]
         
-        # Add optional export statements based on configuration
-        if config.get("enable_wow64", False):
-            lines.append("export PROTON_USE_WOW64=1")
+        # Use auto-generated script generation logic
+        generate_script_lines = get_script_generation_logic()
+        lines.extend(generate_script_lines(config))
         
-        if config.get("disable_steamdeck_mode", False):
-            lines.append("export SteamDeck=0")
-        
-        # Add DXVK_FRAME_RATE if dxvk_frame_rate is set
-        dxvk_frame_rate = config.get("dxvk_frame_rate", 0)
-        if dxvk_frame_rate > 0:
-            lines.append(f"export DXVK_FRAME_RATE={dxvk_frame_rate}")
-        
-        # Always add the LSFG_PROCESS export
-        lines.append("export LSFG_PROCESS=decky-lsfg-vk")
-        
-        # Add the execution line
-        lines.append('exec "$@"')
+        # Always add the LSFG_PROCESS export and execution line
+        lines.extend([
+            "export LSFG_PROCESS=decky-lsfg-vk",
+            'exec "$@"'
+        ])
         
         return "\n".join(lines) + "\n"

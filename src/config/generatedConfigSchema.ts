@@ -7,6 +7,19 @@ export enum ConfigFieldType {
   STRING = "string"
 }
 
+// Field name constants for type-safe access
+export const DLL = "dll" as const;
+export const MULTIPLIER = "multiplier" as const;
+export const FLOW_SCALE = "flow_scale" as const;
+export const PERFORMANCE_MODE = "performance_mode" as const;
+export const HDR_MODE = "hdr_mode" as const;
+export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
+export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
+export const ENABLE_WOW64 = "enable_wow64" as const;
+export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
+export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
+export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
+
 // Configuration field definition
 export interface ConfigField {
   name: string;
@@ -71,6 +84,18 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "disable Steam Deck mode (unlocks hidden settings in some games)"
   },
+  mangohud_workaround: {
+    name: "mangohud_workaround",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+  },
+  disable_vkbasalt: {
+    name: "disable_vkbasalt",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+  },
 };
 
 // Type-safe configuration data structure
@@ -84,6 +109,8 @@ export interface ConfigurationData {
   dxvk_frame_rate: number;
   enable_wow64: boolean;
   disable_steamdeck_mode: boolean;
+  mangohud_workaround: boolean;
+  disable_vkbasalt: boolean;
 }
 
 // Helper functions
@@ -102,6 +129,8 @@ export function getDefaults(): ConfigurationData {
     dxvk_frame_rate: 0,
     enable_wow64: false,
     disable_steamdeck_mode: false,
+    mangohud_workaround: false,
+    disable_vkbasalt: false,
   };
 }
 
@@ -116,6 +145,8 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     dxvk_frame_rate: ConfigFieldType.INTEGER,
     enable_wow64: ConfigFieldType.BOOLEAN,
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
+    mangohud_workaround: ConfigFieldType.BOOLEAN,
+    disable_vkbasalt: ConfigFieldType.BOOLEAN,
   };
 }
 

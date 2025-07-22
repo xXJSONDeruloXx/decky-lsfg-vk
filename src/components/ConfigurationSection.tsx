@@ -1,5 +1,10 @@
 import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
+import {
+  MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
+  EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
+  MANGOHUD_WORKAROUND, DISABLE_VKBASALT
+} from "../config/generatedConfigSchema";
 
 interface ConfigurationSectionProps {
   config: ConfigurationData;
@@ -45,7 +50,7 @@ export function ConfigurationSection({
           ]}
           showValue={false}
           notchTicksVisible={true}
-          onChange={(value) => onConfigChange('multiplier', value)}
+          onChange={(value) => onConfigChange(MULTIPLIER, value)}
         />
       </PanelSectionRow>
 
@@ -57,7 +62,7 @@ export function ConfigurationSection({
           min={0.25}
           max={1.0}
           step={0.01}
-          onChange={(value) => onConfigChange('flow_scale', value)}
+          onChange={(value) => onConfigChange(FLOW_SCALE, value)}
         />
       </PanelSectionRow>
 
@@ -66,7 +71,7 @@ export function ConfigurationSection({
           label="Performance Mode"
           description="Uses a lighter model for FG (Recommended for most games)"
           checked={config.performance_mode}
-          onChange={(value) => onConfigChange('performance_mode', value)}
+          onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)}
         />
       </PanelSectionRow>
 
@@ -75,7 +80,7 @@ export function ConfigurationSection({
           label="HDR Mode"
           description="Enables HDR mode (only for games that support HDR)"
           checked={config.hdr_mode}
-          onChange={(value) => onConfigChange('hdr_mode', value)}
+          onChange={(value) => onConfigChange(HDR_MODE, value)}
         />
       </PanelSectionRow>
 
@@ -101,7 +106,7 @@ export function ConfigurationSection({
           description="Select a specific Vulkan presentation mode for better performance or compatibility (May cause crashes)"
           menuLabel="Select presentation mode"
           selectedOption={config.experimental_present_mode || "fifo"}
-          onChange={(value) => onConfigChange('experimental_present_mode', value.data)}
+          onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value.data)}
           rgOptions={[
             { data: "fifo", label: "FIFO (VSync) - Default" },
             { data: "mailbox", label: "Mailbox" }
@@ -112,16 +117,26 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <div
           style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
-            color: "white"
+        fontSize: "14px",
+        fontWeight: "bold",
+        marginTop: "16px",
+        marginBottom: "2px",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+        paddingBottom: "2px",
+        color: "white"
           }}
         >
-          Environment Variables (Requires re-launch)
+          Environment Variables
+        </div>
+        <div
+          style={{
+        fontSize: "12px",
+        color: "#cccccc",
+        marginTop: "2px",
+        marginBottom: "8px"
+          }}
+        >
+          Must be toggled before game start or restart game to take effect
         </div>
       </PanelSectionRow>
 
@@ -133,7 +148,7 @@ export function ConfigurationSection({
           min={0}
           max={60}
           step={1}
-          onChange={(value) => onConfigChange('dxvk_frame_rate', value)}
+          onChange={(value) => onConfigChange(DXVK_FRAME_RATE, value)}
         />
       </PanelSectionRow>
 
@@ -151,7 +166,25 @@ export function ConfigurationSection({
           label="Disable Steam Deck Mode"
           description="Disables Steam Deck mode (Unlocks hidden settings in some games)"
           checked={config.disable_steamdeck_mode}
-          onChange={(value) => onConfigChange('disable_steamdeck_mode', value)}
+          onChange={(value) => onConfigChange(DISABLE_STEAMDECK_MODE, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="MangoHud Workaround"
+          description="Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+          checked={config.mangohud_workaround}
+          onChange={(value) => onConfigChange(MANGOHUD_WORKAROUND, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Disable vkBasalt"
+          description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+          checked={config.disable_vkbasalt}
+          onChange={(value) => onConfigChange(DISABLE_VKBASALT, value)}
         />
       </PanelSectionRow>
     </>
