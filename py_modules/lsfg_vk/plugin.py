@@ -185,7 +185,7 @@ class Plugin:
         }
 
     async def update_lsfg_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Update lsfg TOML configuration using object-based API
+        """Update lsfg TOML configuration using object-based API (single source of truth)
         
         Args:
             config: Configuration data dictionary containing all settings
@@ -196,19 +196,8 @@ class Plugin:
         # Validate and extract configuration from the config dict
         validated_config = ConfigurationManager.validate_config(config)
         
-        return self.configuration_service.update_config(
-            dll=validated_config["dll"],
-            multiplier=validated_config["multiplier"],
-            flow_scale=validated_config["flow_scale"],
-            performance_mode=validated_config["performance_mode"],
-            hdr_mode=validated_config["hdr_mode"],
-            experimental_present_mode=validated_config["experimental_present_mode"],
-            dxvk_frame_rate=validated_config["dxvk_frame_rate"],
-            enable_wow64=validated_config["enable_wow64"],
-            disable_steamdeck_mode=validated_config["disable_steamdeck_mode"],
-            mangohud_workaround=validated_config["mangohud_workaround"],
-            disable_vkbasalt=validated_config["disable_vkbasalt"]
-        )
+        # Use dynamic parameter passing based on schema
+        return self.configuration_service.update_config_from_dict(validated_config)
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
         """Update the DLL path in the configuration when detected

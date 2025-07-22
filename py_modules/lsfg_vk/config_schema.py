@@ -52,42 +52,16 @@ CONFIG_SCHEMA["dll"] = ConfigField(
     description="specify where Lossless.dll is stored"
 )
 
-# Fields that should ONLY be in the lsfg script, not in TOML config
+# Get script-only fields dynamically from shared config
 SCRIPT_ONLY_FIELDS = {
-    "dxvk_frame_rate": ConfigField(
-        name="dxvk_frame_rate",
-        field_type=ConfigFieldType.INTEGER,
-        default=0,
-        description="base framerate cap for DirectX games, before frame multiplier (0 = disabled, requires game re-launch)"
-    ),
-    
-    "enable_wow64": ConfigField(
-        name="enable_wow64",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=False,
-        description="enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
-    ),
-    
-    "disable_steamdeck_mode": ConfigField(
-        name="disable_steamdeck_mode",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=False,
-        description="disable Steam Deck mode (unlocks hidden settings in some games)"
-    ),
-    
-    "mangohud_workaround": ConfigField(
-        name="mangohud_workaround",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=False,
-        description="Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
-    ),
-    
-    "disable_vkbasalt": ConfigField(
-        name="disable_vkbasalt",
-        field_type=ConfigFieldType.BOOLEAN,
-        default=False,
-        description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+    field_name: ConfigField(
+        name=field_def["name"],
+        field_type=ConfigFieldType(field_def["fieldType"]),
+        default=field_def["default"],
+        description=field_def["description"]
     )
+    for field_name, field_def in CONFIG_SCHEMA_DEF.items()
+    if field_def.get("location") == "script"
 }
 
 # Complete configuration schema (TOML + script-only fields)
@@ -107,6 +81,8 @@ class ConfigurationData(TypedDict):
     disable_steamdeck_mode: bool
     mangohud_workaround: bool
     disable_vkbasalt: bool
+    foobar_toggle: bool
+    test_config_only: str
 
 
 class ConfigurationManager:
@@ -355,6 +331,8 @@ class ConfigurationManager:
                         script_values["mangohud_workaround"] = value == "1"
                     elif key == "DISABLE_VKBASALT":
                         script_values["disable_vkbasalt"] = value == "1"
+                    elif key == "FOOBAR":
+                        script_values["foobar_toggle"] = value == "1"
             
         except (ValueError, KeyError, IndexError) as e:
             # If parsing fails, log the error and return empty dict (will use defaults)
@@ -390,7 +368,9 @@ class ConfigurationManager:
                                enable_wow64: bool = False,
                                disable_steamdeck_mode: bool = False,
                                mangohud_workaround: bool = False,
-                               disable_vkbasalt: bool = False) -> ConfigurationData:
+                               disable_vkbasalt: bool = False,
+                               foobar_toggle: bool = False,
+                               test_config_only: str = "default_value") -> ConfigurationData:
         """Create configuration from individual arguments"""
         return cast(ConfigurationData, {
             "dll": dll,
@@ -403,5 +383,7 @@ class ConfigurationManager:
             "enable_wow64": enable_wow64,
             "disable_steamdeck_mode": disable_steamdeck_mode,
             "mangohud_workaround": mangohud_workaround,
-            "disable_vkbasalt": disable_vkbasalt
+            "disable_vkbasalt": disable_vkbasalt,
+            "foobar_toggle": foobar_toggle,
+            "test_config_only": test_config_only
         })
