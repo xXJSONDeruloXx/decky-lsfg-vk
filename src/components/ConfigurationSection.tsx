@@ -1,7 +1,8 @@
 import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
+import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
-  MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
+  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT
 } from "../config/generatedConfigSchema";
@@ -23,7 +24,7 @@ export function ConfigurationSection({
             fontSize: "14px",
             fontWeight: "bold",
             marginTop: "16px",
-            marginBottom: "8px",
+            marginBottom: "16px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
             paddingBottom: "4px",
             color: "white"
@@ -33,26 +34,8 @@ export function ConfigurationSection({
         </div>
       </PanelSectionRow>
 
-      <PanelSectionRow>
-        <SliderField
-          label="FPS Multiplier"
-          description="Traditional FPS multiplier value"
-          value={config.multiplier}
-          min={1}
-          max={4}
-          step={1}
-          notchCount={4}
-          notchLabels={[
-            { notchIndex: 0, label: "OFF", value: 1 },
-            { notchIndex: 1, label: "2X", value: 2 },
-            { notchIndex: 2, label: "3X", value: 3 },
-            { notchIndex: 3, label: "4X", value: 4 }
-          ]}
-          showValue={false}
-          notchTicksVisible={true}
-          onChange={(value) => onConfigChange(MULTIPLIER, value)}
-        />
-      </PanelSectionRow>
+      {/* FPS Multiplier */}
+      <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
 
       <PanelSectionRow>
         <SliderField
