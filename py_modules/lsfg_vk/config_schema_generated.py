@@ -108,8 +108,8 @@ def get_script_generation_logic():
             lines.append("export ENABLE_VKBASALT=1")
         if config.get("gamescope_frame_pacing", False):
             lines.append("export GAMESCOPE_FRAME_PACING=1")
-        frame_pacing_target_ms = config.get("frame_pacing_target_ms", 0)
-        if frame_pacing_target_ms != 0:
+        frame_pacing_target_ms = config.get("frame_pacing_target_ms", 25)
+        if frame_pacing_target_ms != 25:
             lines.append(f"export FRAME_PACING_TARGET_MS={frame_pacing_target_ms}")
         return lines
     return generate_script_lines
@@ -130,7 +130,7 @@ def get_function_parameters() -> str:
                      disable_vkbasalt: bool = False,
                      force_enable_vkbasalt: bool = False,
                      gamescope_frame_pacing: bool = False,
-                     frame_pacing_target_ms: int = 0"""
+                     frame_pacing_target_ms: int = 25"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:

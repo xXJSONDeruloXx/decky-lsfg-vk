@@ -114,7 +114,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   frame_pacing_target_ms: {
     name: "frame_pacing_target_ms",
     fieldType: ConfigFieldType.INTEGER,
-    default: 0,
+    default: 25,
     description: "Target frame time in milliseconds for frame pacing (25ms = 40fps)"
   },
 };
@@ -157,7 +157,7 @@ export function getDefaults(): ConfigurationData {
     disable_vkbasalt: false,
     force_enable_vkbasalt: false,
     gamescope_frame_pacing: false,
-    frame_pacing_target_ms: 0,
+    frame_pacing_target_ms: 25,
   };
 }
 
