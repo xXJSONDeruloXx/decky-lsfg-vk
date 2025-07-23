@@ -24,6 +24,7 @@ ENABLE_WOW64 = "enable_wow64"
 DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
 MANGOHUD_WORKAROUND = "mangohud_workaround"
 DISABLE_VKBASALT = "disable_vkbasalt"
+FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt"
 
 
 class ConfigurationData(TypedDict):
@@ -39,6 +40,7 @@ class ConfigurationData(TypedDict):
     disable_steamdeck_mode: bool
     mangohud_workaround: bool
     disable_vkbasalt: bool
+    force_enable_vkbasalt: bool
 
 
 def get_script_parsing_logic():
@@ -69,6 +71,8 @@ def get_script_parsing_logic():
                         script_values["mangohud_workaround"] = value == "1"
                 if key == "DISABLE_VKBASALT":
                         script_values["disable_vkbasalt"] = value == "1"
+                if key == "ENABLE_VKBASALT":
+                        script_values["force_enable_vkbasalt"] = value == "1"
 
         return script_values
     return parse_script_values
@@ -89,6 +93,8 @@ def get_script_generation_logic():
             lines.append("export MANGOHUD=1")
         if config.get("disable_vkbasalt", False):
             lines.append("export DISABLE_VKBASALT=1")
+        if config.get("force_enable_vkbasalt", False):
+            lines.append("export ENABLE_VKBASALT=1")
         return lines
     return generate_script_lines
 
@@ -105,7 +111,8 @@ def get_function_parameters() -> str:
                      enable_wow64: bool = False,
                      disable_steamdeck_mode: bool = False,
                      mangohud_workaround: bool = False,
-                     disable_vkbasalt: bool = False"""
+                     disable_vkbasalt: bool = False,
+                     force_enable_vkbasalt: bool = False"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
@@ -122,10 +129,11 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "disable_steamdeck_mode": kwargs.get("disable_steamdeck_mode"),
         "mangohud_workaround": kwargs.get("mangohud_workaround"),
         "disable_vkbasalt": kwargs.get("disable_vkbasalt"),
+        "force_enable_vkbasalt": kwargs.get("force_enable_vkbasalt"),
     })
 
 
 # Field lists for dynamic operations
 TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
-SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
-ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
+SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt']
+ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt']

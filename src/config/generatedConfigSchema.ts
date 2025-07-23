@@ -19,6 +19,7 @@ export const ENABLE_WOW64 = "enable_wow64" as const;
 export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
 export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
 export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
+export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
 
 // Configuration field definition
 export interface ConfigField {
@@ -96,6 +97,12 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
   },
+  force_enable_vkbasalt: {
+    name: "force_enable_vkbasalt",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Force vkBasalt to engage to fix framepacing issues in gamemode"
+  },
 };
 
 // Type-safe configuration data structure
@@ -111,6 +118,7 @@ export interface ConfigurationData {
   disable_steamdeck_mode: boolean;
   mangohud_workaround: boolean;
   disable_vkbasalt: boolean;
+  force_enable_vkbasalt: boolean;
 }
 
 // Helper functions
@@ -131,6 +139,7 @@ export function getDefaults(): ConfigurationData {
     disable_steamdeck_mode: false,
     mangohud_workaround: false,
     disable_vkbasalt: false,
+    force_enable_vkbasalt: false,
   };
 }
 
@@ -147,6 +156,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
     mangohud_workaround: ConfigFieldType.BOOLEAN,
     disable_vkbasalt: ConfigFieldType.BOOLEAN,
+    force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
   };
 }
 

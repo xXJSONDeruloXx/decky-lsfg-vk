@@ -4,7 +4,7 @@ import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
   FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
-  MANGOHUD_WORKAROUND, DISABLE_VKBASALT
+  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT
 } from "../config/generatedConfigSchema";
 
 interface ConfigurationSectionProps {
@@ -168,6 +168,15 @@ export function ConfigurationSection({
           description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
           checked={config.disable_vkbasalt}
           onChange={(value) => onConfigChange(DISABLE_VKBASALT, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Force Enable VKBasalt"
+          description="Force vkBasalt to engage to fix framepacing issues in gamemode"
+          checked={config.force_enable_vkbasalt}
+          onChange={(value) => onConfigChange(FORCE_ENABLE_VKBASALT, value)}
         />
       </PanelSectionRow>
     </>
