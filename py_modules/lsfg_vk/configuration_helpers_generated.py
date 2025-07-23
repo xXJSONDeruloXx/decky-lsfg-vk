@@ -9,7 +9,7 @@ from .config_schema_generated import ConfigurationData, ALL_FIELDS
 
 def log_configuration_update(logger, config: ConfigurationData) -> None:
     """Log configuration update with all field values"""
-    logger.info(f"Updated lsfg TOML configuration: dll={config['dll']}, multiplier={config['multiplier']}, flow_scale={config['flow_scale']}, performance_mode={config['performance_mode']}, hdr_mode={config['hdr_mode']}, experimental_present_mode={config['experimental_present_mode']}, dxvk_frame_rate={config['dxvk_frame_rate']}, enable_wow64={config['enable_wow64']}, disable_steamdeck_mode={config['disable_steamdeck_mode']}, mangohud_workaround={config['mangohud_workaround']}, disable_vkbasalt={config['disable_vkbasalt']}, force_enable_vkbasalt={config['force_enable_vkbasalt']}")
+    logger.info(f"Updated lsfg TOML configuration: dll={config['dll']}, multiplier={config['multiplier']}, flow_scale={config['flow_scale']}, performance_mode={config['performance_mode']}, hdr_mode={config['hdr_mode']}, experimental_present_mode={config['experimental_present_mode']}, dxvk_frame_rate={config['dxvk_frame_rate']}, enable_wow64={config['enable_wow64']}, disable_steamdeck_mode={config['disable_steamdeck_mode']}, mangohud_workaround={config['mangohud_workaround']}, disable_vkbasalt={config['disable_vkbasalt']}, force_enable_vkbasalt={config['force_enable_vkbasalt']}, gamescope_frame_pacing={config['gamescope_frame_pacing']}, frame_pacing_target_ms={config['frame_pacing_target_ms']}")
 
 
 def get_config_field_names() -> list[str]:

@@ -25,6 +25,8 @@ DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
 MANGOHUD_WORKAROUND = "mangohud_workaround"
 DISABLE_VKBASALT = "disable_vkbasalt"
 FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt"
+GAMESCOPE_FRAME_PACING = "gamescope_frame_pacing"
+FRAME_PACING_TARGET_MS = "frame_pacing_target_ms"
 
 
 class ConfigurationData(TypedDict):
@@ -41,6 +43,8 @@ class ConfigurationData(TypedDict):
     mangohud_workaround: bool
     disable_vkbasalt: bool
     force_enable_vkbasalt: bool
+    gamescope_frame_pacing: bool
+    frame_pacing_target_ms: int
 
 
 def get_script_parsing_logic():
@@ -73,6 +77,13 @@ def get_script_parsing_logic():
                         script_values["disable_vkbasalt"] = value == "1"
                 if key == "ENABLE_VKBASALT":
                         script_values["force_enable_vkbasalt"] = value == "1"
+                if key == "GAMESCOPE_FRAME_PACING":
+                        script_values["gamescope_frame_pacing"] = value == "1"
+                if key == "FRAME_PACING_TARGET_MS":
+                        try:
+                            script_values["frame_pacing_target_ms"] = int(value)
+                        except ValueError:
+                            pass
 
         return script_values
     return parse_script_values
@@ -95,6 +106,11 @@ def get_script_generation_logic():
             lines.append("export DISABLE_VKBASALT=1")
         if config.get("force_enable_vkbasalt", False):
             lines.append("export ENABLE_VKBASALT=1")
+        if config.get("gamescope_frame_pacing", False):
+            lines.append("export GAMESCOPE_FRAME_PACING=1")
+        frame_pacing_target_ms = config.get("frame_pacing_target_ms", 0)
+        if frame_pacing_target_ms != 0:
+            lines.append(f"export FRAME_PACING_TARGET_MS={frame_pacing_target_ms}")
         return lines
     return generate_script_lines
 
@@ -112,7 +128,9 @@ def get_function_parameters() -> str:
                      disable_steamdeck_mode: bool = False,
                      mangohud_workaround: bool = False,
                      disable_vkbasalt: bool = False,
-                     force_enable_vkbasalt: bool = False"""
+                     force_enable_vkbasalt: bool = False,
+                     gamescope_frame_pacing: bool = False,
+                     frame_pacing_target_ms: int = 0"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
@@ -130,10 +148,12 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "mangohud_workaround": kwargs.get("mangohud_workaround"),
         "disable_vkbasalt": kwargs.get("disable_vkbasalt"),
         "force_enable_vkbasalt": kwargs.get("force_enable_vkbasalt"),
+        "gamescope_frame_pacing": kwargs.get("gamescope_frame_pacing"),
+        "frame_pacing_target_ms": kwargs.get("frame_pacing_target_ms"),
     })
 
 
 # Field lists for dynamic operations
 TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
-SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt']
-ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt']
+SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'gamescope_frame_pacing', 'frame_pacing_target_ms']
+ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'gamescope_frame_pacing', 'frame_pacing_target_ms']

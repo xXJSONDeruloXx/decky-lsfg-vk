@@ -114,6 +114,22 @@ CONFIG_SCHEMA_DEF = {
         "default": False,
         "description": "Force vkBasalt to engage to fix framepacing issues in gamemode",
         "location": "script"
+    },
+    
+    "gamescope_frame_pacing": {
+        "name": "gamescope_frame_pacing",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "Enable gamescope frame pacing workaround for timing issues",
+        "location": "script"
+    },
+    
+    "frame_pacing_target_ms": {
+        "name": "frame_pacing_target_ms",
+        "fieldType": ConfigFieldType.INTEGER,
+        "default": 25,
+        "description": "Target frame time in milliseconds for frame pacing (25ms = 40fps)",
+        "location": "script"
     }
 }
 

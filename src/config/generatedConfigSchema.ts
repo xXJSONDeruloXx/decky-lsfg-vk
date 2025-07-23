@@ -20,6 +20,8 @@ export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
 export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
 export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
 export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
+export const GAMESCOPE_FRAME_PACING = "gamescope_frame_pacing" as const;
+export const FRAME_PACING_TARGET_MS = "frame_pacing_target_ms" as const;
 
 // Configuration field definition
 export interface ConfigField {
@@ -103,6 +105,18 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Force vkBasalt to engage to fix framepacing issues in gamemode"
   },
+  gamescope_frame_pacing: {
+    name: "gamescope_frame_pacing",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Enable gamescope frame pacing workaround for timing issues"
+  },
+  frame_pacing_target_ms: {
+    name: "frame_pacing_target_ms",
+    fieldType: ConfigFieldType.INTEGER,
+    default: 0,
+    description: "Target frame time in milliseconds for frame pacing (25ms = 40fps)"
+  },
 };
 
 // Type-safe configuration data structure
@@ -119,6 +133,8 @@ export interface ConfigurationData {
   mangohud_workaround: boolean;
   disable_vkbasalt: boolean;
   force_enable_vkbasalt: boolean;
+  gamescope_frame_pacing: boolean;
+  frame_pacing_target_ms: number;
 }
 
 // Helper functions
@@ -140,6 +156,8 @@ export function getDefaults(): ConfigurationData {
     mangohud_workaround: false,
     disable_vkbasalt: false,
     force_enable_vkbasalt: false,
+    gamescope_frame_pacing: false,
+    frame_pacing_target_ms: 0,
   };
 }
 
@@ -157,6 +175,8 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     mangohud_workaround: ConfigFieldType.BOOLEAN,
     disable_vkbasalt: ConfigFieldType.BOOLEAN,
     force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
+    gamescope_frame_pacing: ConfigFieldType.BOOLEAN,
+    frame_pacing_target_ms: ConfigFieldType.INTEGER,
   };
 }
 

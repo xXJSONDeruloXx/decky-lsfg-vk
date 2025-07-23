@@ -4,7 +4,7 @@ import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
   FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
-  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT
+  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, GAMESCOPE_FRAME_PACING, FRAME_PACING_TARGET_MS
 } from "../config/generatedConfigSchema";
 
 interface ConfigurationSectionProps {
@@ -46,6 +46,27 @@ export function ConfigurationSection({
           max={1.0}
           step={0.01}
           onChange={(value) => onConfigChange(FLOW_SCALE, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label="Gamescope Frame Pacing"
+          description="Enable frame pacing workaround for timing issues"
+          checked={config.gamescope_frame_pacing}
+          onChange={(value) => onConfigChange(GAMESCOPE_FRAME_PACING, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`Frame Pacing Target (${config.frame_pacing_target_ms}ms)`}
+          description="Target frame time in milliseconds"
+          value={config.frame_pacing_target_ms}
+          min={10}
+          max={50}
+          step={1}
+          onChange={(value) => onConfigChange(FRAME_PACING_TARGET_MS, value)}
         />
       </PanelSectionRow>
 
@@ -179,6 +200,7 @@ export function ConfigurationSection({
           onChange={(value) => onConfigChange(FORCE_ENABLE_VKBASALT, value)}
         />
       </PanelSectionRow>
+
     </>
   );
 }
