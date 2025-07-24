@@ -7,7 +7,7 @@
 </p>
 
 > **Note:**  
-> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [Decky Lossless Discord Channel](https://discord.gg/sY79peKbSM).
+> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [Decky Lossless Discord Channel](https://discord.gg/TwvHdVucC3).
 
 ## What is this?
 
@@ -56,7 +56,7 @@ All settings (except base FPS limit) are saved automatically and can be changed 
 
 ## Feedback and Support
 
-For per-game feedback and community support, please join the [Decky Lossless Discord Channel](https://discord.gg/sY79peKbSM)
+For per-game feedback and community support, please join the [Decky Lossless Discord Channel](https://discord.gg/TwvHdVucC3)
 
 ## Troubleshooting
 
