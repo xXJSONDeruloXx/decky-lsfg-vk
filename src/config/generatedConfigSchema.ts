@@ -11,6 +11,7 @@ export enum ConfigFieldType {
 export const DLL = "dll" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
+export const TARGET_TOTAL_FPS = "target_total_fps" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
 export const HDR_MODE = "hdr_mode" as const;
 export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
@@ -47,6 +48,12 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.FLOAT,
     default: 0.8,
     description: "change the flow scale"
+  },
+  target_total_fps: {
+    name: "target_total_fps",
+    fieldType: ConfigFieldType.FLOAT,
+    default: 0.0,
+    description: "specify your post-frame gen target framerate to force specific frame pacing logic. 0 = default pacing"
   },
   performance_mode: {
     name: "performance_mode",
@@ -103,6 +110,7 @@ export interface ConfigurationData {
   dll: string;
   multiplier: number;
   flow_scale: number;
+  target_total_fps: number;
   performance_mode: boolean;
   hdr_mode: boolean;
   experimental_present_mode: string;
@@ -123,6 +131,7 @@ export function getDefaults(): ConfigurationData {
     dll: "/games/Lossless Scaling/Lossless.dll",
     multiplier: 1,
     flow_scale: 0.8,
+    target_total_fps: 0.0,
     performance_mode: true,
     hdr_mode: false,
     experimental_present_mode: "fifo",
@@ -139,6 +148,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     dll: ConfigFieldType.STRING,
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
+    target_total_fps: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
     hdr_mode: ConfigFieldType.BOOLEAN,
     experimental_present_mode: ConfigFieldType.STRING,
