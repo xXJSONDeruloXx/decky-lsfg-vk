@@ -46,8 +46,8 @@
   "remote_binary": [
     {
       "name": "lsfg-vk_archlinux.zip",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/fps-target-conf/lsfg-vk_archlinux.zip",
-      "sha256hash": "770f8b8c8698c6bbe7715f2c1dffe76979e40ca89462cd553f5ee6d8bdc7bdd4"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/upstream-16403902734/lsfg-vk_archlinux.zip",
+      "sha256hash": "220628261bfea8c81661d37fd0069a02214e85dbf32e28dcb08c5f55a6193075"
     }
 
   ],
