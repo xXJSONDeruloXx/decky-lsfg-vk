@@ -1,4 +1,4 @@
-import { PanelSectionRow, ToggleField, SliderField, DropdownItem, ButtonItem } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, ButtonItem } from "@decky/ui";
 import { useState } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
@@ -54,13 +54,34 @@ export function ConfigurationSection({
 
       <PanelSectionRow>
         <SliderField
-          label={`Flow Scale ${Math.round(config.flow_scale * 100)}%`}
+          label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`}
           description="Lowers internal motion estimation resolution, improving performance slightly"
           value={config.flow_scale}
           min={0.25}
           max={1.0}
           step={0.01}
           onChange={(value) => onConfigChange(FLOW_SCALE, value)}
+        />
+      </PanelSectionRow>
+      
+      <PanelSectionRow>
+        <SliderField
+          label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
+          description="Base framerate cap for DirectX games, before frame multiplier. (Requires game restart to apply)"
+          value={config.dxvk_frame_rate}
+          min={0}
+          max={60}
+          step={1}
+          onChange={(value) => onConfigChange(DXVK_FRAME_RATE, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <ToggleField
+          label={`Present Mode (${(config.experimental_present_mode || "fifo") === "fifo" ? "FIFO - VSync" : "Mailbox"})`}
+          description="Toggle between FIFO -VSync (default) and Mailbox presentation modes for better performance or compatibility"
+          checked={(config.experimental_present_mode || "fifo") === "fifo"}
+          onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
         />
       </PanelSectionRow>
 
@@ -82,20 +103,6 @@ export function ConfigurationSection({
         />
       </PanelSectionRow>
 
-      <PanelSectionRow>
-        <DropdownItem
-          label="Override Vulkan present mode"
-          description="Select a specific Vulkan presentation mode for better performance or compatibility"
-          menuLabel="Select presentation mode"
-          selectedOption={config.experimental_present_mode || "fifo"}
-          onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value.data)}
-          rgOptions={[
-            { data: "fifo", label: "FIFO (VSync) - Default" },
-            { data: "mailbox", label: "Mailbox" }
-          ]}
-        />
-      </PanelSectionRow>
-
       {/* <PanelSectionRow>
         <div
           style={{
@@ -111,18 +118,6 @@ export function ConfigurationSection({
           Experimental Features
         </div>
       </PanelSectionRow> */}
-
-      <PanelSectionRow>
-        <SliderField
-          label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier. (Requires game restart to apply)"
-          value={config.dxvk_frame_rate}
-          min={0}
-          max={60}
-          step={1}
-          onChange={(value) => onConfigChange(DXVK_FRAME_RATE, value)}
-        />
-      </PanelSectionRow>
 
       {/* Workarounds Section */}
       <PanelSectionRow>
