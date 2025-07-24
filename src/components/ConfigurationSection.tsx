@@ -167,7 +167,14 @@ export function ConfigurationSection({
           label="Disable vkBasalt"
           description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
           checked={config.disable_vkbasalt}
-          onChange={(value) => onConfigChange(DISABLE_VKBASALT, value)}
+          disabled={config.force_enable_vkbasalt}
+          onChange={(value) => {
+            if (value && config.force_enable_vkbasalt) {
+              // Turn off force enable when enabling disable
+              onConfigChange(FORCE_ENABLE_VKBASALT, false);
+            }
+            onConfigChange(DISABLE_VKBASALT, value);
+          }}
         />
       </PanelSectionRow>
 
@@ -176,7 +183,14 @@ export function ConfigurationSection({
           label="Force Enable vkBasalt"
           description="Force vkBasalt to engage to fix framepacing issues in gamemode"
           checked={config.force_enable_vkbasalt}
-          onChange={(value) => onConfigChange(FORCE_ENABLE_VKBASALT, value)}
+          disabled={config.disable_vkbasalt}
+          onChange={(value) => {
+            if (value && config.disable_vkbasalt) {
+              // Turn off disable when enabling force enable
+              onConfigChange(DISABLE_VKBASALT, false);
+            }
+            onConfigChange(FORCE_ENABLE_VKBASALT, value);
+          }}
         />
       </PanelSectionRow>
 
