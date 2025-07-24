@@ -60,3 +60,27 @@ cli/decky
 py_modules/lsfg_vk/config_schema_generated.py
 py_modules/lsfg_vk/configuration_helpers_generated.py
 src/config/generatedConfigSchema.ts
+
+# Additional development artifacts
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+.tox/
+.eslintcache
+.turbo/
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# IDE specific files (beyond what's already covered)
+*.sublime-project
+*.sublime-workspace
+.vscode/settings.json
+.vscode/.ropeproject
+
