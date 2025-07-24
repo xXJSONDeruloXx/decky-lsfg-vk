@@ -50,18 +50,6 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <SliderField
-          label={`Target Total FPS ${config.target_total_fps === 0 ? '(Default)' : config.target_total_fps.toFixed(0)}`}
-          description="Specify your post-frame gen target framerate to force specific frame pacing logic. 0 = default pacing"
-          value={config.target_total_fps}
-          min={0}
-          max={144}
-          step={1}
-          onChange={(value) => onConfigChange(TARGET_TOTAL_FPS, value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
         <ToggleField
           label="Performance Mode"
           description="Uses a lighter model for FG (Recommended for most games)"
