@@ -83,6 +83,20 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
+        <DropdownItem
+          label="Override Vulkan present mode"
+          description="Select a specific Vulkan presentation mode for better performance or compatibility"
+          menuLabel="Select presentation mode"
+          selectedOption={config.experimental_present_mode || "fifo"}
+          onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value.data)}
+          rgOptions={[
+            { data: "fifo", label: "FIFO (VSync) - Default" },
+            { data: "mailbox", label: "Mailbox" }
+          ]}
+        />
+      </PanelSectionRow>
+
+      {/* <PanelSectionRow>
         <div
           style={{
             fontSize: "14px",
@@ -96,26 +110,12 @@ export function ConfigurationSection({
         >
           Experimental Features
         </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <DropdownItem
-          label="Override Vulkan present mode"
-          description="Select a specific Vulkan presentation mode for better performance or compatibility (May cause crashes)"
-          menuLabel="Select presentation mode"
-          selectedOption={config.experimental_present_mode || "fifo"}
-          onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value.data)}
-          rgOptions={[
-            { data: "fifo", label: "FIFO (VSync) - Default" },
-            { data: "mailbox", label: "Mailbox" }
-          ]}
-        />
-      </PanelSectionRow>
+      </PanelSectionRow> */}
 
       <PanelSectionRow>
         <SliderField
           label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier"
+          description="Base framerate cap for DirectX games, before frame multiplier. (Requires game restart to apply)"
           value={config.dxvk_frame_rate}
           min={0}
           max={60}
