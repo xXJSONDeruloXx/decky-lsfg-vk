@@ -79,7 +79,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label={`Present Mode (${(config.experimental_present_mode || "fifo") === "fifo" ? "FIFO - VSync" : "Mailbox"})`}
-          description="Toggle between FIFO -VSync (default) and Mailbox presentation modes for better performance or compatibility"
+          description="Toggle between FIFO - VSync (default) and Mailbox presentation modes for better performance or compatibility"
           checked={(config.experimental_present_mode || "fifo") === "fifo"}
           onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
         />
