@@ -63,7 +63,7 @@ export function ConfigurationSection({
           onChange={(value) => onConfigChange(FLOW_SCALE, value)}
         />
       </PanelSectionRow>
-      
+
       <PanelSectionRow>
         <SliderField
           label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
@@ -102,22 +102,6 @@ export function ConfigurationSection({
           onChange={(value) => onConfigChange(HDR_MODE, value)}
         />
       </PanelSectionRow>
-
-      {/* <PanelSectionRow>
-        <div
-          style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
-            color: "white"
-          }}
-        >
-          Experimental Features
-        </div>
-      </PanelSectionRow> */}
 
       {/* Workarounds Section */}
       <PanelSectionRow>

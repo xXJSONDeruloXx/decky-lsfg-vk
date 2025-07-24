@@ -6,6 +6,5 @@ export { FpsMultiplierControl } from "./FpsMultiplierControl";
 export { UsageInstructions } from "./UsageInstructions";
 export { WikiButton } from "./WikiButton";
 export { SmartClipboardButton } from "./SmartClipboardButton";
-export { LaunchOptionInfo } from "./LaunchOptionInfo";
 export { PluginUpdateChecker } from "./PluginUpdateChecker";
 export { NerdStuffModal } from "./NerdStuffModal";
