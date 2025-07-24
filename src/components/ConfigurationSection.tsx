@@ -1,4 +1,6 @@
-import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, DropdownItem, ButtonItem } from "@decky/ui";
+import { useState } from "react";
+import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
@@ -16,6 +18,8 @@ export function ConfigurationSection({
   config,
   onConfigChange
 }: ConfigurationSectionProps) {
+  const [workaroundsCollapsed, setWorkaroundsCollapsed] = useState(true);
+
   return (
     <>
       <PanelSectionRow>
@@ -98,32 +102,6 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div
-          style={{
-        fontSize: "14px",
-        fontWeight: "bold",
-        marginTop: "16px",
-        marginBottom: "2px",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-        paddingBottom: "2px",
-        color: "white"
-          }}
-        >
-          Environment Variables
-        </div>
-        <div
-          style={{
-        fontSize: "12px",
-        color: "#cccccc",
-        marginTop: "2px",
-        marginBottom: "8px"
-          }}
-        >
-          Must be toggled before game start or restart game to take effect
-        </div>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
         <SliderField
           label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
           description="Base framerate cap for DirectX games, before frame multiplier"
@@ -135,73 +113,112 @@ export function ConfigurationSection({
         />
       </PanelSectionRow>
 
+      {/* Workarounds Section */}
       <PanelSectionRow>
-        <ToggleField
-          label="Enable WOW64 for 32-bit games"
-          description="Enables PROTON_USE_WOW64=1 for 32-bit games (Use with ProtonGE to fix crashing)"
-          checked={config.enable_wow64}
-          onChange={(value) => onConfigChange('enable_wow64', value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="Disable Steam Deck Mode"
-          description="Disables Steam Deck mode (Unlocks hidden settings in some games)"
-          checked={config.disable_steamdeck_mode}
-          onChange={(value) => onConfigChange(DISABLE_STEAMDECK_MODE, value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="MangoHud Workaround"
-          description="Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
-          checked={config.mangohud_workaround}
-          onChange={(value) => onConfigChange(MANGOHUD_WORKAROUND, value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="Disable vkBasalt"
-          description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
-          checked={config.disable_vkbasalt}
-          disabled={config.force_enable_vkbasalt}
-          onChange={(value) => {
-            if (value && config.force_enable_vkbasalt) {
-              // Turn off force enable when enabling disable
-              onConfigChange(FORCE_ENABLE_VKBASALT, false);
-            }
-            onConfigChange(DISABLE_VKBASALT, value);
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "16px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+            paddingBottom: "4px",
+            color: "white"
           }}
-        />
+        >
+          Workarounds
+        </div>
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <ToggleField
-          label="Force Enable vkBasalt"
-          description="Force vkBasalt to engage to fix framepacing issues in gamemode"
-          checked={config.force_enable_vkbasalt}
-          disabled={config.disable_vkbasalt}
-          onChange={(value) => {
-            if (value && config.disable_vkbasalt) {
-              // Turn off disable when enabling force enable
-              onConfigChange(DISABLE_VKBASALT, false);
-            }
-            onConfigChange(FORCE_ENABLE_VKBASALT, value);
-          }}
-        />
+        <ButtonItem
+          layout="below"
+          bottomSeparator={workaroundsCollapsed ? "standard" : "none"}
+          onClick={() => setWorkaroundsCollapsed(!workaroundsCollapsed)}
+        >
+          {workaroundsCollapsed ? (
+            <RiArrowDownSFill
+              style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }}
+            />
+          ) : (
+            <RiArrowUpSFill
+              style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }}
+            />
+          )}
+        </ButtonItem>
       </PanelSectionRow>
 
-      <PanelSectionRow>
-        <ToggleField
-          label="Deactivate WSI"
-          description="Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
-          checked={config.deactivate_wsi}
-          onChange={(value) => onConfigChange(DEACTIVATE_WSI, value)}
-        />
-      </PanelSectionRow>
+      {!workaroundsCollapsed && (
+        <>
+          <PanelSectionRow>
+            <ToggleField
+              label="Enable WOW64 for 32-bit games"
+              description="Enables PROTON_USE_WOW64=1 for 32-bit games (Use with ProtonGE to fix crashing)"
+              checked={config.enable_wow64}
+              onChange={(value) => onConfigChange('enable_wow64', value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Disable Steam Deck Mode"
+              description="Disables Steam Deck mode (Unlocks hidden settings in some games)"
+              checked={config.disable_steamdeck_mode}
+              onChange={(value) => onConfigChange(DISABLE_STEAMDECK_MODE, value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="MangoHud Workaround"
+              description="Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+              checked={config.mangohud_workaround}
+              onChange={(value) => onConfigChange(MANGOHUD_WORKAROUND, value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Disable vkBasalt"
+              description="Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+              checked={config.disable_vkbasalt}
+              disabled={config.force_enable_vkbasalt}
+              onChange={(value) => {
+                if (value && config.force_enable_vkbasalt) {
+                  // Turn off force enable when enabling disable
+                  onConfigChange(FORCE_ENABLE_VKBASALT, false);
+                }
+                onConfigChange(DISABLE_VKBASALT, value);
+              }}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Force Enable vkBasalt"
+              description="Force vkBasalt to engage to fix framepacing issues in gamemode"
+              checked={config.force_enable_vkbasalt}
+              disabled={config.disable_vkbasalt}
+              onChange={(value) => {
+                if (value && config.disable_vkbasalt) {
+                  // Turn off disable when enabling force enable
+                  onConfigChange(DISABLE_VKBASALT, false);
+                }
+                onConfigChange(FORCE_ENABLE_VKBASALT, value);
+              }}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Deactivate WSI"
+              description="Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
+              checked={config.deactivate_wsi}
+              onChange={(value) => onConfigChange(DEACTIVATE_WSI, value)}
+            />
+          </PanelSectionRow>
+        </>
+      )}
     </>
   );
 }
