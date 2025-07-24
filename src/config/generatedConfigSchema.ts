@@ -11,7 +11,6 @@ export enum ConfigFieldType {
 export const DLL = "dll" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
-export const TARGET_TOTAL_FPS = "target_total_fps" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
 export const HDR_MODE = "hdr_mode" as const;
 export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
@@ -20,6 +19,8 @@ export const ENABLE_WOW64 = "enable_wow64" as const;
 export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
 export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
 export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
+export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
+export const DEACTIVATE_WSI = "deactivate_wsi" as const;
 
 // Configuration field definition
 export interface ConfigField {
@@ -48,12 +49,6 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.FLOAT,
     default: 0.8,
     description: "change the flow scale"
-  },
-  target_total_fps: {
-    name: "target_total_fps",
-    fieldType: ConfigFieldType.FLOAT,
-    default: 0.0,
-    description: "specify your post-frame gen target framerate to force specific frame pacing logic. 0 = default pacing"
   },
   performance_mode: {
     name: "performance_mode",
@@ -103,6 +98,18 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
   },
+  force_enable_vkbasalt: {
+    name: "force_enable_vkbasalt",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Force vkBasalt to engage to fix framepacing issues in gamemode"
+  },
+  deactivate_wsi: {
+    name: "deactivate_wsi",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
+  },
 };
 
 // Type-safe configuration data structure
@@ -110,7 +117,6 @@ export interface ConfigurationData {
   dll: string;
   multiplier: number;
   flow_scale: number;
-  target_total_fps: number;
   performance_mode: boolean;
   hdr_mode: boolean;
   experimental_present_mode: string;
@@ -119,6 +125,8 @@ export interface ConfigurationData {
   disable_steamdeck_mode: boolean;
   mangohud_workaround: boolean;
   disable_vkbasalt: boolean;
+  force_enable_vkbasalt: boolean;
+  deactivate_wsi: boolean;
 }
 
 // Helper functions
@@ -131,7 +139,6 @@ export function getDefaults(): ConfigurationData {
     dll: "/games/Lossless Scaling/Lossless.dll",
     multiplier: 1,
     flow_scale: 0.8,
-    target_total_fps: 0.0,
     performance_mode: true,
     hdr_mode: false,
     experimental_present_mode: "fifo",
@@ -140,6 +147,8 @@ export function getDefaults(): ConfigurationData {
     disable_steamdeck_mode: false,
     mangohud_workaround: false,
     disable_vkbasalt: false,
+    force_enable_vkbasalt: false,
+    deactivate_wsi: false,
   };
 }
 
@@ -148,7 +157,6 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     dll: ConfigFieldType.STRING,
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
-    target_total_fps: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
     hdr_mode: ConfigFieldType.BOOLEAN,
     experimental_present_mode: ConfigFieldType.STRING,
@@ -157,6 +165,8 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
     mangohud_workaround: ConfigFieldType.BOOLEAN,
     disable_vkbasalt: ConfigFieldType.BOOLEAN,
+    force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
+    deactivate_wsi: ConfigFieldType.BOOLEAN,
   };
 }
 

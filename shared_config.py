@@ -106,6 +106,22 @@ CONFIG_SCHEMA_DEF = {
         "default": False,
         "description": "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)",
         "location": "script"
+    },
+    
+    "force_enable_vkbasalt": {
+        "name": "force_enable_vkbasalt",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "Force vkBasalt to engage to fix framepacing issues in gamemode",
+        "location": "script"
+    },
+    
+    "deactivate_wsi": {
+        "name": "deactivate_wsi",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth",
+        "location": "script"
     }
 }
 

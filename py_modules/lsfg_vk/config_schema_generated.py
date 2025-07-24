@@ -16,7 +16,6 @@ from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 DLL = "dll"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
-TARGET_TOTAL_FPS = "target_total_fps"
 PERFORMANCE_MODE = "performance_mode"
 HDR_MODE = "hdr_mode"
 EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode"
@@ -25,6 +24,8 @@ ENABLE_WOW64 = "enable_wow64"
 DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
 MANGOHUD_WORKAROUND = "mangohud_workaround"
 DISABLE_VKBASALT = "disable_vkbasalt"
+FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt"
+DEACTIVATE_WSI = "deactivate_wsi"
 
 
 class ConfigurationData(TypedDict):
@@ -32,7 +33,6 @@ class ConfigurationData(TypedDict):
     dll: str
     multiplier: int
     flow_scale: float
-    target_total_fps: float
     performance_mode: bool
     hdr_mode: bool
     experimental_present_mode: str
@@ -41,6 +41,8 @@ class ConfigurationData(TypedDict):
     disable_steamdeck_mode: bool
     mangohud_workaround: bool
     disable_vkbasalt: bool
+    force_enable_vkbasalt: bool
+    deactivate_wsi: bool
 
 
 def get_script_parsing_logic():
@@ -71,6 +73,10 @@ def get_script_parsing_logic():
                         script_values["mangohud_workaround"] = value == "1"
                 if key == "DISABLE_VKBASALT":
                         script_values["disable_vkbasalt"] = value == "1"
+                if key == "ENABLE_VKBASALT":
+                        script_values["force_enable_vkbasalt"] = value == "1"
+                if key == "ENABLE_GAMESCOPE_WSI":
+                        script_values["deactivate_wsi"] = value == "1"
 
         return script_values
     return parse_script_values
@@ -91,6 +97,10 @@ def get_script_generation_logic():
             lines.append("export MANGOHUD=1")
         if config.get("disable_vkbasalt", False):
             lines.append("export DISABLE_VKBASALT=1")
+        if config.get("force_enable_vkbasalt", False):
+            lines.append("export ENABLE_VKBASALT=1")
+        if config.get("deactivate_wsi", False):
+            lines.append("export ENABLE_GAMESCOPE_WSI=0")
         return lines
     return generate_script_lines
 
@@ -100,7 +110,6 @@ def get_function_parameters() -> str:
     return """dll: str = "/games/Lossless Scaling/Lossless.dll",
                      multiplier: int = 1,
                      flow_scale: float = 0.8,
-                     target_total_fps: float = 0.0,
                      performance_mode: bool = True,
                      hdr_mode: bool = False,
                      experimental_present_mode: str = "fifo",
@@ -108,7 +117,9 @@ def get_function_parameters() -> str:
                      enable_wow64: bool = False,
                      disable_steamdeck_mode: bool = False,
                      mangohud_workaround: bool = False,
-                     disable_vkbasalt: bool = False"""
+                     disable_vkbasalt: bool = False,
+                     force_enable_vkbasalt: bool = False,
+                     deactivate_wsi: bool = False"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
@@ -117,7 +128,6 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "dll": kwargs.get("dll"),
         "multiplier": kwargs.get("multiplier"),
         "flow_scale": kwargs.get("flow_scale"),
-        "target_total_fps": kwargs.get("target_total_fps"),
         "performance_mode": kwargs.get("performance_mode"),
         "hdr_mode": kwargs.get("hdr_mode"),
         "experimental_present_mode": kwargs.get("experimental_present_mode"),
@@ -126,10 +136,12 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "disable_steamdeck_mode": kwargs.get("disable_steamdeck_mode"),
         "mangohud_workaround": kwargs.get("mangohud_workaround"),
         "disable_vkbasalt": kwargs.get("disable_vkbasalt"),
+        "force_enable_vkbasalt": kwargs.get("force_enable_vkbasalt"),
+        "deactivate_wsi": kwargs.get("deactivate_wsi"),
     })
 
 
 # Field lists for dynamic operations
-TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'target_total_fps', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
-SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
-ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'target_total_fps', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
+TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
+SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'deactivate_wsi']
+ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'deactivate_wsi']

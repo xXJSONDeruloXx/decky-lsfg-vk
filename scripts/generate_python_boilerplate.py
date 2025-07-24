@@ -34,7 +34,9 @@ def get_env_var_name(field_name: str) -> str:
         "enable_wow64": "PROTON_USE_WOW64", 
         "disable_steamdeck_mode": "SteamDeck",
         "mangohud_workaround": "MANGOHUD",
-        "disable_vkbasalt": "DISABLE_VKBASALT"
+        "disable_vkbasalt": "DISABLE_VKBASALT",
+        "force_enable_vkbasalt": "ENABLE_VKBASALT",
+        "deactivate_wsi": "ENABLE_GAMESCOPE_WSI"
     }
     return env_map.get(field_name, field_name.upper())
 
@@ -143,6 +145,10 @@ def generate_script_generation() -> str:
         if field_type == ConfigFieldType.BOOLEAN:
             if field_name == "disable_steamdeck_mode":
                 # Special case: disable_steamdeck_mode=True should export SteamDeck=0
+                lines.append(f'        if config.get("{field_name}", False):')
+                lines.append(f'            lines.append("export {env_var}=0")')
+            elif field_name == "deactivate_wsi":
+                # Special case: deactivate_wsi=True should export ENABLE_GAMESCOPE_WSI=0
                 lines.append(f'        if config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=0")')
             else:
