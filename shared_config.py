@@ -44,6 +44,14 @@ CONFIG_SCHEMA_DEF = {
         "location": "toml"
     },
     
+    "target_total_fps": {
+        "name": "target_total_fps",
+        "fieldType": ConfigFieldType.FLOAT,
+        "default": 0.0,
+        "description": "specify your post-frame gen target framerate to force specific frame pacing logic. 0 = default pacing",
+        "location": "toml"
+    },
+    
     "performance_mode": {
         "name": "performance_mode",
         "fieldType": ConfigFieldType.BOOLEAN,

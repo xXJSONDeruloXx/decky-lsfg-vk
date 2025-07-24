@@ -16,6 +16,7 @@ from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 DLL = "dll"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
+TARGET_TOTAL_FPS = "target_total_fps"
 PERFORMANCE_MODE = "performance_mode"
 HDR_MODE = "hdr_mode"
 EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode"
@@ -31,6 +32,7 @@ class ConfigurationData(TypedDict):
     dll: str
     multiplier: int
     flow_scale: float
+    target_total_fps: float
     performance_mode: bool
     hdr_mode: bool
     experimental_present_mode: str
@@ -98,6 +100,7 @@ def get_function_parameters() -> str:
     return """dll: str = "/games/Lossless Scaling/Lossless.dll",
                      multiplier: int = 1,
                      flow_scale: float = 0.8,
+                     target_total_fps: float = 0.0,
                      performance_mode: bool = True,
                      hdr_mode: bool = False,
                      experimental_present_mode: str = "fifo",
@@ -114,6 +117,7 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "dll": kwargs.get("dll"),
         "multiplier": kwargs.get("multiplier"),
         "flow_scale": kwargs.get("flow_scale"),
+        "target_total_fps": kwargs.get("target_total_fps"),
         "performance_mode": kwargs.get("performance_mode"),
         "hdr_mode": kwargs.get("hdr_mode"),
         "experimental_present_mode": kwargs.get("experimental_present_mode"),
@@ -126,6 +130,6 @@ def create_config_dict(**kwargs) -> ConfigurationData:
 
 
 # Field lists for dynamic operations
-TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
+TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'target_total_fps', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
 SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
-ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
+ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'target_total_fps', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt']
