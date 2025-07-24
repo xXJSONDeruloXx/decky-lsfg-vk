@@ -2,7 +2,7 @@ import { PanelSectionRow, ToggleField, SliderField, DropdownItem } from "@decky/
 import { ConfigurationData } from "../config/configSchema";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
-  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
+  FLOW_SCALE, TARGET_TOTAL_FPS, PERFORMANCE_MODE, HDR_MODE, 
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT
 } from "../config/generatedConfigSchema";
@@ -46,6 +46,18 @@ export function ConfigurationSection({
           max={1.0}
           step={0.01}
           onChange={(value) => onConfigChange(FLOW_SCALE, value)}
+        />
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <SliderField
+          label={`Target Total FPS ${config.target_total_fps === 0 ? '(Default)' : config.target_total_fps.toFixed(0)}`}
+          description="Specify your post-frame gen target framerate to force specific frame pacing logic. 0 = default pacing"
+          value={config.target_total_fps}
+          min={0}
+          max={144}
+          step={1}
+          onChange={(value) => onConfigChange(TARGET_TOTAL_FPS, value)}
         />
       </PanelSectionRow>
 
