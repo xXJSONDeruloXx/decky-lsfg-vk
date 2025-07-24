@@ -22,6 +22,17 @@ export function ConfigurationSection({
 
   return (
     <>
+      <style>
+        {`
+        .LSFG_WorkaroundsCollapseButton_Container > div > div > div > button {
+          height: 10px !important;
+        }
+        .LSFG_WorkaroundsCollapseButton_Container > div > div > div > div > button {
+          height: 10px !important;
+        }
+        `}
+      </style>
+
       <PanelSectionRow>
         <div
           style={{
@@ -131,21 +142,23 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          bottomSeparator={workaroundsCollapsed ? "standard" : "none"}
-          onClick={() => setWorkaroundsCollapsed(!workaroundsCollapsed)}
-        >
-          {workaroundsCollapsed ? (
-            <RiArrowDownSFill
-              style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }}
-            />
-          ) : (
-            <RiArrowUpSFill
-              style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }}
-            />
-          )}
-        </ButtonItem>
+        <div className="LSFG_WorkaroundsCollapseButton_Container">
+          <ButtonItem
+            layout="below"
+            bottomSeparator={workaroundsCollapsed ? "standard" : "none"}
+            onClick={() => setWorkaroundsCollapsed(!workaroundsCollapsed)}
+          >
+            {workaroundsCollapsed ? (
+              <RiArrowDownSFill
+                style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }}
+              />
+            ) : (
+              <RiArrowUpSFill
+                style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }}
+              />
+            )}
+          </ButtonItem>
+        </div>
       </PanelSectionRow>
 
       {!workaroundsCollapsed && (
