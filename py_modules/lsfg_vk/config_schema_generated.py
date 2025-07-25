@@ -76,7 +76,7 @@ def get_script_parsing_logic():
                 if key == "ENABLE_VKBASALT":
                         script_values["force_enable_vkbasalt"] = value == "1"
                 if key == "ENABLE_GAMESCOPE_WSI":
-                        script_values["deactivate_wsi"] = value == "1"
+                        script_values["deactivate_wsi"] = value == "0"
 
         return script_values
     return parse_script_values
