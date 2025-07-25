@@ -106,6 +106,10 @@ def generate_script_parsing() -> str:
                 # Special case: SteamDeck=0 means disable_steamdeck_mode=True
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value == "0"')
+            elif field_name == "deactivate_wsi":
+                # Special case: ENABLE_GAMESCOPE_WSI=0 means deactivate_wsi=True
+                lines.append(f'                    elif key == "{env_var}":')
+                lines.append(f'                        script_values["{field_name}"] = value == "0"')
             else:
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value == "1"')
