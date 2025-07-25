@@ -1,5 +1,5 @@
 import { PanelSectionRow, ToggleField, SliderField, ButtonItem } from "@decky/ui";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
@@ -14,11 +14,30 @@ interface ConfigurationSectionProps {
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string) => Promise<void>;
 }
 
+const WORKAROUNDS_COLLAPSED_KEY = 'lsfg-workarounds-collapsed';
+
 export function ConfigurationSection({
   config,
   onConfigChange
 }: ConfigurationSectionProps) {
-  const [workaroundsCollapsed, setWorkaroundsCollapsed] = useState(true);
+  // Initialize with localStorage value, fallback to true if not found
+  const [workaroundsCollapsed, setWorkaroundsCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(WORKAROUNDS_COLLAPSED_KEY);
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Persist workarounds collapse state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(WORKAROUNDS_COLLAPSED_KEY, JSON.stringify(workaroundsCollapsed));
+    } catch (error) {
+      console.warn('Failed to save workarounds collapse state:', error);
+    }
+  }, [workaroundsCollapsed]);
 
   return (
     <>
