@@ -20,7 +20,7 @@ export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
 export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
 export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
 export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
-export const DEACTIVATE_WSI = "deactivate_wsi" as const;
+export const ENABLE_WSI = "enable_wsi" as const;
 
 // Configuration field definition
 export interface ConfigField {
@@ -104,11 +104,11 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Force vkBasalt to engage to fix framepacing issues in gamemode"
   },
-  deactivate_wsi: {
-    name: "deactivate_wsi",
+  enable_wsi: {
+    name: "enable_wsi",
     fieldType: ConfigFieldType.BOOLEAN,
-    default: true,
-    description: "Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
+    default: false,
+    description: "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)"
   },
 };
 
@@ -126,7 +126,7 @@ export interface ConfigurationData {
   mangohud_workaround: boolean;
   disable_vkbasalt: boolean;
   force_enable_vkbasalt: boolean;
-  deactivate_wsi: boolean;
+  enable_wsi: boolean;
 }
 
 // Helper functions
@@ -148,7 +148,7 @@ export function getDefaults(): ConfigurationData {
     mangohud_workaround: false,
     disable_vkbasalt: false,
     force_enable_vkbasalt: false,
-    deactivate_wsi: true,
+    enable_wsi: false,
   };
 }
 
@@ -166,7 +166,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     mangohud_workaround: ConfigFieldType.BOOLEAN,
     disable_vkbasalt: ConfigFieldType.BOOLEAN,
     force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
-    deactivate_wsi: ConfigFieldType.BOOLEAN,
+    enable_wsi: ConfigFieldType.BOOLEAN,
   };
 }
 
