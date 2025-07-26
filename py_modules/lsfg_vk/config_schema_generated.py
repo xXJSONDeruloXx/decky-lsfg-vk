@@ -25,7 +25,7 @@ DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
 MANGOHUD_WORKAROUND = "mangohud_workaround"
 DISABLE_VKBASALT = "disable_vkbasalt"
 FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt"
-DEACTIVATE_WSI = "deactivate_wsi"
+ENABLE_WSI = "enable_wsi"
 
 
 class ConfigurationData(TypedDict):
@@ -42,7 +42,7 @@ class ConfigurationData(TypedDict):
     mangohud_workaround: bool
     disable_vkbasalt: bool
     force_enable_vkbasalt: bool
-    deactivate_wsi: bool
+    enable_wsi: bool
 
 
 def get_script_parsing_logic():
@@ -76,7 +76,7 @@ def get_script_parsing_logic():
                 if key == "ENABLE_VKBASALT":
                         script_values["force_enable_vkbasalt"] = value == "1"
                 if key == "ENABLE_GAMESCOPE_WSI":
-                        script_values["deactivate_wsi"] = value == "0"
+                        script_values["enable_wsi"] = value != "0"
 
         return script_values
     return parse_script_values
@@ -99,7 +99,7 @@ def get_script_generation_logic():
             lines.append("export DISABLE_VKBASALT=1")
         if config.get("force_enable_vkbasalt", False):
             lines.append("export ENABLE_VKBASALT=1")
-        if config.get("deactivate_wsi", False):
+        if not config.get("enable_wsi", False):
             lines.append("export ENABLE_GAMESCOPE_WSI=0")
         return lines
     return generate_script_lines
@@ -119,7 +119,7 @@ def get_function_parameters() -> str:
                      mangohud_workaround: bool = False,
                      disable_vkbasalt: bool = False,
                      force_enable_vkbasalt: bool = False,
-                     deactivate_wsi: bool = True"""
+                     enable_wsi: bool = False"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
@@ -137,11 +137,11 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "mangohud_workaround": kwargs.get("mangohud_workaround"),
         "disable_vkbasalt": kwargs.get("disable_vkbasalt"),
         "force_enable_vkbasalt": kwargs.get("force_enable_vkbasalt"),
-        "deactivate_wsi": kwargs.get("deactivate_wsi"),
+        "enable_wsi": kwargs.get("enable_wsi"),
     })
 
 
 # Field lists for dynamic operations
 TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
-SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'deactivate_wsi']
-ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'deactivate_wsi']
+SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']
+ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']

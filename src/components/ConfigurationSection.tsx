@@ -6,7 +6,7 @@ import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
   FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE, 
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
-  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, DEACTIVATE_WSI
+  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI
 } from "../config/generatedConfigSchema";
 
 interface ConfigurationSectionProps {
@@ -163,10 +163,10 @@ export function ConfigurationSection({
         <>
         <PanelSectionRow>
             <ToggleField
-              label="Deactivate WSI"
-              description="Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
-              checked={config.deactivate_wsi}
-              onChange={(value) => onConfigChange(DEACTIVATE_WSI, value)}
+              label="Enable WSI"
+              description="Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)"
+              checked={config.enable_wsi}
+              onChange={(value) => onConfigChange(ENABLE_WSI, value)}
             />
           </PanelSectionRow>
           
