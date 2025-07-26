@@ -116,11 +116,11 @@ CONFIG_SCHEMA_DEF = {
         "location": "script"
     },
     
-    "deactivate_wsi": {
-        "name": "deactivate_wsi",
+    "enable_wsi": {
+        "name": "enable_wsi",
         "fieldType": ConfigFieldType.BOOLEAN,
-        "default": True,
-        "description": "Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth",
+        "default": False,
+        "description": "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)",
         "location": "script"
     }
 }

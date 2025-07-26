@@ -36,7 +36,7 @@ def get_env_var_name(field_name: str) -> str:
         "mangohud_workaround": "MANGOHUD",
         "disable_vkbasalt": "DISABLE_VKBASALT",
         "force_enable_vkbasalt": "ENABLE_VKBASALT",
-        "deactivate_wsi": "ENABLE_GAMESCOPE_WSI"
+        "enable_wsi": "ENABLE_GAMESCOPE_WSI"
     }
     return env_map.get(field_name, field_name.upper())
 
@@ -106,10 +106,10 @@ def generate_script_parsing() -> str:
                 # Special case: SteamDeck=0 means disable_steamdeck_mode=True
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value == "0"')
-            elif field_name == "deactivate_wsi":
-                # Special case: ENABLE_GAMESCOPE_WSI=0 means deactivate_wsi=True
+            elif field_name == "enable_wsi":
+                # Special case: ENABLE_GAMESCOPE_WSI=0 means enable_wsi=False
                 lines.append(f'                    elif key == "{env_var}":')
-                lines.append(f'                        script_values["{field_name}"] = value == "0"')
+                lines.append(f'                        script_values["{field_name}"] = value != "0"')
             else:
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value == "1"')
@@ -151,9 +151,9 @@ def generate_script_generation() -> str:
                 # Special case: disable_steamdeck_mode=True should export SteamDeck=0
                 lines.append(f'        if config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=0")')
-            elif field_name == "deactivate_wsi":
-                # Special case: deactivate_wsi=True should export ENABLE_GAMESCOPE_WSI=0
-                lines.append(f'        if config.get("{field_name}", False):')
+            elif field_name == "enable_wsi":
+                # Special case: enable_wsi=False should export ENABLE_GAMESCOPE_WSI=0
+                lines.append(f'        if not config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=0")')
             else:
                 lines.append(f'        if config.get("{field_name}", False):')
