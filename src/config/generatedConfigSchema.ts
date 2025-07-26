@@ -107,7 +107,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   deactivate_wsi: {
     name: "deactivate_wsi",
     fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
+    default: true,
     description: "Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
   },
 };
@@ -148,7 +148,7 @@ export function getDefaults(): ConfigurationData {
     mangohud_workaround: false,
     disable_vkbasalt: false,
     force_enable_vkbasalt: false,
-    deactivate_wsi: false,
+    deactivate_wsi: true,
   };
 }
 
