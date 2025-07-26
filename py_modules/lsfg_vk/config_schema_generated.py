@@ -119,7 +119,7 @@ def get_function_parameters() -> str:
                      mangohud_workaround: bool = False,
                      disable_vkbasalt: bool = False,
                      force_enable_vkbasalt: bool = False,
-                     deactivate_wsi: bool = False"""
+                     deactivate_wsi: bool = True"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
