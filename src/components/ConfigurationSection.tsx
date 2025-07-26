@@ -161,6 +161,15 @@ export function ConfigurationSection({
 
       {!workaroundsCollapsed && (
         <>
+        <PanelSectionRow>
+            <ToggleField
+              label="Deactivate WSI"
+              description="Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
+              checked={config.deactivate_wsi}
+              onChange={(value) => onConfigChange(DEACTIVATE_WSI, value)}
+            />
+          </PanelSectionRow>
+          
           <PanelSectionRow>
             <ToggleField
               label="Enable WOW64 for 32-bit games"
@@ -217,15 +226,6 @@ export function ConfigurationSection({
                 }
                 onConfigChange(FORCE_ENABLE_VKBASALT, value);
               }}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ToggleField
-              label="Deactivate WSI"
-              description="Deactivates Gamescope WSI Layer, use with HDR off, workaround if frame generation isn't applying or isn't feeling smooth"
-              checked={config.deactivate_wsi}
-              onChange={(value) => onConfigChange(DEACTIVATE_WSI, value)}
             />
           </PanelSectionRow>
         </>
