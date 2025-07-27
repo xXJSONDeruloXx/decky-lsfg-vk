@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { 
   ModalRoot, 
   Field,
-  Focusable
+  Focusable,
+  Button
 } from "@decky/ui";
 import { getDllStats, DllStatsResult, getConfigFileContent, getLaunchScriptContent, FileContentResult } from "../api/lsfgApi";
 
@@ -155,8 +156,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
                       borderRadius: "4px", 
                       fontSize: "0.8em",
                       whiteSpace: "pre-wrap",
-                      overflow: "auto",
-                      maxHeight: "200px"
+                      overflow: "auto"
                     }}>
                       {configContent.content || "No content"}
                     </pre>
@@ -165,6 +165,10 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
               )}
             </Field>
           )}
+          
+            <Button onClick={closeModal}>
+              Close
+            </Button>
         </>
       )}
     </ModalRoot>
