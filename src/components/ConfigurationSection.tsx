@@ -116,8 +116,9 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="HDR Mode"
-          description="Enables HDR mode (only for games that support HDR)"
+          description={config.enable_wsi ? "Enables HDR mode (only for games that support HDR)" : "Enable WSI in the workarounds menu to unlock HDR toggle"}
           checked={config.hdr_mode}
+          disabled={!config.enable_wsi}
           onChange={(value) => onConfigChange(HDR_MODE, value)}
         />
       </PanelSectionRow>
@@ -164,9 +165,16 @@ export function ConfigurationSection({
         <PanelSectionRow>
             <ToggleField
               label="Enable WSI"
-              description="Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)"
+              description="Re-Enable Gamescope WSI Layer. Requires game restart to apply."
               checked={config.enable_wsi}
-              onChange={(value) => onConfigChange(ENABLE_WSI, value)}
+              disabled={config.hdr_mode}
+              onChange={(value) => {
+                if (!value && config.hdr_mode) {
+                  // Turn off HDR when disabling WSI
+                  onConfigChange(HDR_MODE, false);
+                }
+                onConfigChange(ENABLE_WSI, value);
+              }}
             />
           </PanelSectionRow>
           
