@@ -6,6 +6,7 @@ import os
 import shutil
 import zipfile
 import tempfile
+import json
 from pathlib import Path
 from typing import Dict, Any
 
@@ -102,8 +103,42 @@ class InstallationService(BaseService):
                         dst_dir = dest_map.get(file_path.suffix)
                         if dst_dir:
                             dst_file = dst_dir / file
-                            shutil.copy2(src_file, dst_file)
+                            
+                            # Special handling for JSON files - need to modify library_path
+                            if file_path.suffix == JSON_EXT and file == JSON_FILENAME:
+                                self._copy_and_fix_json_file(src_file, dst_file)
+                            else:
+                                shutil.copy2(src_file, dst_file)
+                            
                             self.log.info(f"Copied {file} to {dst_file}")
+    
+    def _copy_and_fix_json_file(self, src_file: Path, dst_file: Path) -> None:
+        """Copy JSON file and fix the library_path to use relative path
+        
+        Args:
+            src_file: Source JSON file path
+            dst_file: Destination JSON file path
+        """
+        try:
+            # Read the JSON file
+            with open(src_file, 'r') as f:
+                json_data = json.load(f)
+            
+            # Fix the library_path from "liblsfg-vk.so" to "../../../lib/liblsfg-vk.so"
+            if 'layer' in json_data and 'library_path' in json_data['layer']:
+                current_path = json_data['layer']['library_path']
+                if current_path == "liblsfg-vk.so":
+                    json_data['layer']['library_path'] = "../../../lib/liblsfg-vk.so"
+                    self.log.info(f"Fixed library_path from '{current_path}' to '../../../lib/liblsfg-vk.so'")
+            
+            # Write the modified JSON file
+            with open(dst_file, 'w') as f:
+                json.dump(json_data, f, indent=2)
+                
+        except (json.JSONDecodeError, KeyError, OSError) as e:
+            self.log.error(f"Error fixing JSON file {src_file}: {e}")
+            # Fallback to simple copy if JSON modification fails
+            shutil.copy2(src_file, dst_file)
     
     def _create_config_file(self) -> None:
         """Create the TOML config file in ~/.config/lsfg-vk with default configuration and detected DLL path"""
