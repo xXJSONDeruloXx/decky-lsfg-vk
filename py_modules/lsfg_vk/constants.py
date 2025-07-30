@@ -15,7 +15,7 @@ SCRIPT_NAME = "lsfg"
 CONFIG_FILENAME = "conf.toml"
 LIB_FILENAME = "liblsfg-vk.so"
 JSON_FILENAME = "VkLayer_LS_frame_generation.json"
-ZIP_FILENAME = "lsfg-vk_archlinux.zip"
+ZIP_FILENAME = "lsfg-vk_noui.zip"
 
 # File extensions
 SO_EXT = ".so"
