@@ -9,6 +9,7 @@ export enum ConfigFieldType {
 
 // Field name constants for type-safe access
 export const DLL = "dll" as const;
+export const NO_FP16 = "no_fp16" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
@@ -37,6 +38,12 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.STRING,
     default: "/games/Lossless Scaling/Lossless.dll",
     description: "specify where Lossless.dll is stored"
+  },
+  no_fp16: {
+    name: "no_fp16",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "force-disable fp16 (use on older nvidia cards)"
   },
   multiplier: {
     name: "multiplier",
@@ -115,6 +122,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
 // Type-safe configuration data structure
 export interface ConfigurationData {
   dll: string;
+  no_fp16: boolean;
   multiplier: number;
   flow_scale: number;
   performance_mode: boolean;
@@ -137,6 +145,7 @@ export function getFieldNames(): string[] {
 export function getDefaults(): ConfigurationData {
   return {
     dll: "/games/Lossless Scaling/Lossless.dll",
+    no_fp16: false,
     multiplier: 1,
     flow_scale: 0.8,
     performance_mode: true,
@@ -155,6 +164,7 @@ export function getDefaults(): ConfigurationData {
 export function getFieldTypes(): Record<string, ConfigFieldType> {
   return {
     dll: ConfigFieldType.STRING,
+    no_fp16: ConfigFieldType.BOOLEAN,
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
