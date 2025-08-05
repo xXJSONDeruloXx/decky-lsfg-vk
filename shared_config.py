@@ -28,6 +28,14 @@ CONFIG_SCHEMA_DEF = {
         "location": "toml"  # where this field is stored/used
     },
     
+    "no_fp16": {
+        "name": "no_fp16",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "force-disable fp16 (use on older nvidia cards)",
+        "location": "toml"
+    },
+    
     "multiplier": {
         "name": "multiplier",
         "fieldType": ConfigFieldType.INTEGER,
