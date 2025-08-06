@@ -61,7 +61,7 @@ For per-game feedback and community support, please join the [Decky Lossless Dis
 ## Troubleshooting
 
 **Frame generation not working?**
-- Ensure you've added `LSFG_PROCESS=decky-lsfg-vk %command%` to your game's launch options
+- Ensure you've added `~/lsfg %command%` to your game's launch options
 - Check that the Lossless Scaling DLL was detected correctly in the plugin
 - Try enabling Performance Mode if you're experiencing crashes
 - Make sure your game is running in fullscreen mode for best results
