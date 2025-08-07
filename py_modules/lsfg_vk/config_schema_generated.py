@@ -113,7 +113,7 @@ def get_function_parameters() -> str:
                      no_fp16: bool = False,
                      multiplier: int = 1,
                      flow_scale: float = 0.8,
-                     performance_mode: bool = True,
+                     performance_mode: bool = False,
                      hdr_mode: bool = False,
                      experimental_present_mode: str = "fifo",
                      dxvk_frame_rate: int = 0,

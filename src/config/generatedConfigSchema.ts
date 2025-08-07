@@ -60,7 +60,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   performance_mode: {
     name: "performance_mode",
     fieldType: ConfigFieldType.BOOLEAN,
-    default: true,
+    default: false,
     description: "use a lighter model for FG (recommended for most games)"
   },
   hdr_mode: {
@@ -148,7 +148,7 @@ export function getDefaults(): ConfigurationData {
     no_fp16: false,
     multiplier: 1,
     flow_scale: 0.8,
-    performance_mode: true,
+    performance_mode: false,
     hdr_mode: false,
     experimental_present_mode: "fifo",
     dxvk_frame_rate: 0,

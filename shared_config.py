@@ -55,7 +55,7 @@ CONFIG_SCHEMA_DEF = {
     "performance_mode": {
         "name": "performance_mode",
         "fieldType": ConfigFieldType.BOOLEAN,
-        "default": True,
+        "default": False,
         "description": "use a lighter model for FG (recommended for most games)",
         "location": "toml"
     },
