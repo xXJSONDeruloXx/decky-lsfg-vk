@@ -167,14 +167,20 @@ class ConfigurationManager:
         lines = ["version = 1"]
         lines.append("")
         
-        # Add global section with DLL path only (if specified)
+        # Add global section with global fields
+        lines.append("[global]")
+        
+        # Add dll field if specified
         if config.get("dll"):
-            lines.append("[global]")
             lines.append(f"# specify where Lossless.dll is stored")
-            # Generate TOML lines for TOML fields only - USE GENERATED CONSTANTS
             from .config_schema_generated import DLL
             lines.append(f'dll = "{config[DLL]}"')
-            lines.append("")
+        
+        # Add no_fp16 field
+        from .config_schema_generated import NO_FP16
+        lines.append(f"# force-disable fp16 (use on older nvidia cards)")
+        lines.append(f"no_fp16 = {str(config[NO_FP16]).lower()}")
+        lines.append("")
         
         # Add game section with process name for LSFG_PROCESS approach
         lines.append("[[game]]")
@@ -184,8 +190,8 @@ class ConfigurationManager:
         
         # Add all configuration fields to the game section
         for field_name, field_def in CONFIG_SCHEMA.items():
-            # Skip dll field - dll goes in global section
-            if field_name == "dll":
+            # Skip global fields - they go in global section
+            if field_name in ("dll", "no_fp16"):
                 continue
                 
             value = config[field_name]
@@ -250,10 +256,14 @@ class ConfigurationManager:
                     elif value.startswith("'") and value.endswith("'"):
                         value = value[1:-1]
                     
-                    # Handle global section (dll only) - USE GENERATED CONSTANTS
-                    if in_global_section and key == "dll":
-                        from .config_schema_generated import DLL
-                        config[DLL] = value
+                    # Handle global section (dll and no_fp16) - USE GENERATED CONSTANTS
+                    if in_global_section:
+                        if key == "dll":
+                            from .config_schema_generated import DLL
+                            config[DLL] = value
+                        elif key == "no_fp16":
+                            from .config_schema_generated import NO_FP16
+                            config[NO_FP16] = value.lower() in ('true', '1', 'yes', 'on')
                     
                     # Handle game section
                     elif in_game_section:

@@ -14,6 +14,7 @@ from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 
 # Field name constants for type-safe access
 DLL = "dll"
+NO_FP16 = "no_fp16"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
 PERFORMANCE_MODE = "performance_mode"
@@ -31,6 +32,7 @@ ENABLE_WSI = "enable_wsi"
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure - AUTO-GENERATED"""
     dll: str
+    no_fp16: bool
     multiplier: int
     flow_scale: float
     performance_mode: bool
@@ -108,9 +110,10 @@ def get_script_generation_logic():
 def get_function_parameters() -> str:
     """Return function signature parameters"""
     return """dll: str = "/games/Lossless Scaling/Lossless.dll",
+                     no_fp16: bool = False,
                      multiplier: int = 1,
                      flow_scale: float = 0.8,
-                     performance_mode: bool = True,
+                     performance_mode: bool = False,
                      hdr_mode: bool = False,
                      experimental_present_mode: str = "fifo",
                      dxvk_frame_rate: int = 0,
@@ -126,6 +129,7 @@ def create_config_dict(**kwargs) -> ConfigurationData:
     """Create configuration dictionary from keyword arguments"""
     return cast(ConfigurationData, {
         "dll": kwargs.get("dll"),
+        "no_fp16": kwargs.get("no_fp16"),
         "multiplier": kwargs.get("multiplier"),
         "flow_scale": kwargs.get("flow_scale"),
         "performance_mode": kwargs.get("performance_mode"),
@@ -142,6 +146,6 @@ def create_config_dict(**kwargs) -> ConfigurationData:
 
 
 # Field lists for dynamic operations
-TOML_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
+TOML_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
 SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']
-ALL_FIELDS = ['dll', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']
+ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']
