@@ -163,6 +163,8 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
       if (result.success) {
         showSuccessToast("Profile created", `Created profile: ${profileName}`);
         await loadProfiles();
+        // Automatically switch to the newly created profile
+        await handleProfileChange(profileName);
       } else {
         console.error("Failed to create profile:", result.error);
         showErrorToast("Failed to create profile", result.error || "Unknown error");
