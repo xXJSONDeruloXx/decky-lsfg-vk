@@ -33,7 +33,8 @@ export function Content() {
 
   const {
     currentProfile,
-    updateProfileConfig
+    updateProfileConfig,
+    loadProfiles
   } = useProfileManagement();
 
   const { isInstalling, isUninstalling, handleInstall, handleUninstall } = useInstallationActions();
@@ -96,7 +97,10 @@ export function Content() {
       {isInstalled && (
         <ProfileManagement
           currentProfile={currentProfile}
-          onProfileChange={() => loadLsfgConfig()}
+          onProfileChange={async () => {
+            await loadProfiles();
+            await loadLsfgConfig();
+          }}
         />
       )}
 
