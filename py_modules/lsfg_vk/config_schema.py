@@ -205,7 +205,8 @@ class ConfigurationManager:
         if dll_path:
             lines.append(f"# specify where Lossless.dll is stored")
             lines.append(f'dll = "{dll_path}"')
-        
+            lines.append("")
+            
         # Add no_fp16 field
         no_fp16 = profile_data["global_config"].get("no_fp16", False)
         lines.append(f"# force-disable fp16 (use on older nvidia cards)")
