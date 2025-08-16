@@ -265,10 +265,9 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   }));
 
   return (
-    <PanelSection title="Profile Management">
+    <PanelSection title="Select Profile">
       <PanelSectionRow>
-        <Field label="Current Profile">
-          <div style={{ width: "100%" }}>
+          <div>
             <Dropdown
               rgOptions={profileOptions}
               selectedOption={selectedProfile}
@@ -276,7 +275,6 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
               disabled={isLoading}
             />
           </div>
-        </Field>
       </PanelSectionRow>
 
       <PanelSectionRow>
