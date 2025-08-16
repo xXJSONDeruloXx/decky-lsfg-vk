@@ -267,14 +267,18 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   return (
     <PanelSection title="Select Profile">
       <PanelSectionRow>
-          <div>
-            <Dropdown
-              rgOptions={profileOptions}
-              selectedOption={selectedProfile}
-              onChange={(option) => handleProfileChange(option.data)}
-              disabled={isLoading}
-            />
-          </div>
+        <Field
+          label=""
+          childrenLayout="below"
+          childrenContainerWidth="max"
+        >
+          <Dropdown
+            rgOptions={profileOptions}
+            selectedOption={selectedProfile}
+            onChange={(option) => handleProfileChange(option.data)}
+            disabled={isLoading}
+          />
+        </Field>
       </PanelSectionRow>
 
       <PanelSectionRow>
