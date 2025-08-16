@@ -42,6 +42,8 @@ export type LsfgConfig = ConfigurationData;
 export interface ConfigResult {
   success: boolean;
   config?: LsfgConfig;
+  profiles?: string[];
+  current_profile?: string;
   error?: string;
 }
 
@@ -94,6 +96,8 @@ export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg
 export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
 export const getDllStats = callable<[], DllStatsResult>("get_dll_stats");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
+export const createProfile = callable<[string], ConfigResult>("create_profile");
+export const setCurrentProfile = callable<[string], ConfigResult>("set_current_profile");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
@@ -101,13 +105,13 @@ export const getLaunchScriptContent = callable<[], FileContentResult>("get_launc
 
 // Updated config function using object-based configuration (single source of truth)
 export const updateLsfgConfig = callable<
-  [ConfigurationData],
+  [string, ConfigurationData],
   ConfigUpdateResult
 >("update_lsfg_config");
 
 // Legacy helper function for backward compatibility
-export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
-  return updateLsfgConfig(config);
+export const updateLsfgConfigFromObject = async (profile: string, config: ConfigurationData): Promise<ConfigUpdateResult> => {
+  return updateLsfgConfig(profile, config);
 };
 
 // Self-updater API functions

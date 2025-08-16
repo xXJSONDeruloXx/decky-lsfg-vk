@@ -58,5 +58,7 @@ class DllDetectionResponse(TypedDict):
 class ConfigurationResponse(BaseResponse):
     """Response for configuration operations"""
     config: Optional[ConfigurationData]
+    profiles: Optional[List[str]]
+    current_profile: Optional[str]
     message: Optional[str]
     error: Optional[str]

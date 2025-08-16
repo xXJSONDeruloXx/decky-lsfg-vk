@@ -184,20 +184,18 @@ class Plugin:
             "defaults": ConfigurationManager.get_defaults()
         }
 
-    async def update_lsfg_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Update lsfg TOML configuration using object-based API (single source of truth)
-        
-        Args:
-            config: Configuration data dictionary containing all settings
-            
-        Returns:
-            ConfigurationResponse dict with success status
-        """
-        # Validate and extract configuration from the config dict
+    async def update_lsfg_config(self, profile: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Update lsfg configuration for a specific profile"""
         validated_config = ConfigurationManager.validate_config(config)
-        
-        # Use dynamic parameter passing based on schema
-        return self.configuration_service.update_config_from_dict(validated_config)
+        return self.configuration_service.update_config_for_profile(profile, validated_config)
+
+    async def create_profile(self, profile: str) -> Dict[str, Any]:
+        """Create a new configuration profile"""
+        return self.configuration_service.create_profile(profile)
+
+    async def set_current_profile(self, profile: str) -> Dict[str, Any]:
+        """Switch the active configuration profile"""
+        return self.configuration_service.set_current_profile(profile)
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
         """Update the DLL path in the configuration when detected

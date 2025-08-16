@@ -75,9 +75,9 @@ export class ConfigurationManager {
   /**
    * Save configuration to backend
    */
-  async saveConfig(config: ConfigurationData): Promise<void> {
+  async saveConfig(config: ConfigurationData, profile: string = "decky-lsfg-vk"): Promise<void> {
     try {
-      const result = await updateLsfgConfig(config);
+      const result = await updateLsfgConfig(profile, config);
       if (result.success) {
         this._config = config;
       } else {

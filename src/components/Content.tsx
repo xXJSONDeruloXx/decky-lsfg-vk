@@ -5,6 +5,7 @@ import { useInstallationActions } from "../hooks/useInstallationActions";
 import { StatusDisplay } from "./StatusDisplay";
 import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
+import { ProfileSelector } from "./ProfileSelector";
 import { UsageInstructions } from "./UsageInstructions";
 import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
@@ -25,8 +26,12 @@ export function Content() {
 
   const {
     config,
+    profiles,
+    currentProfile,
     loadLsfgConfig,
-    updateField
+    updateField,
+    selectProfile,
+    createProfile
   } = useLsfgConfig();
 
   const { isInstalling, isUninstalling, handleInstall, handleUninstall } = useInstallationActions();
@@ -76,10 +81,18 @@ export function Content() {
 
       {/* Configuration Section - only show if installed */}
       {isInstalled && (
-        <ConfigurationSection
-          config={config}
-          onConfigChange={handleConfigChange}
-        />
+        <>
+          <ProfileSelector
+            profiles={profiles}
+            currentProfile={currentProfile}
+            onSelect={selectProfile}
+            onCreate={createProfile}
+          />
+          <ConfigurationSection
+            config={config}
+            onConfigChange={handleConfigChange}
+          />
+        </>
       )}
 
       <UsageInstructions config={config} />

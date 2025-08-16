@@ -4,6 +4,8 @@ import {
   checkLosslessScalingDll,
   getLsfgConfig,
   updateLsfgConfigFromObject,
+  createProfile,
+  setCurrentProfile,
   type ConfigUpdateResult
 } from "../api/lsfgApi";
 import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
@@ -71,14 +73,17 @@ export function useDllDetection() {
 }
 
 export function useLsfgConfig() {
-  // Use centralized configuration for initial state
   const [config, setConfig] = useState<ConfigurationData>(() => ConfigurationManager.getDefaults());
+  const [profiles, setProfiles] = useState<string[]>([]);
+  const [currentProfile, setCurrentProfileState] = useState<string>("" );
 
   const loadLsfgConfig = useCallback(async () => {
     try {
       const result = await getLsfgConfig();
       if (result.success && result.config) {
         setConfig(result.config);
+        setProfiles(result.profiles || []);
+        setCurrentProfileState(result.current_profile || "");
       } else {
         console.log("lsfg config not available, using defaults:", result.error);
         setConfig(ConfigurationManager.getDefaults());
@@ -91,12 +96,12 @@ export function useLsfgConfig() {
 
   const updateConfig = useCallback(async (newConfig: ConfigurationData): Promise<ConfigUpdateResult> => {
     try {
-      const result = await updateLsfgConfigFromObject(newConfig);
+      const result = await updateLsfgConfigFromObject(currentProfile, newConfig);
       if (result.success) {
         setConfig(newConfig);
       } else {
         showErrorToast(
-          ToastMessages.CONFIG_UPDATE_ERROR.title, 
+          ToastMessages.CONFIG_UPDATE_ERROR.title,
           result.error || ToastMessages.CONFIG_UPDATE_ERROR.body
         );
       }
@@ -105,22 +110,53 @@ export function useLsfgConfig() {
       showErrorToast(ToastMessages.CONFIG_UPDATE_ERROR.title, String(error));
       return { success: false, error: String(error) };
     }
-  }, []);
+  }, [currentProfile]);
 
   const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number | string): Promise<ConfigUpdateResult> => {
     const newConfig = { ...config, [fieldName]: value };
     return updateConfig(newConfig);
   }, [config, updateConfig]);
 
+  const selectProfile = useCallback(async (profile: string) => {
+    try {
+      const result = await setCurrentProfile(profile);
+      if (result.success && result.config) {
+        setConfig(result.config);
+        setCurrentProfileState(profile);
+      }
+    } catch (error) {
+      showErrorToast(ToastMessages.CONFIG_UPDATE_ERROR.title, String(error));
+    }
+  }, []);
+
+  const createProfileHook = useCallback(async (name: string) => {
+    try {
+      const result = await createProfile(name);
+      if (result.success && result.config) {
+        setConfig(result.config);
+        setProfiles(result.profiles || []);
+        setCurrentProfileState(result.current_profile || name);
+      } else {
+        showErrorToast(ToastMessages.CONFIG_UPDATE_ERROR.title, result.error || "Failed to create profile");
+      }
+    } catch (error) {
+      showErrorToast(ToastMessages.CONFIG_UPDATE_ERROR.title, String(error));
+    }
+  }, []);
+
   useEffect(() => {
     loadLsfgConfig();
-  }, []); // Empty dependency array to prevent infinite loop
+  }, []);
 
   return {
     config,
+    profiles,
+    currentProfile,
     setConfig,
     loadLsfgConfig,
     updateConfig,
-    updateField
+    updateField,
+    selectProfile,
+    createProfile: createProfileHook,
   };
 }
