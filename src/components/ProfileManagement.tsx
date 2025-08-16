@@ -216,6 +216,14 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
     }
   };
 
+  const handleDropdownChange = (option: DropdownOption) => {
+    if (option.data === "__NEW_PROFILE__") {
+      handleCreateProfile();
+    } else {
+      handleProfileChange(option.data);
+    }
+  };
+
   const handleRenameProfile = () => {
     if (selectedProfile === "decky-lsfg-vk") {
       showErrorToast("Cannot rename default profile", "The default profile cannot be renamed");
@@ -259,10 +267,16 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
     }
   };
 
-  const profileOptions: DropdownOption[] = profiles.map(profile => ({
-    data: profile,
-    label: profile === "decky-lsfg-vk" ? `${profile} (default)` : profile
-  }));
+  const profileOptions: DropdownOption[] = [
+    ...profiles.map((profile: string) => ({
+      data: profile,
+      label: profile === "decky-lsfg-vk" ? "Default" : profile
+    })),
+    {
+      data: "__NEW_PROFILE__",
+      label: "New Profile"
+    }
+  ];
 
   return (
     <PanelSection title="Select Profile">
@@ -275,20 +289,10 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
           <Dropdown
             rgOptions={profileOptions}
             selectedOption={selectedProfile}
-            onChange={(option) => handleProfileChange(option.data)}
+            onChange={handleDropdownChange}
             disabled={isLoading}
           />
         </Field>
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleCreateProfile}
-          disabled={isLoading}
-        >
-          New Profile
-        </ButtonItem>
       </PanelSectionRow>
       
       <PanelSectionRow>
