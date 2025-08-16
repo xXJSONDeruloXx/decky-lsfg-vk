@@ -213,7 +213,11 @@ class ConfigurationManager:
         lines.append("")
         
         # Add game sections for each profile
-        for profile_name, config in profile_data["profiles"].items():
+        # Sort profiles to ensure consistent order (default profile first)
+        sorted_profiles = sorted(profile_data["profiles"].items(), 
+                               key=lambda x: (x[0] != DEFAULT_PROFILE_NAME, x[0]))
+        
+        for profile_name, config in sorted_profiles:
             lines.append("[[game]]")
             if profile_name == DEFAULT_PROFILE_NAME:
                 lines.append("# Plugin-managed game entry (default profile)")
@@ -228,7 +232,7 @@ class ConfigurationManager:
                 if field_name in GLOBAL_SECTION_FIELDS:
                     continue
                     
-                value = config[field_name]
+                value = config.get(field_name, field_def.default)
                 
                 # Add field description comment
                 lines.append(f"# {field_def.description}")

@@ -50,11 +50,13 @@ export function Content() {
     // If we have a current profile, update that profile specifically
     if (currentProfile) {
       const newConfig = { ...config, [fieldName]: value };
-      await updateProfileConfig(currentProfile, newConfig);
-      // Also update local config state
-      await updateField(fieldName, value);
+      const result = await updateProfileConfig(currentProfile, newConfig);
+      if (result.success) {
+        // Reload config to reflect the changes from the backend
+        await loadLsfgConfig();
+      }
     } else {
-      // Fallback to the original method
+      // Fallback to the original method for backward compatibility
       await updateField(fieldName, value);
     }
   };
