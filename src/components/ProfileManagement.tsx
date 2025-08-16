@@ -56,23 +56,30 @@ function TextInputModal({
 
   return (
     <ModalRoot>
-      <div style={{ padding: "16px", minWidth: "300px" }}>
+      <div style={{ padding: "16px", minWidth: "400px" }}>
         <h2 style={{ marginBottom: "16px" }}>{title}</h2>
-        <p style={{ marginBottom: "16px" }}>{description}</p>
+        <p style={{ marginBottom: "24px" }}>{description}</p>
         
-        <Field label="Name">
-          <TextField
-            value={value}
-            onChange={(e) => setValue(e?.target?.value || "")}
-          />
-        </Field>
+        <div style={{ marginBottom: "24px" }}>
+          <Field 
+            label="Name"
+            childrenLayout="below"
+            childrenContainerWidth="max"
+          >
+            <TextField
+              value={value}
+              onChange={(e) => setValue(e?.target?.value || "")}
+              style={{ width: "100%" }}
+            />
+          </Field>
+        </div>
         
-        <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
-          <DialogButton onClick={handleOK} disabled={!value.trim()}>
-            {okText}
-          </DialogButton>
+        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
           <DialogButton onClick={closeModal}>
             {cancelText}
+          </DialogButton>
+          <DialogButton onClick={handleOK} disabled={!value.trim()}>
+            {okText}
           </DialogButton>
         </div>
       </div>
