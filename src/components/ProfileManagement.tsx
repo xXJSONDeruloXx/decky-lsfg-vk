@@ -8,7 +8,7 @@ import {
   ConfirmModal,
   Field,
   DialogButton,
-  Focusable,
+  ButtonItem,
   ModalRoot,
   TextField
 } from "@decky/ui";
@@ -268,41 +268,45 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
     <PanelSection title="Profile Management">
       <PanelSectionRow>
         <Field label="Current Profile">
-          <Dropdown
-            rgOptions={profileOptions}
-            selectedOption={selectedProfile}
-            onChange={(option) => handleProfileChange(option.data)}
-            disabled={isLoading}
-          />
+          <div style={{ width: "100%" }}>
+            <Dropdown
+              rgOptions={profileOptions}
+              selectedOption={selectedProfile}
+              onChange={(option) => handleProfileChange(option.data)}
+              disabled={isLoading}
+            />
+          </div>
         </Field>
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <Focusable style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <DialogButton
-            onClick={handleCreateProfile}
-            disabled={isLoading}
-            style={{ flex: "1", minWidth: "120px" }}
-          >
-            New Profile
-          </DialogButton>
-          
-          <DialogButton
-            onClick={handleRenameProfile}
-            disabled={isLoading || selectedProfile === "decky-lsfg-vk"}
-            style={{ flex: "1", minWidth: "120px" }}
-          >
-            Rename
-          </DialogButton>
-          
-          <DialogButton
-            onClick={handleDeleteProfile}
-            disabled={isLoading || selectedProfile === "decky-lsfg-vk"}
-            style={{ flex: "1", minWidth: "120px" }}
-          >
-            Delete
-          </DialogButton>
-        </Focusable>
+        <ButtonItem
+          layout="below"
+          onClick={handleCreateProfile}
+          disabled={isLoading}
+        >
+          New Profile
+        </ButtonItem>
+      </PanelSectionRow>
+      
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleRenameProfile}
+          disabled={isLoading || selectedProfile === "decky-lsfg-vk"}
+        >
+          Rename
+        </ButtonItem>
+      </PanelSectionRow>
+      
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleDeleteProfile}
+          disabled={isLoading || selectedProfile === "decky-lsfg-vk"}
+        >
+          Delete
+        </ButtonItem>
       </PanelSectionRow>
     </PanelSection>
   );

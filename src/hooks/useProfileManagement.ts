@@ -156,10 +156,6 @@ export function useProfileManagement() {
     try {
       const result: ConfigUpdateResult = await updateProfileConfig(profileName, config);
       if (result.success) {
-        // Only show success toast if this is the current profile
-        if (profileName === currentProfile) {
-          showSuccessToast("Configuration updated", `Updated configuration for profile: ${profileName}`);
-        }
         return result;
       } else {
         console.error("Failed to update profile config:", result.error);
