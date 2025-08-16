@@ -10,7 +10,8 @@ import {
   DialogButton,
   ButtonItem,
   ModalRoot,
-  TextField
+  TextField,
+  Focusable
 } from "@decky/ui";
 import { 
   getProfiles, 
@@ -50,8 +51,10 @@ function TextInputModal({
   const [value, setValue] = useState(defaultValue);
 
   const handleOK = () => {
-    onOK(value);
-    closeModal?.();
+    if (value.trim()) {
+      onOK(value);
+      closeModal?.();
+    }
   };
 
   return (
@@ -74,14 +77,25 @@ function TextInputModal({
           </Field>
         </div>
         
-        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+        <Focusable
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "8px",
+            marginTop: "16px"
+          }}
+          flow-children="horizontal"
+        >
           <DialogButton onClick={closeModal}>
             {cancelText}
           </DialogButton>
-          <DialogButton onClick={handleOK} disabled={!value.trim()}>
+          <DialogButton 
+            onClick={handleOK} 
+            disabled={!value.trim()}
+          >
             {okText}
           </DialogButton>
-        </div>
+        </Focusable>
       </div>
     </ModalRoot>
   );
