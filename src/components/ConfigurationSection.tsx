@@ -15,6 +15,7 @@ interface ConfigurationSectionProps {
 }
 
 const WORKAROUNDS_COLLAPSED_KEY = 'lsfg-workarounds-collapsed';
+const CONFIG_COLLAPSED_KEY = 'lsfg-config-collapsed';
 
 export function ConfigurationSection({
   config,
@@ -30,6 +31,16 @@ export function ConfigurationSection({
     }
   });
 
+  // Initialize with localStorage value, fallback to false (expanded) if not found
+  const [configCollapsed, setConfigCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CONFIG_COLLAPSED_KEY);
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
   // Persist workarounds collapse state to localStorage
   useEffect(() => {
     try {
@@ -39,6 +50,15 @@ export function ConfigurationSection({
     }
   }, [workaroundsCollapsed]);
 
+  // Persist config collapse state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONFIG_COLLAPSED_KEY, JSON.stringify(configCollapsed));
+    } catch (error) {
+      console.warn('Failed to save config collapse state:', error);
+    }
+  }, [configCollapsed]);
+
   return (
     <>
       <style>
@@ -47,6 +67,12 @@ export function ConfigurationSection({
           height: 10px !important;
         }
         .LSFG_WorkaroundsCollapseButton_Container > div > div > div > div > button {
+          height: 10px !important;
+        }
+        .LSFG_ConfigCollapseButton_Container > div > div > div > button {
+          height: 10px !important;
+        }
+        .LSFG_ConfigCollapseButton_Container > div > div > div > div > button {
           height: 10px !important;
         }
         `}
@@ -68,69 +94,93 @@ export function ConfigurationSection({
         </div>
       </PanelSectionRow>
 
-      {/* FPS Multiplier */}
-      <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
-
       <PanelSectionRow>
-        <SliderField
-          label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`}
-          description="Lowers internal motion estimation resolution, improving performance slightly"
-          value={config.flow_scale}
-          min={0.25}
-          max={1.0}
-          step={0.01}
-          onChange={(value) => onConfigChange(FLOW_SCALE, value)}
-        />
+        <div className="LSFG_ConfigCollapseButton_Container">
+          <ButtonItem
+            layout="below"
+            bottomSeparator={configCollapsed ? "standard" : "none"}
+            onClick={() => setConfigCollapsed(!configCollapsed)}
+          >
+            {configCollapsed ? (
+              <RiArrowDownSFill
+                style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }}
+              />
+            ) : (
+              <RiArrowUpSFill
+                style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }}
+              />
+            )}
+          </ButtonItem>
+        </div>
       </PanelSectionRow>
 
-      <PanelSectionRow>
-        <SliderField
-          label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
-          description="Base framerate cap for DirectX games, before frame multiplier. (Requires game restart to apply)"
-          value={config.dxvk_frame_rate}
-          min={0}
-          max={60}
-          step={1}
-          onChange={(value) => onConfigChange(DXVK_FRAME_RATE, value)}
-        />
-      </PanelSectionRow>
+      {!configCollapsed && (
+        <>
+          {/* FPS Multiplier */}
+          <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
 
-      <PanelSectionRow>
-        <ToggleField
-          label={`Present Mode (${(config.experimental_present_mode || "fifo") === "fifo" ? "FIFO - VSync" : "Mailbox"})`}
-          description="Toggle between FIFO - VSync (default) and Mailbox presentation modes for better performance or compatibility"
-          checked={(config.experimental_present_mode || "fifo") === "fifo"}
-          onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
-        />
-      </PanelSectionRow>
+          <PanelSectionRow>
+            <SliderField
+              label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`}
+              description="Lowers internal motion estimation resolution, improving performance slightly"
+              value={config.flow_scale}
+              min={0.25}
+              max={1.0}
+              step={0.01}
+              onChange={(value) => onConfigChange(FLOW_SCALE, value)}
+            />
+          </PanelSectionRow>
 
-      <PanelSectionRow>
-        <ToggleField
-          label="Performance Mode"
-          description="Uses a lighter model for FG (Recommended for most games)"
-          checked={config.performance_mode}
-          onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)}
-        />
-      </PanelSectionRow>
+          <PanelSectionRow>
+            <SliderField
+              label={`Base FPS Cap${config.dxvk_frame_rate > 0 ? ` (${config.dxvk_frame_rate} FPS)` : ' (Off)'}`}
+              description="Base framerate cap for DirectX games, before frame multiplier. (Requires game restart to apply)"
+              value={config.dxvk_frame_rate}
+              min={0}
+              max={60}
+              step={1}
+              onChange={(value) => onConfigChange(DXVK_FRAME_RATE, value)}
+            />
+          </PanelSectionRow>
 
-      {/* <PanelSectionRow>
-        <ToggleField
-          label="Force Disable FP16"
-          description="Force-disable FP16 acceleration"
-          checked={config.no_fp16}
-          onChange={(value) => onConfigChange(NO_FP16, value)}
-        />
-      </PanelSectionRow> */}
+          <PanelSectionRow>
+            <ToggleField
+              label={`Present Mode (${(config.experimental_present_mode || "fifo") === "fifo" ? "FIFO - VSync" : "Mailbox"})`}
+              description="Toggle between FIFO - VSync (default) and Mailbox presentation modes for better performance or compatibility"
+              checked={(config.experimental_present_mode || "fifo") === "fifo"}
+              onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
+            />
+          </PanelSectionRow>
 
-      <PanelSectionRow>
-        <ToggleField
-          label="HDR Mode"
-          description={config.enable_wsi ? "Enables HDR mode (only for games that support HDR)" : "Enable WSI in the workarounds menu to unlock HDR toggle"}
-          checked={config.hdr_mode}
-          disabled={!config.enable_wsi}
-          onChange={(value) => onConfigChange(HDR_MODE, value)}
-        />
-      </PanelSectionRow>
+          <PanelSectionRow>
+            <ToggleField
+              label="Performance Mode"
+              description="Uses a lighter model for FG (Recommended for most games)"
+              checked={config.performance_mode}
+              onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)}
+            />
+          </PanelSectionRow>
+
+          {/* <PanelSectionRow>
+            <ToggleField
+              label="Force Disable FP16"
+              description="Force-disable FP16 acceleration"
+              checked={config.no_fp16}
+              onChange={(value) => onConfigChange(NO_FP16, value)}
+            />
+          </PanelSectionRow> */}
+
+          <PanelSectionRow>
+            <ToggleField
+              label="HDR Mode"
+              description={config.enable_wsi ? "Enables HDR mode (only for games that support HDR)" : "Enable WSI in the workarounds menu to unlock HDR toggle"}
+              checked={config.hdr_mode}
+              disabled={!config.enable_wsi}
+              onChange={(value) => onConfigChange(HDR_MODE, value)}
+            />
+          </PanelSectionRow>
+        </>
+      )}
 
       {/* Workarounds Section */}
       <PanelSectionRow>
