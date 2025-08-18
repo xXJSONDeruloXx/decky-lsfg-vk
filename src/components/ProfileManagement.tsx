@@ -347,6 +347,21 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
         `}
       </style>
 
+      {/* Display currently running game info - always visible */}
+      {mainRunningApp && (
+        <PanelSectionRow>
+          <div style={{ 
+            padding: "8px 12px", 
+            backgroundColor: "rgba(0, 255, 0, 0.1)", 
+            borderRadius: "4px",
+            border: "1px solid rgba(0, 255, 0, 0.3)",
+            fontSize: "13px"
+          }}>
+            <strong>{mainRunningApp.display_name}</strong> running. Close game to change profile.
+          </div>
+        </PanelSectionRow>
+      )}
+
       <PanelSectionRow>
         <div
           style={{
@@ -385,21 +400,6 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
 
       {!profilesCollapsed && (
         <>
-          {/* Display currently running game info */}
-          {mainRunningApp && (
-            <PanelSectionRow>
-              <div style={{ 
-                padding: "8px 12px", 
-                backgroundColor: "rgba(0, 255, 0, 0.1)", 
-                borderRadius: "4px",
-                border: "1px solid rgba(0, 255, 0, 0.3)",
-                fontSize: "13px"
-              }}>
-                <strong>{mainRunningApp.display_name}</strong> running. Close game to change profile.
-              </div>
-            </PanelSectionRow>
-          )}
-          
           <PanelSectionRow>
             <Field
               label=""
