@@ -141,25 +141,55 @@ class InstallationService(BaseService):
             shutil.copy2(src_file, dst_file)
     
     def _create_config_file(self) -> None:
-        """Create the TOML config file in ~/.config/lsfg-vk with default configuration and detected DLL path"""
+        """Create or update the TOML config file in ~/.config/lsfg-vk with default configuration and detected DLL path
+        
+        If a config file already exists, preserve existing profiles and only update global settings like DLL path.
+        """
         # Import here to avoid circular imports
         from .dll_detection import DllDetectionService
         
         # Try to detect DLL path
         dll_service = DllDetectionService(self.log)
-        config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
         
-        # Generate TOML content using centralized manager
-        toml_content = ConfigurationManager.generate_toml_content(config)
+        # Check if config file already exists
+        if self.config_file_path.exists():
+            try:
+                # Read existing config to preserve user profiles
+                content = self.config_file_path.read_text(encoding='utf-8')
+                existing_profile_data = ConfigurationManager.parse_toml_content_multi_profile(content)
+                self.log.info(f"Found existing config file, preserving user profiles")
+                
+                # Create merged profile data that preserves user settings but adds any new fields
+                merged_profile_data = self._merge_config_with_defaults(existing_profile_data, dll_service)
+                
+                # Generate TOML content with merged profiles
+                toml_content = ConfigurationManager.generate_toml_content_multi_profile(merged_profile_data)
+                
+            except Exception as e:
+                self.log.warning(f"Failed to parse existing config file: {str(e)}, creating new one")
+                # Fall back to creating a new config file
+                config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+                toml_content = ConfigurationManager.generate_toml_content(config)
+        else:
+            # No existing config file, create a new one with defaults
+            config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+            toml_content = ConfigurationManager.generate_toml_content(config)
+            self.log.info(f"Creating new config file")
         
-        # Write initial config file
+        # Write config file
         self._write_file(self.config_file_path, toml_content, 0o644)
         self.log.info(f"Created config file at {self.config_file_path}")
         
         # Log detected DLL path if found - USE GENERATED CONSTANTS
         from .config_schema_generated import DLL
-        if config[DLL]:
-            self.log.info(f"Configured DLL path: {config[DLL]}")
+        try:
+            # Try to parse the written content to get the DLL path
+            final_content = self.config_file_path.read_text(encoding='utf-8')
+            final_config = ConfigurationManager.parse_toml_content(final_content)
+            if final_config.get(DLL):
+                self.log.info(f"Configured DLL path: {final_config[DLL]}")
+        except Exception:
+            pass  # Don't fail installation if we can't log the DLL path
     
     def _create_lsfg_launch_script(self) -> None:
         """Create the ~/lsfg launch script for easier game setup"""
@@ -221,12 +251,15 @@ class InstallationService(BaseService):
     def uninstall(self) -> UninstallationResponse:
         """Uninstall lsfg-vk by removing the installed files
         
+        Note: The config file (conf.toml) is preserved to maintain user's custom profiles
+        
         Returns:
             UninstallationResponse with success status and removed files list
         """
         try:
             removed_files = []
-            files_to_remove = [self.lib_file, self.json_file, self.config_file_path, self.lsfg_launch_script_path]
+            # Remove core lsfg-vk files, but preserve config file to maintain user's custom profiles
+            files_to_remove = [self.lib_file, self.json_file, self.lsfg_launch_script_path]
             
             for file_path in files_to_remove:
                 if self._remove_if_exists(file_path):
@@ -236,13 +269,7 @@ class InstallationService(BaseService):
             if self._remove_if_exists(self.lsfg_script_path):
                 removed_files.append(str(self.lsfg_script_path))
             
-            # Remove config directory if it's empty
-            try:
-                if self.config_dir.exists() and not any(self.config_dir.iterdir()):
-                    self.config_dir.rmdir()
-                    removed_files.append(str(self.config_dir))
-            except OSError:
-                pass  # Directory not empty or other error, ignore
+            # Don't remove config directory since we're preserving the config file
             
             if not removed_files:
                 return self._success_response(UninstallationResponse,
@@ -261,17 +288,21 @@ class InstallationService(BaseService):
                                       message="", removed_files=None)
     
     def cleanup_on_uninstall(self) -> None:
-        """Clean up lsfg-vk files when the plugin is uninstalled"""
+        """Clean up lsfg-vk files when the plugin is uninstalled
+        
+        Note: The config file (conf.toml) is preserved to maintain user's custom profiles
+        """
         try:
             self.log.info("Checking for lsfg-vk files to clean up:")
             self.log.info(f"  Library file: {self.lib_file}")
             self.log.info(f"  JSON file: {self.json_file}")
-            self.log.info(f"  Config file: {self.config_file_path}")
+            self.log.info(f"  Config file: {self.config_file_path} (preserved)")
             self.log.info(f"  Launch script: {self.lsfg_launch_script_path}")
             self.log.info(f"  Old script file: {self.lsfg_script_path}")
             
             removed_files = []
-            files_to_remove = [self.lib_file, self.json_file, self.config_file_path, self.lsfg_launch_script_path, self.lsfg_script_path]
+            # Remove core lsfg-vk files, but preserve config file to maintain user's custom profiles
+            files_to_remove = [self.lib_file, self.json_file, self.lsfg_launch_script_path, self.lsfg_script_path]
             
             for file_path in files_to_remove:
                 try:
@@ -280,13 +311,7 @@ class InstallationService(BaseService):
                 except OSError as e:
                     self.log.error(f"Failed to remove {file_path}: {e}")
             
-            # Try to remove config directory if empty
-            try:
-                if self.config_dir.exists() and not any(self.config_dir.iterdir()):
-                    self.config_dir.rmdir()
-                    removed_files.append(str(self.config_dir))
-            except OSError:
-                pass  # Directory not empty or other error, ignore
+            # Don't remove config directory since we're preserving the config file
             
             if removed_files:
                 self.log.info(f"Cleaned up {len(removed_files)} lsfg-vk files during plugin uninstall: {removed_files}")
@@ -297,3 +322,77 @@ class InstallationService(BaseService):
             self.log.error(f"Error cleaning up lsfg-vk files during uninstall: {str(e)}")
             import traceback
             self.log.error(f"Traceback: {traceback.format_exc()}")
+
+    def _merge_config_with_defaults(self, existing_profile_data, dll_service):
+        """Merge existing user config with current schema defaults
+        
+        This ensures that:
+        1. User's custom profiles and values are preserved
+        2. Any new fields added to the schema get their default values
+        3. Global settings like DLL path are updated as needed
+        
+        Args:
+            existing_profile_data: The user's existing ProfileData
+            dll_service: DLL detection service for updating DLL path
+            
+        Returns:
+            ProfileData with merged configuration
+        """
+        from .config_schema import ProfileData
+        
+        # Get current schema defaults
+        default_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+        default_global_config = {
+            "dll": default_config.get("dll", ""),
+            "no_fp16": default_config.get("no_fp16", False)
+        }
+        
+        # Start with existing data
+        merged_data: ProfileData = {
+            "current_profile": existing_profile_data.get("current_profile", "decky-lsfg-vk"),
+            "global_config": existing_profile_data.get("global_config", {}).copy(),
+            "profiles": {}
+        }
+        
+        # Merge global config: preserve user values, add missing fields, update DLL
+        for key, default_value in default_global_config.items():
+            if key not in merged_data["global_config"]:
+                merged_data["global_config"][key] = default_value
+                self.log.info(f"Added missing global field '{key}' with default value: {default_value}")
+        
+        # Update DLL path if detected
+        dll_result = dll_service.check_lossless_scaling_dll()
+        if dll_result.get("detected") and dll_result.get("path"):
+            old_dll = merged_data["global_config"].get("dll")
+            merged_data["global_config"]["dll"] = dll_result["path"]
+            if old_dll != dll_result["path"]:
+                self.log.info(f"Updated DLL path from '{old_dll}' to: {dll_result['path']}")
+        
+        # Merge each profile: preserve user values, add missing fields
+        existing_profiles = existing_profile_data.get("profiles", {})
+        
+        for profile_name, existing_profile_config in existing_profiles.items():
+            merged_profile_config = existing_profile_config.copy()
+            
+            # Add any missing fields from current schema with default values
+            added_fields = []
+            for key, default_value in default_config.items():
+                if key not in merged_profile_config and key not in ["dll", "no_fp16"]:  # Skip global fields
+                    merged_profile_config[key] = default_value
+                    added_fields.append(key)
+            
+            if added_fields:
+                self.log.info(f"Profile '{profile_name}': Added missing fields {added_fields}")
+            
+            merged_data["profiles"][profile_name] = merged_profile_config
+        
+        # If no profiles exist, create the default one
+        if not merged_data["profiles"]:
+            merged_data["profiles"]["decky-lsfg-vk"] = {
+                k: v for k, v in default_config.items() 
+                if k not in ["dll", "no_fp16"]  # Exclude global fields
+            }
+            merged_data["current_profile"] = "decky-lsfg-vk"
+            self.log.info("No existing profiles found, created default profile")
+        
+        return merged_data
