@@ -306,7 +306,9 @@ class Plugin:
 
     # Self-updater methods
     async def check_for_plugin_update(self) -> Dict[str, Any]:
-        """Check for plugin updates by comparing current version with latest GitHub release
+        """Check for plugin updates by comparing current version with most recent GitHub release
+        
+        Checks for the most recent release including pre-releases, not just the latest stable.
         
         Returns:
             Dict containing update information:
@@ -335,8 +337,8 @@ class Plugin:
                 except Exception as e:
                     decky.logger.warning(f"Failed to read package.json: {e}")
             
-            # Fetch latest release from GitHub
-            api_url = "https://api.github.com/repos/xXJSONDeruloXx/decky-lossless-scaling-vk/releases/latest"
+            # Fetch most recent release from GitHub (including pre-releases)
+            api_url = "https://api.github.com/repos/xXJSONDeruloXx/decky-lossless-scaling-vk/releases"
             
             try:
                 # Create SSL context that doesn't verify certificates
@@ -345,9 +347,15 @@ class Plugin:
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
                 
-                # Use urllib to fetch the latest release info
+                # Use urllib to fetch all releases (sorted by most recent first)
                 with urllib.request.urlopen(api_url, context=ssl_context) as response:
-                    release_data = json.loads(response.read().decode('utf-8'))
+                    releases_data = json.loads(response.read().decode('utf-8'))
+                
+                # Get the most recent release (first item in the array)
+                if not releases_data:
+                    raise Exception("No releases found")
+                    
+                release_data = releases_data[0]
                 
                 latest_version = release_data.get('tag_name', '').lstrip('v')
                 release_notes = release_data.get('body', '')
