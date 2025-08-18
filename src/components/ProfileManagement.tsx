@@ -11,7 +11,9 @@ import {
   ButtonItem,
   ModalRoot,
   TextField,
-  Focusable
+  Focusable,
+  AppOverview,
+  Router
 } from "@decky/ui";
 import { 
   getProfiles, 
@@ -23,11 +25,6 @@ import {
   ProfileResult
 } from "../api/lsfgApi";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
-
-interface ProfileManagementProps {
-  currentProfile?: string;
-  onProfileChange?: (profileName: string) => void;
-}
 
 interface TextInputModalProps {
   title: string;
@@ -110,6 +107,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   const [profiles, setProfiles] = useState<string[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>(currentProfile || "decky-lsfg-vk");
   const [isLoading, setIsLoading] = useState(false);
+  const [mainRunningApp, setMainRunningApp] = useState<AppOverview | undefined>(undefined);
 
   // Load profiles on component mount
   useEffect(() => {
@@ -122,6 +120,22 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
       setSelectedProfile(currentProfile);
     }
   }, [currentProfile]);
+
+  // Poll for running app every 2 seconds
+  useEffect(() => {
+    const checkRunningApp = () => {
+      setMainRunningApp(Router.MainRunningApp);
+    };
+
+    // Check immediately
+    checkRunningApp();
+
+    // Set up polling interval
+    const interval = setInterval(checkRunningApp, 2000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
+  }, []);
 
   const loadProfiles = async () => {
     try {
@@ -301,6 +315,21 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
 
   return (
     <PanelSection title="Select Profile">
+      {/* Display currently running game info */}
+      {mainRunningApp && (
+        <PanelSectionRow>
+          <div style={{ 
+            padding: "8px 12px", 
+            backgroundColor: "rgba(0, 255, 0, 0.1)", 
+            borderRadius: "4px",
+            border: "1px solid rgba(0, 255, 0, 0.3)",
+            fontSize: "13px"
+          }}>
+            <strong>{mainRunningApp.display_name}</strong> running. Close game to change profile.
+          </div>
+        </PanelSectionRow>
+      )}
+      
       <PanelSectionRow>
         <Field
           label=""
@@ -311,7 +340,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
             rgOptions={profileOptions}
             selectedOption={selectedProfile}
             onChange={handleDropdownChange}
-            disabled={isLoading}
+            disabled={isLoading || !!mainRunningApp}
           />
         </Field>
       </PanelSectionRow>
@@ -320,7 +349,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
         <ButtonItem
           layout="below"
           onClick={handleRenameProfile}
-          disabled={isLoading || selectedProfile === "decky-lsfg-vk"}
+          disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
         >
           Rename
         </ButtonItem>
@@ -330,7 +359,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
         <ButtonItem
           layout="below"
           onClick={handleDeleteProfile}
-          disabled={isLoading || selectedProfile === "decky-lsfg-vk"}
+          disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
         >
           Delete
         </ButtonItem>
