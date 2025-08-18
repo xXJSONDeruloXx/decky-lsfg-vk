@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  PanelSection,
   PanelSectionRow,
   Dropdown,
   DropdownOption,
@@ -15,6 +14,7 @@ import {
   AppOverview,
   Router
 } from "@decky/ui";
+import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { 
   getProfiles, 
   createProfile, 
@@ -25,6 +25,8 @@ import {
   ProfileResult
 } from "../api/lsfgApi";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
+
+const PROFILES_COLLAPSED_KEY = 'lsfg-profiles-collapsed';
 
 interface TextInputModalProps {
   title: string;
@@ -108,6 +110,25 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   const [selectedProfile, setSelectedProfile] = useState<string>(currentProfile || "decky-lsfg-vk");
   const [isLoading, setIsLoading] = useState(false);
   const [mainRunningApp, setMainRunningApp] = useState<AppOverview | undefined>(undefined);
+  
+  // Initialize with localStorage value, fallback to false (expanded) if not found
+  const [profilesCollapsed, setProfilesCollapsed] = useState(() => {
+    try {
+      const saved = localStorage.getItem(PROFILES_COLLAPSED_KEY);
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  // Persist profiles collapse state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(PROFILES_COLLAPSED_KEY, JSON.stringify(profilesCollapsed));
+    } catch (error) {
+      console.warn('Failed to save profiles collapse state:', error);
+    }
+  }, [profilesCollapsed]);
 
   // Load profiles on component mount
   useEffect(() => {
@@ -314,56 +335,107 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   ];
 
   return (
-    <PanelSection title="Select Profile">
-      {/* Display currently running game info */}
-      {mainRunningApp && (
-        <PanelSectionRow>
-          <div style={{ 
-            padding: "8px 12px", 
-            backgroundColor: "rgba(0, 255, 0, 0.1)", 
-            borderRadius: "4px",
-            border: "1px solid rgba(0, 255, 0, 0.3)",
-            fontSize: "13px"
-          }}>
-            <strong>{mainRunningApp.display_name}</strong> running. Close game to change profile.
-          </div>
-        </PanelSectionRow>
+    <>
+      <style>
+        {`
+        .LSFG_ProfilesCollapseButton_Container > div > div > div > button {
+          height: 10px !important;
+        }
+        .LSFG_ProfilesCollapseButton_Container > div > div > div > div > button {
+          height: 10px !important;
+        }
+        `}
+      </style>
+
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "bold",
+            marginTop: "16px",
+            marginBottom: "8px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+            paddingBottom: "4px",
+            color: "white"
+          }}
+        >
+          Select Profile
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <div className="LSFG_ProfilesCollapseButton_Container">
+          <ButtonItem
+            layout="below"
+            bottomSeparator={profilesCollapsed ? "standard" : "none"}
+            onClick={() => setProfilesCollapsed(!profilesCollapsed)}
+          >
+            {profilesCollapsed ? (
+              <RiArrowDownSFill
+                style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }}
+              />
+            ) : (
+              <RiArrowUpSFill
+                style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }}
+              />
+            )}
+          </ButtonItem>
+        </div>
+      </PanelSectionRow>
+
+      {!profilesCollapsed && (
+        <>
+          {/* Display currently running game info */}
+          {mainRunningApp && (
+            <PanelSectionRow>
+              <div style={{ 
+                padding: "8px 12px", 
+                backgroundColor: "rgba(0, 255, 0, 0.1)", 
+                borderRadius: "4px",
+                border: "1px solid rgba(0, 255, 0, 0.3)",
+                fontSize: "13px"
+              }}>
+                <strong>{mainRunningApp.display_name}</strong> running. Close game to change profile.
+              </div>
+            </PanelSectionRow>
+          )}
+          
+          <PanelSectionRow>
+            <Field
+              label=""
+              childrenLayout="below"
+              childrenContainerWidth="max"
+            >
+              <Dropdown
+                rgOptions={profileOptions}
+                selectedOption={selectedProfile}
+                onChange={handleDropdownChange}
+                disabled={isLoading || !!mainRunningApp}
+              />
+            </Field>
+          </PanelSectionRow>
+          
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={handleRenameProfile}
+              disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
+            >
+              Rename
+            </ButtonItem>
+          </PanelSectionRow>
+          
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={handleDeleteProfile}
+              disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
+            >
+              Delete
+            </ButtonItem>
+          </PanelSectionRow>
+        </>
       )}
-      
-      <PanelSectionRow>
-        <Field
-          label=""
-          childrenLayout="below"
-          childrenContainerWidth="max"
-        >
-          <Dropdown
-            rgOptions={profileOptions}
-            selectedOption={selectedProfile}
-            onChange={handleDropdownChange}
-            disabled={isLoading || !!mainRunningApp}
-          />
-        </Field>
-      </PanelSectionRow>
-      
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleRenameProfile}
-          disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
-        >
-          Rename
-        </ButtonItem>
-      </PanelSectionRow>
-      
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={handleDeleteProfile}
-          disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
-        >
-          Delete
-        </ButtonItem>
-      </PanelSectionRow>
-    </PanelSection>
+    </>
   );
 }
