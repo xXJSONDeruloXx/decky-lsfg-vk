@@ -359,7 +359,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
             color: "white"
           }}
         >
-          Select Profile
+          Profile: {selectedProfile === "decky-lsfg-vk" ? "Default" : selectedProfile}
         </div>
       </PanelSectionRow>
 
