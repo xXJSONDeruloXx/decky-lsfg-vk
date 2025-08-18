@@ -93,14 +93,6 @@ export function Content() {
       
       <SmartClipboardButton />
 
-      {/* Configuration Section - only show if installed */}
-      {isInstalled && (
-        <ConfigurationSection
-          config={config}
-          onConfigChange={handleConfigChange}
-        />
-      )}
-
       {/* Profile Management - only show if installed */}
       {isInstalled && (
         <ProfileManagement
@@ -109,6 +101,14 @@ export function Content() {
             await loadProfiles();
             await loadLsfgConfig();
           }}
+        />
+      )}
+
+      {/* Configuration Section - only show if installed */}
+      {isInstalled && (
+        <ConfigurationSection
+          config={config}
+          onConfigChange={handleConfigChange}
         />
       )}
 
