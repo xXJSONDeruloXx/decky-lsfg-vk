@@ -52,22 +52,6 @@ export function ConfigurationSection({
         `}
       </style>
 
-      <PanelSectionRow>
-        <div
-          style={{
-            fontSize: "14px",
-            fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "16px",
-            borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
-            color: "white"
-          }}
-        >
-          LSFG Configuration
-        </div>
-      </PanelSectionRow>
-
       {/* FPS Multiplier */}
       <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
 

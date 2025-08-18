@@ -76,20 +76,25 @@ export function Content() {
 
   return (
     <PanelSection>
-      <InstallationButton
-        isInstalled={isInstalled}
-        isInstalling={isInstalling}
-        isUninstalling={isUninstalling}
-        onInstall={onInstall}
-        onUninstall={onUninstall}
-      />
+      {/* Show installation components at top when not fully installed */}
+      {!isInstalled && (
+        <>
+          <InstallationButton
+            isInstalled={isInstalled}
+            isInstalling={isInstalling}
+            isUninstalling={isUninstalling}
+            onInstall={onInstall}
+            onUninstall={onUninstall}
+          />
 
-      <StatusDisplay
-        dllDetected={dllDetected}
-        dllDetectionStatus={dllDetectionStatus}
-        isInstalled={isInstalled}
-        installationStatus={installationStatus}
-      />
+          <StatusDisplay
+            dllDetected={dllDetected}
+            dllDetectionStatus={dllDetectionStatus}
+            isInstalled={isInstalled}
+            installationStatus={installationStatus}
+          />
+        </>
+      )}
       
       <SmartClipboardButton />
 
@@ -118,7 +123,29 @@ export function Content() {
       <ClipboardButton />
       
       {/* Plugin Update Checker */}
-      <PluginUpdateChecker />      {/* Nerd Stuff Button */}
+      <PluginUpdateChecker />
+      
+      {/* Show installation components at bottom when fully installed */}
+      {isInstalled && (
+        <>
+          <InstallationButton
+            isInstalled={isInstalled}
+            isInstalling={isInstalling}
+            isUninstalling={isUninstalling}
+            onInstall={onInstall}
+            onUninstall={onUninstall}
+          />
+
+          <StatusDisplay
+            dllDetected={dllDetected}
+            dllDetectionStatus={dllDetectionStatus}
+            isInstalled={isInstalled}
+            installationStatus={installationStatus}
+          />
+        </>
+      )}
+
+      {/* Nerd Stuff Button */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
