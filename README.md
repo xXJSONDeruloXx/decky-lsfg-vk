@@ -1,9 +1,9 @@
-# Lossless Scaling for Steam Deck
+# decky-lsfg-vk
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71HZTAX)
 
 <p align="center">
-   <img src="assets/decky-lossless-logo.png" alt="Lossless Scaling for Steam Deck Logo" width="200"/>
+   <img src="assets/decky-lossless-logo.png" alt="decky-lsfg-vk Logo" width="200"/>
 </p>
 
 > **Note:**  
@@ -18,12 +18,12 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 **Note:** This plugin is currently in active development. While functional, some features may change before the official Decky Plugin Store release.
 
 1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lossless-scaling-vk/releases)
-   - Download the "Lossless Scaling.zip" file to your Steam Deck
+   - Download the "decky-lsfg-vk.zip" file to your Steam Deck
 2. **Install manually through Decky**:
    - In Game Mode, go to the settings cog in the top right of the Decky Loader tab
    - Enable "Developer Mode"
    - Go to "Developer" tab and select "Install Plugin from Zip"
-   - Select the downloaded "Lossless Scaling.zip" file
+   - Select the downloaded "decky-lsfg-vk.zip" file
 
 ## How to Use
 

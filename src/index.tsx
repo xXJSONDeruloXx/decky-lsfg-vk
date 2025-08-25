@@ -4,13 +4,13 @@ import { GiPlasticDuck } from "react-icons/gi";
 import { Content } from "./components";
 
 export default definePlugin(() => {
-  console.log("Lossless Scaling plugin initializing");
+  console.log("decky-lsfg-vk plugin initializing");
 
   return {
     // The name shown in various decky menus
-    name: "Lossless Scaling",
+    name: "decky-lsfg-vk",
     // The element displayed at the top of your plugin's menu
-    titleView: <div className={staticClasses.Title}>Lossless Scaling</div>,
+    titleView: <div className={staticClasses.Title}>decky-lsfg-vk</div>,
     // Always render to retain state when panel is toggled
     alwaysRender: true,
     // The content of your plugin's menu
@@ -19,7 +19,7 @@ export default definePlugin(() => {
     icon: <GiPlasticDuck />,
     // The function triggered when your plugin unloads
     onDismount() {
-      console.log("Lossless Scaling unloading");
+      console.log("decky-lsfg-vk unloading");
     }
   };
 });
