@@ -109,7 +109,7 @@ export function ConfigurationSection({
       <PanelSectionRow>
         <ToggleField
           label="HDR Mode"
-          description={"Enables HDR mode (only for games that support HDR)"}
+          description="Enables HDR mode (only for games that support HDR)"
           checked={config.hdr_mode}
           onChange={(value) => onConfigChange(HDR_MODE, value)}
         />
