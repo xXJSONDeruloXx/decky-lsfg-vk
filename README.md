@@ -7,17 +7,17 @@
 </p>
 
 > **Note:**  
-> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [Decky Lossless Discord Channel](https://discord.gg/TwvHdVucC3).
+> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vkDiscord Channel](https://discord.gg/TwvHdVucC3).
 
 ## What is this?
 
-A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling features on Linux with a controller friendly UI in SteamOS or Bazzite. 
+A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS or Bazzite. 
 
 ## Installation
 
 **Note:** This plugin is currently in active development. While functional, some features may change before the official Decky Plugin Store release.
 
-1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lossless-scaling-vk/releases)
+1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lsfg-vk/releases)
    - Download the "decky-lsfg-vk.zip" file to your Steam Deck
 2. **Install manually through Decky**:
    - In Game Mode, go to the settings cog in the top right of the Decky Loader tab
@@ -56,7 +56,7 @@ All settings (except base FPS limit) are saved automatically and can be changed 
 
 ## Feedback and Support
 
-For per-game feedback and community support, please join the [Decky Lossless Discord Channel](https://discord.gg/TwvHdVucC3)
+For per-game feedback and community support, please join the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3)
 
 ## Troubleshooting
 
