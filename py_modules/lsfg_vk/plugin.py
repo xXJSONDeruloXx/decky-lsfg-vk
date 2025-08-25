@@ -338,7 +338,7 @@ class Plugin:
                     decky.logger.warning(f"Failed to read package.json: {e}")
             
             # Fetch most recent release from GitHub (including pre-releases)
-            api_url = "https://api.github.com/repos/xXJSONDeruloXx/decky-lossless-scaling-vk/releases"
+            api_url = "https://api.github.com/repos/xXJSONDeruloXx/decky-lsfg-vk/releases"
             
             try:
                 # Create SSL context that doesn't verify certificates
@@ -414,7 +414,7 @@ class Plugin:
             # Create download path
             downloads_dir = Path.home() / "Downloads"
             downloads_dir.mkdir(exist_ok=True)
-            download_path = downloads_dir / "decky-lossless-scaling-vk.zip"
+            download_path = downloads_dir / "decky-lsfg-vk.zip"
             
             # Remove existing file if it exists
             if download_path.exists():
