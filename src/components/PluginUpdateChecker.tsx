@@ -152,7 +152,7 @@ export const PluginUpdateChecker: React.FC<PluginUpdateCheckerProps> = () => {
               <Focusable>
                 1. Go to Decky Loader settings
                 <br />2. Click "Developer" tab
-                <br />3. Click "Uninstall" next to "Lossless Scaling"
+                <br />3. Click "Uninstall" next to "decky-lsfg-vk"
                 <br />4. Click "Install from ZIP"
                 <br />5. Select the downloaded file
                 <br />6. Restart Steam or reload plugins
