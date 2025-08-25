@@ -2,7 +2,7 @@
 Main plugin class for the lsfg-vk Decky Loader plugin.
 
 This plugin provides services for installing and managing the lsfg-vk 
-Vulkan layer for Lossless Scaling frame generation on Steam Deck.
+Vulkan layer for frame generation on Steam Deck.
 """
 
 import os
@@ -592,7 +592,7 @@ class Plugin:
         Any initialization code should go here.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin loaded")
+        decky.logger.info("decky-lsfg-vk plugin loaded")
 
     async def _unload(self):
         """
@@ -602,7 +602,7 @@ class Plugin:
         Any cleanup code should go here.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin unloaded")
+        decky.logger.info("decky-lsfg-vk plugin unloaded")
 
     async def _uninstall(self):
         """
@@ -612,12 +612,12 @@ class Plugin:
         It automatically cleans up any lsfg-vk files that were installed.
         """
         import decky
-        decky.logger.info("Lossless Scaling VK plugin uninstalled - starting cleanup")
+        decky.logger.info("decky-lsfg-vk plugin uninstalled - starting cleanup")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
         self.installation_service.cleanup_on_uninstall()
         
-        decky.logger.info("Lossless Scaling VK plugin uninstall cleanup completed")
+        decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
     async def _migration(self):
         """
@@ -627,7 +627,7 @@ class Plugin:
         Currently migrates logs, settings, and runtime data from old locations.
         """
         import decky
-        decky.logger.info("Running Lossless Scaling VK plugin migrations")
+        decky.logger.info("Running decky-lsfg-vk plugin migrations")
         
         # Migrate logs from old location
         # ~/.config/decky-lossless-scaling-vk/lossless-scaling-vk.log -> decky.DECKY_LOG_DIR/lossless-scaling-vk.log
@@ -648,4 +648,4 @@ class Plugin:
             os.path.join(decky.DECKY_HOME, "lossless-scaling-vk"),
             os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-lossless-scaling-vk"))
         
-        decky.logger.info("Lossless Scaling VK plugin migrations completed")
+        decky.logger.info("decky-lsfg-vk plugin migrations completed")
