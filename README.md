@@ -7,7 +7,7 @@
 </p>
 
 > **Note:**  
-> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vkDiscord Channel](https://discord.gg/TwvHdVucC3).
+> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3).
 
 ## What is this?
 
