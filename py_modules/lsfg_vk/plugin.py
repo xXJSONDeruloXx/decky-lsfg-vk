@@ -553,35 +553,67 @@ class Plugin:
             }
 
     async def get_launch_script_content(self) -> Dict[str, Any]:
-        """Get the current launch script content
+        """Get the content of the launch script file
         
         Returns:
-            Dict containing the launch script content or error message
+            FileContentResponse dict with file content or error information
         """
         try:
-            script_path = self.installation_service.lsfg_script_path
-            if not script_path.exists():
+            script_path = self.installation_service.get_launch_script_path()
+            
+            if not os.path.exists(script_path):
                 return {
                     "success": False,
-                    "content": None,
-                    "path": str(script_path),
-                    "error": "Launch script does not exist"
+                    "error": f"Launch script not found at {script_path}",
+                    "path": str(script_path)
                 }
             
-            content = script_path.read_text(encoding='utf-8')
+            with open(script_path, 'r') as file:
+                content = file.read()
+                
             return {
                 "success": True,
                 "content": content,
-                "path": str(script_path),
-                "error": None
+                "path": str(script_path)
             }
+            
         except Exception as e:
+            import decky
+            decky.logger.error(f"Error reading launch script: {e}")
             return {
                 "success": False,
-                "content": None,
-                "path": str(script_path) if 'script_path' in locals() else "unknown",
-                "error": f"Error reading launch script: {str(e)}"
+                "error": str(e)
             }
+
+    async def check_fgmod_directory(self) -> Dict[str, Any]:
+        """Check if the fgmod directory exists in the home directory
+        
+        Returns:
+            Dict with exists status and directory path
+        """
+        try:
+            import decky
+            home_path = Path(decky.DECKY_USER_HOME)
+            fgmod_path = home_path / "fgmod"
+            
+            exists = fgmod_path.exists() and fgmod_path.is_dir()
+            
+            return {
+                "success": True,
+                "exists": exists,
+                "path": str(fgmod_path)
+            }
+            
+        except Exception as e:
+            import decky
+            decky.logger.error(f"Error checking fgmod directory: {e}")
+            return {
+                "success": False,
+                "exists": False,
+                "error": str(e)
+            }
+    
+    # Decky Loader lifecycle methods
 
     # Lifecycle methods
     async def _main(self):

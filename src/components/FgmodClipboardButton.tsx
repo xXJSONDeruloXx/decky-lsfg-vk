@@ -1,0 +1,109 @@
+import { useState, useEffect } from "react";
+import { PanelSectionRow, ButtonItem } from "@decky/ui";
+import { FaClipboard, FaCheck } from "react-icons/fa";
+import { checkFgmodDirectory } from "../api/lsfgApi";
+import { showClipboardErrorToast } from "../utils/toastUtils";
+import { copyWithVerification } from "../utils/clipboardUtils";
+
+export function FgmodClipboardButton() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [fgmodExists, setFgmodExists] = useState(false);
+  const [checkingFgmod, setCheckingFgmod] = useState(true);
+
+  // Check for fgmod directory on component mount
+  useEffect(() => {
+    const checkFgmod = async () => {
+      try {
+        const result = await checkFgmodDirectory();
+        setFgmodExists(result.exists);
+      } catch (error) {
+        console.error("Error checking fgmod directory:", error);
+        setFgmodExists(false);
+      } finally {
+        setCheckingFgmod(false);
+      }
+    };
+
+    checkFgmod();
+  }, []);
+
+  // Reset success state after 3 seconds
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [showSuccess]);
+
+  const copyToClipboard = async () => {
+    if (isLoading || showSuccess) return;
+    
+    setIsLoading(true);
+    try {
+      const text = "~/fgmod/fgmod ~/lsfg %command%";
+      const { success, verified } = await copyWithVerification(text);
+      
+      if (success) {
+        // Show success feedback in the button instead of toast
+        setShowSuccess(true);
+        if (!verified) {
+          // Copy worked but verification failed - still show success
+          console.log('Copy verification failed but copy likely worked');
+        }
+      } else {
+        showClipboardErrorToast();
+      }
+    } catch (error) {
+      showClipboardErrorToast();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Don't render if fgmod directory doesn't exist or we're still checking
+  if (checkingFgmod || !fgmodExists) {
+    return null;
+  }
+
+  return (
+    <PanelSectionRow>
+      <ButtonItem
+        layout="below"
+        onClick={copyToClipboard}
+        disabled={isLoading || showSuccess}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {showSuccess ? (
+            <FaCheck style={{ 
+              color: "#4CAF50" // Green color for success
+            }} />
+          ) : isLoading ? (
+            <FaClipboard style={{ 
+              animation: "pulse 1s ease-in-out infinite",
+              opacity: 0.7 
+            }} />
+          ) : (
+            <FaClipboard />
+          )}
+          <div style={{ 
+            color: showSuccess ? "#4CAF50" : "inherit",
+            fontWeight: showSuccess ? "bold" : "normal"
+          }}>
+            {showSuccess ? "Copied to clipboard" : isLoading ? "Copying..." : "LSFG + DeckyFG"}
+          </div>
+        </div>
+      </ButtonItem>
+      <style>{`
+        @keyframes pulse {
+          0% { opacity: 0.7; }
+          50% { opacity: 1; }
+          100% { opacity: 0.7; }
+        }
+      `}</style>
+    </PanelSectionRow>
+  );
+}
