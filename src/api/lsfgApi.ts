@@ -89,6 +89,13 @@ export interface FileContentResult {
   error?: string;
 }
 
+export interface FgmodCheckResult {
+  success: boolean;
+  exists: boolean;
+  path?: string;
+  error?: string;
+}
+
 // Profile management interfaces
 export interface ProfilesResult {
   success: boolean;
@@ -116,6 +123,7 @@ export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_sche
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
+export const checkFgmodDirectory = callable<[], FgmodCheckResult>("check_fgmod_directory");
 
 // Updated config function using object-based configuration (single source of truth)
 export const updateLsfgConfig = callable<
