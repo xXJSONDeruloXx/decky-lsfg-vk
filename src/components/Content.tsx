@@ -12,6 +12,7 @@ import { WikiButton } from "./WikiButton";
 import { ClipboardButton } from "./ClipboardButton";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
+import { ClipboardDisplay } from "./ClipboardDisplay";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
 import { ConfigurationData } from "../config/configSchema";
@@ -100,6 +101,7 @@ export function Content() {
       {/* Clipboard buttons - only show if installed */}
       {isInstalled && (
         <>
+          <ClipboardDisplay />
           <SmartClipboardButton />
           <FgmodClipboardButton />
         </>
