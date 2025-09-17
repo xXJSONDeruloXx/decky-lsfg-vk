@@ -6,7 +6,7 @@ import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
   NO_FP16, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
-  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI
+  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
 
 interface ConfigurationSectionProps {
@@ -219,6 +219,15 @@ export function ConfigurationSection({
                 }
                 onConfigChange(FORCE_ENABLE_VKBASALT, value);
               }}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Enable Zink for OpenGL Games"
+              description="Use Vulkan-based OpenGL implementation for OpenGL games (may cause crashes or freezes with some games)"
+              checked={config.enable_zink}
+              onChange={(value) => onConfigChange(ENABLE_ZINK, value)}
             />
           </PanelSectionRow>
         </>
