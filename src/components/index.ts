@@ -6,6 +6,8 @@ export { FpsMultiplierControl } from "./FpsMultiplierControl";
 export { UsageInstructions } from "./UsageInstructions";
 export { WikiButton } from "./WikiButton";
 export { SmartClipboardButton } from "./SmartClipboardButton";
+export { FgmodClipboardButton } from "./FgmodClipboardButton";
+export { ClipboardDisplay } from "./ClipboardDisplay";
 export { PluginUpdateChecker } from "./PluginUpdateChecker";
 export { NerdStuffModal } from "./NerdStuffModal";
 export { ProfileManagement } from "./ProfileManagement";
