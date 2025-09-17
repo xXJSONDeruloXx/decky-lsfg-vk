@@ -22,6 +22,7 @@ export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
 export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
 export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
 export const ENABLE_WSI = "enable_wsi" as const;
+export const ENABLE_ZINK = "enable_zink" as const;
 
 // Configuration field definition
 export interface ConfigField {
@@ -117,6 +118,12 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)"
   },
+  enable_zink: {
+    name: "enable_zink",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games"
+  },
 };
 
 // Type-safe configuration data structure
@@ -135,6 +142,7 @@ export interface ConfigurationData {
   disable_vkbasalt: boolean;
   force_enable_vkbasalt: boolean;
   enable_wsi: boolean;
+  enable_zink: boolean;
 }
 
 // Helper functions
@@ -158,6 +166,7 @@ export function getDefaults(): ConfigurationData {
     disable_vkbasalt: false,
     force_enable_vkbasalt: false,
     enable_wsi: false,
+    enable_zink: false,
   };
 }
 
@@ -177,6 +186,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     disable_vkbasalt: ConfigFieldType.BOOLEAN,
     force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
     enable_wsi: ConfigFieldType.BOOLEAN,
+    enable_zink: ConfigFieldType.BOOLEAN,
   };
 }
 

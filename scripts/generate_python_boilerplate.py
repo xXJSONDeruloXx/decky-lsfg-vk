@@ -36,7 +36,8 @@ def get_env_var_name(field_name: str) -> str:
         "mangohud_workaround": "MANGOHUD",
         "disable_vkbasalt": "DISABLE_VKBASALT",
         "force_enable_vkbasalt": "ENABLE_VKBASALT",
-        "enable_wsi": "ENABLE_GAMESCOPE_WSI"
+        "enable_wsi": "ENABLE_GAMESCOPE_WSI",
+        "enable_zink": "ZINK_ENABLE"
     }
     return env_map.get(field_name, field_name.upper())
 
@@ -110,6 +111,14 @@ def generate_script_parsing() -> str:
                 # Special case: ENABLE_GAMESCOPE_WSI=0 means enable_wsi=False
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value != "0"')
+            elif field_name == "enable_zink":
+                # Special case: Zink uses multiple environment variables
+                lines.append(f'                    elif key == "__GLX_VENDOR_LIBRARY_NAME" and value == "mesa":')
+                lines.append(f'                        script_values["{field_name}"] = True')
+                lines.append(f'                    elif key == "MESA_LOADER_DRIVER_OVERRIDE" and value == "zink":')
+                lines.append(f'                        script_values["{field_name}"] = True')
+                lines.append(f'                    elif key == "GALLIUM_DRIVER" and value == "zink":')
+                lines.append(f'                        script_values["{field_name}"] = True')
             else:
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value == "1"')
@@ -155,6 +164,12 @@ def generate_script_generation() -> str:
                 # Special case: enable_wsi=False should export ENABLE_GAMESCOPE_WSI=0
                 lines.append(f'        if not config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=0")')
+            elif field_name == "enable_zink":
+                # Special case: enable_zink=True should export multiple Zink environment variables
+                lines.append(f'        if config.get("{field_name}", False):')
+                lines.append(f'            lines.append("export __GLX_VENDOR_LIBRARY_NAME=mesa")')
+                lines.append(f'            lines.append("export MESA_LOADER_DRIVER_OVERRIDE=zink")')
+                lines.append(f'            lines.append("export GALLIUM_DRIVER=zink")')
             else:
                 lines.append(f'        if config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=1")')

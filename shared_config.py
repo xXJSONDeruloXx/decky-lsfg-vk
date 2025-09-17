@@ -130,6 +130,14 @@ CONFIG_SCHEMA_DEF = {
         "default": False,
         "description": "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)",
         "location": "script"
+    },
+    
+    "enable_zink": {
+        "name": "enable_zink",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games",
+        "location": "script"
     }
 }
 
