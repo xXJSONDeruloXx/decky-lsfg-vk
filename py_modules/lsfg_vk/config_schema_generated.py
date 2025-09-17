@@ -27,6 +27,7 @@ MANGOHUD_WORKAROUND = "mangohud_workaround"
 DISABLE_VKBASALT = "disable_vkbasalt"
 FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt"
 ENABLE_WSI = "enable_wsi"
+ENABLE_ZINK = "enable_zink"
 
 
 class ConfigurationData(TypedDict):
@@ -45,6 +46,7 @@ class ConfigurationData(TypedDict):
     disable_vkbasalt: bool
     force_enable_vkbasalt: bool
     enable_wsi: bool
+    enable_zink: bool
 
 
 def get_script_parsing_logic():
@@ -79,6 +81,12 @@ def get_script_parsing_logic():
                         script_values["force_enable_vkbasalt"] = value == "1"
                 if key == "ENABLE_GAMESCOPE_WSI":
                         script_values["enable_wsi"] = value != "0"
+                if key == "__GLX_VENDOR_LIBRARY_NAME" and value == "mesa":
+                        script_values["enable_zink"] = True
+                if key == "MESA_LOADER_DRIVER_OVERRIDE" and value == "zink":
+                        script_values["enable_zink"] = True
+                if key == "GALLIUM_DRIVER" and value == "zink":
+                        script_values["enable_zink"] = True
 
         return script_values
     return parse_script_values
@@ -103,6 +111,10 @@ def get_script_generation_logic():
             lines.append("export ENABLE_VKBASALT=1")
         if not config.get("enable_wsi", False):
             lines.append("export ENABLE_GAMESCOPE_WSI=0")
+        if config.get("enable_zink", False):
+            lines.append("export __GLX_VENDOR_LIBRARY_NAME=mesa")
+            lines.append("export MESA_LOADER_DRIVER_OVERRIDE=zink")
+            lines.append("export GALLIUM_DRIVER=zink")
         return lines
     return generate_script_lines
 
@@ -122,7 +134,8 @@ def get_function_parameters() -> str:
                      mangohud_workaround: bool = False,
                      disable_vkbasalt: bool = False,
                      force_enable_vkbasalt: bool = False,
-                     enable_wsi: bool = False"""
+                     enable_wsi: bool = False,
+                     enable_zink: bool = False"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
@@ -142,10 +155,11 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "disable_vkbasalt": kwargs.get("disable_vkbasalt"),
         "force_enable_vkbasalt": kwargs.get("force_enable_vkbasalt"),
         "enable_wsi": kwargs.get("enable_wsi"),
+        "enable_zink": kwargs.get("enable_zink"),
     })
 
 
 # Field lists for dynamic operations
 TOML_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
-SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']
-ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi']
+SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
