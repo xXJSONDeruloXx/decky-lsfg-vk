@@ -15,7 +15,7 @@ import { FgmodClipboardButton } from "./FgmodClipboardButton";
 // import { ClipboardDisplay } from "./ClipboardDisplay";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
-import { FlatpaksModal } from "./index";
+import FlatpaksModal from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
