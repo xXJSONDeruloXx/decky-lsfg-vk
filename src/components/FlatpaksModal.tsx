@@ -15,6 +15,7 @@ import {
   ConfirmModal
 } from '@decky/ui';
 import { FaCheck, FaTimes, FaDownload, FaTrash, FaCog } from 'react-icons/fa';
+import flatpakTargetImage from '../../assets/flatpak-target.png';
 import { 
   checkFlatpakExtensionStatus, 
   installFlatpakExtension, 
@@ -343,6 +344,20 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                   borderRadius: '4px'
                 }}>
                   ~/lsfg "usr/bin/flatpak"
+                </div>
+                
+                {/* Visual example image */}
+                <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                  <img 
+                    src={flatpakTargetImage} 
+                    alt="Steam Properties Target Field Example"
+                    style={{ 
+                      maxWidth: '100%', 
+                      height: 'auto',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '4px'
+                    }}
+                  />
                 </div>
               </div>
             </Focusable>
