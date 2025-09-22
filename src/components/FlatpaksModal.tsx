@@ -132,7 +132,7 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
         <Focusable>
           {/* Extension Status Section */}
           <DialogControlsSection>
-            <DialogControlsSectionHeader>Runtime Extensions</DialogControlsSectionHeader>
+            <DialogControlsSectionHeader>Runtime Extension Installer</DialogControlsSectionHeader>
 
             {extensionStatus && extensionStatus.success ? (
               <>
@@ -281,6 +281,83 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                 />
               </PanelSectionRow>
             )}
+          </DialogControlsSection>
+
+          {/* Steam Configuration Instructions */}
+          <DialogControlsSection>
+            <DialogControlsSectionHeader>Steam Configuration</DialogControlsSectionHeader>
+            
+            <Focusable>
+              <div style={{ 
+                padding: '12px', 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                borderRadius: '8px', 
+                margin: '8px 0'
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>
+                  Configure Steam Flatpak Shortcuts
+                </div>
+                <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '8px' }}>
+                  In Steam, open your flatpak game and click the cog wheel."
+                </div>
+                <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '12px', color: '#ffa500' }}>
+                  <strong>IMPORTANT:</strong> Set this in TARGET (NOT LAUNCH OPTIONS)
+                </div>
+                
+                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
+                  Try first:
+                </div>
+                <div style={{ 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.85em', 
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  marginBottom: '12px'
+                }}>
+                  ~/lsfg
+                </div>
+                
+                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
+                  If that doesn't work, try full path:
+                </div>
+                <div style={{ 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.85em', 
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  marginBottom: '12px'
+                }}>
+                  /home/(username)/lsfg
+                </div>
+                
+                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
+                  Final result should look like:
+                </div>
+                <div style={{ 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.85em', 
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  padding: '8px',
+                  borderRadius: '4px'
+                }}>
+                  ~/lsfg "usr/bin/flatpak"
+                </div>
+              </div>
+            </Focusable>
+          </DialogControlsSection>
+
+          {/* Close Button */}
+          <DialogControlsSection>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={closeModal}
+              >
+                Close
+              </ButtonItem>
+            </PanelSectionRow>
           </DialogControlsSection>
         </Focusable>
       </DialogBody>
