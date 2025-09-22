@@ -306,15 +306,49 @@ class FlatpakService(BaseService):
             output = result.stdout
             home_path = os.path.expanduser("~")
             config_path = f"{home_path}/.config/lsfg-vk"
+            dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+            lsfg_path = f"{home_path}/lsfg"
 
-            # Check for filesystem override in the [Context] section
-            # Format: filesystems=/home/kurt/.config/lsfg-vk;
-            filesystem_override = f"filesystems={config_path}" in output
+            # More precise checking - look for exact filesystem entries
+            # Flatpak output format typically shows filesystem entries like:
+            # filesystems=/path1;/path2;/path3
+            filesystem_section = ""
+            in_context = False
+            
+            for line in output.split('\n'):
+                line = line.strip()
+                if line == "[Context]":
+                    in_context = True
+                elif line.startswith("[") and line != "[Context]":
+                    in_context = False
+                elif in_context and line.startswith("filesystems="):
+                    filesystem_section = line
+                    break
+            
+            # Check each required filesystem override
+            has_config_fs = config_path in filesystem_section
+            has_dll_fs = dll_path in filesystem_section
+            has_lsfg_fs = lsfg_path in filesystem_section
+
+            # All three filesystem overrides must be present
+            filesystem_override = has_config_fs and has_dll_fs and has_lsfg_fs
 
             # Check for environment override in the [Environment] section
-            # Format: LSFG_CONFIG=/home/kurt/.config/lsfg-vk/conf.toml
-            env_override = f"LSFG_CONFIG={config_path}/conf.toml" in output
+            env_override = False
+            in_environment = False
+            
+            for line in output.split('\n'):
+                line = line.strip()
+                if line == "[Environment]":
+                    in_environment = True
+                elif line.startswith("[") and line != "[Environment]":
+                    in_environment = False
+                elif in_environment and line.startswith(f"LSFG_CONFIG={config_path}/conf.toml"):
+                    env_override = True
+                    break
 
+            self.log.debug(f"Override status for {app_id}: filesystem={filesystem_override} ({has_config_fs}/{has_dll_fs}/{has_lsfg_fs}), env={env_override}")
+            
             return {"filesystem": filesystem_override, "env": env_override}
 
         except Exception as e:
@@ -331,21 +365,35 @@ class FlatpakService(BaseService):
 
             home_path = os.path.expanduser("~")
             config_path = f"{home_path}/.config/lsfg-vk"
+            dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+            lsfg_path = f"{home_path}/lsfg"
 
-            # Set filesystem override
-            result1 = self._run_flatpak_command(
-                ["override", "--user", f"--filesystem={config_path}:rw", app_id],
-                capture_output=True, text=True
-            )
+            # Set all filesystem overrides
+            filesystem_overrides = [
+                f"--filesystem={dll_path}",
+                f"--filesystem={config_path}:rw", 
+                f"--filesystem={lsfg_path}:rw"
+            ]
+            
+            # Apply filesystem overrides
+            for override in filesystem_overrides:
+                result = self._run_flatpak_command(
+                    ["override", "--user", override, app_id],
+                    capture_output=True, text=True
+                )
+                if result.returncode != 0:
+                    error_msg = f"Failed to set filesystem override {override}: {result.stderr}"
+                    return self._error_response(FlatpakOverrideResponse, error_msg,
+                                              app_id=app_id, operation="set")
 
             # Set environment override
-            result2 = self._run_flatpak_command(
+            result = self._run_flatpak_command(
                 ["override", "--user", f"--env=LSFG_CONFIG={config_path}/conf.toml", app_id],
                 capture_output=True, text=True
             )
 
-            if result1.returncode != 0 or result2.returncode != 0:
-                error_msg = f"Failed to set overrides: {result1.stderr} {result2.stderr}"
+            if result.returncode != 0:
+                error_msg = f"Failed to set environment override: {result.stderr}"
                 return self._error_response(FlatpakOverrideResponse, error_msg,
                                           app_id=app_id, operation="set")
 
@@ -370,25 +418,55 @@ class FlatpakService(BaseService):
 
             home_path = os.path.expanduser("~")
             config_path = f"{home_path}/.config/lsfg-vk"
+            dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+            lsfg_path = f"{home_path}/lsfg"
 
-            # Remove filesystem override
-            result1 = self._run_flatpak_command(
-                ["override", "--user", f"--nofilesystem={config_path}", app_id],
+            # First, try to reset all overrides for this app to clean slate
+            reset_result = self._run_flatpak_command(
+                ["override", "--user", "--reset", app_id],
                 capture_output=True, text=True
             )
+            
+            if reset_result.returncode == 0:
+                self.log.info(f"Successfully reset all overrides for {app_id}")
+                return self._success_response(FlatpakOverrideResponse,
+                                            f"All overrides reset for {app_id}",
+                                            app_id=app_id, operation="remove")
+            
+            # If reset fails, try individual removal (fallback)
+            self.log.debug(f"Reset failed, trying individual removal: {reset_result.stderr}")
+            
+            # Remove all filesystem overrides individually
+            filesystem_overrides = [
+                f"--nofilesystem={dll_path}",
+                f"--nofilesystem={config_path}",
+                f"--nofilesystem={lsfg_path}"
+            ]
+            
+            removal_errors = []
+            
+            # Remove filesystem overrides
+            for override in filesystem_overrides:
+                result = self._run_flatpak_command(
+                    ["override", "--user", override, app_id],
+                    capture_output=True, text=True
+                )
+                if result.returncode != 0:
+                    removal_errors.append(f"{override}: {result.stderr}")
 
             # Remove environment override
-            result2 = self._run_flatpak_command(
+            result = self._run_flatpak_command(
                 ["override", "--user", "--unset-env=LSFG_CONFIG", app_id],
                 capture_output=True, text=True
             )
 
-            if result1.returncode != 0 or result2.returncode != 0:
-                error_msg = f"Failed to remove overrides: {result1.stderr} {result2.stderr}"
-                return self._error_response(FlatpakOverrideResponse, error_msg,
-                                          app_id=app_id, operation="remove")
+            if result.returncode != 0:
+                removal_errors.append(f"unset-env: {result.stderr}")
 
-            self.log.info(f"Successfully removed lsfg-vk overrides for {app_id}")
+            if removal_errors:
+                self.log.warning(f"Some override removals had issues for {app_id}: {'; '.join(removal_errors)}")
+            
+            self.log.info(f"Completed override removal for {app_id}")
             return self._success_response(FlatpakOverrideResponse,
                                         f"lsfg-vk overrides removed for {app_id}",
                                         app_id=app_id, operation="remove")
