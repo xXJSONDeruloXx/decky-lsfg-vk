@@ -210,6 +210,14 @@ class InstallationService(BaseService):
         self._write_file(self.lsfg_launch_script_path, script_content, 0o755)
         self.log.info(f"Created lsfg launch script at {self.lsfg_launch_script_path}")
     
+    def get_launch_script_path(self) -> str:
+        """Get the path to the lsfg launch script
+        
+        Returns:
+            String path to the launch script file
+        """
+        return str(self.lsfg_launch_script_path)
+
     def check_installation(self) -> InstallationCheckResponse:
         """Check if lsfg-vk is already installed
         

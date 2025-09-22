@@ -8,9 +8,9 @@ export default definePlugin(() => {
 
   return {
     // The name shown in various decky menus
-    name: "decky-lsfg-vk",
+    name: "Decky LSFG-VK",
     // The element displayed at the top of your plugin's menu
-    titleView: <div className={staticClasses.Title}>decky-lsfg-vk</div>,
+    titleView: <div className={staticClasses.Title}>Decky LSFG-VK</div>,
     // Always render to retain state when panel is toggled
     alwaysRender: true,
     // The content of your plugin's menu
