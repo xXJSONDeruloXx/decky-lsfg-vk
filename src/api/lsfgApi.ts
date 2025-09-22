@@ -96,6 +96,38 @@ export interface FgmodCheckResult {
   error?: string;
 }
 
+// Flatpak management interfaces
+export interface FlatpakExtensionStatus {
+  success: boolean;
+  message: string;
+  error?: string;
+  installed_23_08: boolean;
+  installed_24_08: boolean;
+}
+
+export interface FlatpakApp {
+  app_id: string;
+  app_name: string;
+  has_filesystem_override: boolean;
+  has_env_override: boolean;
+}
+
+export interface FlatpakAppInfo {
+  success: boolean;
+  message: string;
+  error?: string;
+  apps: FlatpakApp[];
+  total_apps: number;
+}
+
+export interface FlatpakOperationResult {
+  success: boolean;
+  message: string;
+  error?: string;
+  app_id?: string;
+  operation?: string;
+}
+
 // Profile management interfaces
 export interface ProfilesResult {
   success: boolean;
@@ -124,6 +156,14 @@ export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_opti
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
 export const checkFgmodDirectory = callable<[], FgmodCheckResult>("check_fgmod_directory");
+
+// Flatpak management API functions
+export const checkFlatpakExtensionStatus = callable<[], FlatpakExtensionStatus>("check_flatpak_extension_status");
+export const installFlatpakExtension = callable<[string], FlatpakOperationResult>("install_flatpak_extension");
+export const uninstallFlatpakExtension = callable<[string], FlatpakOperationResult>("uninstall_flatpak_extension");
+export const getFlatpakApps = callable<[], FlatpakAppInfo>("get_flatpak_apps");
+export const setFlatpakAppOverride = callable<[string], FlatpakOperationResult>("set_flatpak_app_override");
+export const removeFlatpakAppOverride = callable<[string], FlatpakOperationResult>("remove_flatpak_app_override");
 
 // Updated config function using object-based configuration (single source of truth)
 export const updateLsfgConfig = callable<

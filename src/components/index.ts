@@ -10,4 +10,5 @@ export { FgmodClipboardButton } from "./FgmodClipboardButton";
 // export { ClipboardDisplay } from "./ClipboardDisplay";
 export { PluginUpdateChecker } from "./PluginUpdateChecker";
 export { NerdStuffModal } from "./NerdStuffModal";
+export { default as FlatpaksModal } from "./FlatpaksModal";
 export { ProfileManagement } from "./ProfileManagement";
