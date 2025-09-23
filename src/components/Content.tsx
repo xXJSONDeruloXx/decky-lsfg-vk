@@ -15,6 +15,7 @@ import { FgmodClipboardButton } from "./FgmodClipboardButton";
 // import { ClipboardDisplay } from "./ClipboardDisplay";
 import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
+import FlatpaksModal from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
@@ -74,6 +75,10 @@ export function Content() {
 
   const handleShowNerdStuff = () => {
     showModal(<NerdStuffModal />);
+  };
+
+  const handleShowFlatpaks = () => {
+    showModal(<FlatpaksModal />);
   };
 
   return (
@@ -163,6 +168,16 @@ export function Content() {
           onClick={handleShowNerdStuff}
         >
           Nerd Stuff
+        </ButtonItem>
+      </PanelSectionRow>
+
+      {/* Flatpaks Button */}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={handleShowFlatpaks}
+        >
+          Flatpaks
         </ButtonItem>
       </PanelSectionRow>
     </PanelSection>
