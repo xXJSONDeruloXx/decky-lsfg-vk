@@ -6,7 +6,7 @@ import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
   NO_FP16, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
-  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
+  MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK, DISABLE_DXVK_HDR
 } from "../config/generatedConfigSchema";
 
 interface ConfigurationSectionProps {
@@ -160,6 +160,15 @@ export function ConfigurationSection({
               description="Re-Enable Gamescope WSI Layer. Requires game restart to apply."
               checked={config.enable_wsi}
               onChange={(value) => onConfigChange(ENABLE_WSI, value)}
+            />
+          </PanelSectionRow>
+          
+          <PanelSectionRow>
+            <ToggleField
+              label="Disable HDR in DirectX Games"
+              description="Disables HDR in DirectX games to prevent pale colors (DXVK_HDR=0). Enabled by default."
+              checked={config.disable_dxvk_hdr}
+              onChange={(value) => onConfigChange(DISABLE_DXVK_HDR, value)}
             />
           </PanelSectionRow>
           

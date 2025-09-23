@@ -138,6 +138,14 @@ CONFIG_SCHEMA_DEF = {
         "default": False,
         "description": "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games",
         "location": "script"
+    },
+    
+    "disable_dxvk_hdr": {
+        "name": "disable_dxvk_hdr",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": True,
+        "description": "Disable HDR in DirectX games to prevent pale colors (DXVK_HDR=0)",
+        "location": "script"
     }
 }
 
