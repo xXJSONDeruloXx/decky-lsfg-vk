@@ -18,6 +18,7 @@ from .installation import InstallationService
 from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
 from .config_schema import ConfigurationManager
+from .flatpak_service import FlatpakService
 
 
 class Plugin:
@@ -35,6 +36,7 @@ class Plugin:
         self.installation_service = InstallationService()
         self.dll_detection_service = DllDetectionService()
         self.configuration_service = ConfigurationService()
+        self.flatpak_service = FlatpakService()
 
     # Installation methods
     async def install_lsfg_vk(self) -> Dict[str, Any]:
@@ -612,6 +614,67 @@ class Plugin:
                 "exists": False,
                 "error": str(e)
             }
+
+    # Flatpak management methods
+    async def check_flatpak_extension_status(self) -> Dict[str, Any]:
+        """Check status of lsfg-vk Flatpak runtime extensions
+        
+        Returns:
+            FlatpakExtensionStatus dict with installation status for both runtime versions
+        """
+        return self.flatpak_service.get_extension_status()
+
+    async def install_flatpak_extension(self, version: str) -> Dict[str, Any]:
+        """Install lsfg-vk Flatpak runtime extension
+        
+        Args:
+            version: Runtime version to install ("23.08" or "24.08")
+            
+        Returns:
+            BaseResponse dict with success status and message/error
+        """
+        return self.flatpak_service.install_extension(version)
+
+    async def uninstall_flatpak_extension(self, version: str) -> Dict[str, Any]:
+        """Uninstall lsfg-vk Flatpak runtime extension
+        
+        Args:
+            version: Runtime version to uninstall ("23.08" or "24.08")
+            
+        Returns:
+            BaseResponse dict with success status and message/error
+        """
+        return self.flatpak_service.uninstall_extension(version)
+
+    async def get_flatpak_apps(self) -> Dict[str, Any]:
+        """Get list of installed Flatpak apps and their lsfg-vk override status
+        
+        Returns:
+            FlatpakAppInfo dict with apps list and override status
+        """
+        return self.flatpak_service.get_flatpak_apps()
+
+    async def set_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
+        """Set lsfg-vk overrides for a Flatpak app
+        
+        Args:
+            app_id: Flatpak application ID
+            
+        Returns:
+            FlatpakOverrideResponse dict with operation result
+        """
+        return self.flatpak_service.set_app_override(app_id)
+
+    async def remove_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
+        """Remove lsfg-vk overrides for a Flatpak app
+        
+        Args:
+            app_id: Flatpak application ID
+            
+        Returns:
+            FlatpakOverrideResponse dict with operation result
+        """
+        return self.flatpak_service.remove_app_override(app_id)
     
     # Decky Loader lifecycle methods
 
@@ -641,13 +704,48 @@ class Plugin:
         Cleanup tasks when the plugin is uninstalled.
         
         This method is called by Decky Loader when the plugin is being uninstalled.
-        It automatically cleans up any lsfg-vk files that were installed.
+        It automatically cleans up any lsfg-vk files that were installed and
+        uninstalls any flatpak extensions.
         """
         import decky
         decky.logger.info("decky-lsfg-vk plugin uninstalled - starting cleanup")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
         self.installation_service.cleanup_on_uninstall()
+        
+        # Also clean up flatpak extensions if they are installed
+        try:
+            decky.logger.info("Checking for flatpak extensions to uninstall")
+            
+            # Get current extension status
+            extension_status = self.flatpak_service.get_extension_status()
+            
+            if extension_status.get("success"):
+                # Uninstall 23.08 runtime if installed
+                if extension_status.get("installed_23_08"):
+                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 23.08")
+                    result = self.flatpak_service.uninstall_extension("23.08")
+                    if result.get("success"):
+                        decky.logger.info("Successfully uninstalled flatpak runtime 23.08")
+                    else:
+                        decky.logger.warning(f"Failed to uninstall flatpak runtime 23.08: {result.get('error')}")
+                
+                # Uninstall 24.08 runtime if installed
+                if extension_status.get("installed_24_08"):
+                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 24.08")
+                    result = self.flatpak_service.uninstall_extension("24.08")
+                    if result.get("success"):
+                        decky.logger.info("Successfully uninstalled flatpak runtime 24.08")
+                    else:
+                        decky.logger.warning(f"Failed to uninstall flatpak runtime 24.08: {result.get('error')}")
+                        
+                decky.logger.info("Flatpak extension cleanup completed")
+            else:
+                decky.logger.info(f"Could not check flatpak status for cleanup: {extension_status.get('error')}")
+                
+        except Exception as e:
+            decky.logger.error(f"Error during flatpak cleanup: {e}")
+            # Don't fail the uninstall if flatpak cleanup fails
         
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
