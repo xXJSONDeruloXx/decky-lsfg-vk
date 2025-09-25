@@ -28,6 +28,7 @@ DISABLE_VKBASALT = "disable_vkbasalt"
 FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt"
 ENABLE_WSI = "enable_wsi"
 ENABLE_ZINK = "enable_zink"
+DISABLE_DXVK_HDR = "disable_dxvk_hdr"
 
 
 class ConfigurationData(TypedDict):
@@ -47,6 +48,7 @@ class ConfigurationData(TypedDict):
     force_enable_vkbasalt: bool
     enable_wsi: bool
     enable_zink: bool
+    disable_dxvk_hdr: bool
 
 
 def get_script_parsing_logic():
@@ -87,6 +89,8 @@ def get_script_parsing_logic():
                         script_values["enable_zink"] = True
                 if key == "GALLIUM_DRIVER" and value == "zink":
                         script_values["enable_zink"] = True
+                if key == "DXVK_HDR":
+                        script_values["disable_dxvk_hdr"] = value == "0"
 
         return script_values
     return parse_script_values
@@ -115,6 +119,8 @@ def get_script_generation_logic():
             lines.append("export __GLX_VENDOR_LIBRARY_NAME=mesa")
             lines.append("export MESA_LOADER_DRIVER_OVERRIDE=zink")
             lines.append("export GALLIUM_DRIVER=zink")
+        if config.get("disable_dxvk_hdr", True):
+            lines.append("export DXVK_HDR=0")
         return lines
     return generate_script_lines
 
@@ -135,7 +141,8 @@ def get_function_parameters() -> str:
                      disable_vkbasalt: bool = False,
                      force_enable_vkbasalt: bool = False,
                      enable_wsi: bool = False,
-                     enable_zink: bool = False"""
+                     enable_zink: bool = False,
+                     disable_dxvk_hdr: bool = True"""
 
 
 def create_config_dict(**kwargs) -> ConfigurationData:
@@ -156,10 +163,11 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "force_enable_vkbasalt": kwargs.get("force_enable_vkbasalt"),
         "enable_wsi": kwargs.get("enable_wsi"),
         "enable_zink": kwargs.get("enable_zink"),
+        "disable_dxvk_hdr": kwargs.get("disable_dxvk_hdr"),
     })
 
 
 # Field lists for dynamic operations
 TOML_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
-SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
-ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink', 'disable_dxvk_hdr']
+ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink', 'disable_dxvk_hdr']

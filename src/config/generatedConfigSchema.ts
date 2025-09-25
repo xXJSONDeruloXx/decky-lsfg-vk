@@ -23,6 +23,7 @@ export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
 export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
 export const ENABLE_WSI = "enable_wsi" as const;
 export const ENABLE_ZINK = "enable_zink" as const;
+export const DISABLE_DXVK_HDR = "disable_dxvk_hdr" as const;
 
 // Configuration field definition
 export interface ConfigField {
@@ -124,6 +125,12 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games"
   },
+  disable_dxvk_hdr: {
+    name: "disable_dxvk_hdr",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: true,
+    description: "Disable HDR in DirectX games to prevent pale colors (DXVK_HDR=0)"
+  },
 };
 
 // Type-safe configuration data structure
@@ -143,6 +150,7 @@ export interface ConfigurationData {
   force_enable_vkbasalt: boolean;
   enable_wsi: boolean;
   enable_zink: boolean;
+  disable_dxvk_hdr: boolean;
 }
 
 // Helper functions
@@ -167,6 +175,7 @@ export function getDefaults(): ConfigurationData {
     force_enable_vkbasalt: false,
     enable_wsi: false,
     enable_zink: false,
+    disable_dxvk_hdr: true,
   };
 }
 
@@ -187,6 +196,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
     enable_wsi: ConfigFieldType.BOOLEAN,
     enable_zink: ConfigFieldType.BOOLEAN,
+    disable_dxvk_hdr: ConfigFieldType.BOOLEAN,
   };
 }
 
