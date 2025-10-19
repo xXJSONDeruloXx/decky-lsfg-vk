@@ -49,16 +49,9 @@ class FlatpakService(BaseService):
         self.extension_id_23_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/23.08"
         self.extension_id_24_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08"
         self.flatpak_command = None  # Will be set when flatpak is detected
-    def __init__(self, logger=None):
-        super().__init__(logger)
-        self.extension_id_23_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/23.08"
-        self.extension_id_24_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08"
-        self.flatpak_command = None  # Will be set when flatpak is detected
 
     def _get_clean_env(self):
         """Get a clean environment without PyInstaller's bundled libraries"""
-        import os
-
         # Create a clean environment without PyInstaller's bundled libraries
         env = os.environ.copy()
 
@@ -96,8 +89,6 @@ class FlatpakService(BaseService):
 
     def check_flatpak_available(self) -> bool:
         """Check if flatpak command is available and store the working command"""
-        import os
-
         # Log environment info for debugging
         self.log.info(f"PATH: {os.environ.get('PATH', 'Not set')}")
         self.log.info(f"HOME: {os.environ.get('HOME', 'Not set')}")

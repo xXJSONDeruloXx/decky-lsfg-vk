@@ -8,6 +8,7 @@ This module defines the complete configuration structure for lsfg-vk, managing T
 - Type definitions
 """
 
+import logging
 import re
 import sys
 from typing import TypedDict, Dict, Any, Union, cast, List
@@ -124,9 +125,9 @@ class ConfigurationManager:
                 dll_result = dll_detection_service.check_lossless_scaling_dll()
                 if dll_result.get("detected") and dll_result.get("path"):
                     defaults["dll"] = dll_result["path"]
-            except Exception:
+            except (OSError, IOError, KeyError, TypeError) as e:
                 # If detection fails, keep empty default
-                pass
+                logging.getLogger(__name__).debug(f"DLL detection failed: {e}")
         
         # If DLL path is still empty, use a reasonable fallback
         if not defaults["dll"]:
@@ -403,8 +404,9 @@ class ConfigurationManager:
                 global_config=global_config
             )
             
-        except Exception:
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
             # If parsing fails completely, return default profile structure
+            logging.getLogger(__name__).warning(f"Failed to parse TOML profiles, using defaults: {e}")
             return ProfileData(
                 current_profile=DEFAULT_PROFILE_NAME,
                 profiles={DEFAULT_PROFILE_NAME: ConfigurationManager.get_defaults()},
