@@ -14,6 +14,8 @@ import hashlib
 from typing import Dict, Any
 from pathlib import Path
 
+import decky
+
 from .installation import InstallationService
 from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
@@ -200,8 +202,9 @@ class Plugin:
             
             return schema_data
             
-        except Exception:
+        except (ValueError, KeyError, AttributeError) as e:
             # Fallback to basic schema without profile info
+            self.configuration_service.log.warning(f"Failed to get full schema, using fallback: {e}")
             return {
                 "field_names": ConfigurationManager.get_field_names(),
                 "field_types": {name: field_type.value for name, field_type in ConfigurationManager.get_field_types().items()},
@@ -325,8 +328,6 @@ class Plugin:
             }
         """
         try:
-            import decky
-            
             # Read current version from package.json
             package_json_path = Path(decky.DECKY_PLUGIN_DIR) / "package.json"
             current_version = "0.0.0"
@@ -411,8 +412,6 @@ class Plugin:
             }
         """
         try:
-            import decky
-            
             # Create download path
             downloads_dir = Path.home() / "Downloads"
             downloads_dir.mkdir(exist_ok=True)
@@ -504,8 +503,9 @@ class Plugin:
             # All parts are equal
             return False
             
-        except Exception:
+        except (IndexError, AttributeError, TypeError) as e:
             # If comparison fails, assume no update available
+            self.configuration_service.log.warning(f"Version comparison failed: {e}")
             return False
 
     # Plugin lifecycle methods
@@ -580,7 +580,6 @@ class Plugin:
             }
             
         except Exception as e:
-            import decky
             decky.logger.error(f"Error reading launch script: {e}")
             return {
                 "success": False,
@@ -594,7 +593,6 @@ class Plugin:
             Dict with exists status and directory path
         """
         try:
-            import decky
             home_path = Path(decky.DECKY_USER_HOME)
             fgmod_path = home_path / "fgmod"
             
@@ -607,7 +605,6 @@ class Plugin:
             }
             
         except Exception as e:
-            import decky
             decky.logger.error(f"Error checking fgmod directory: {e}")
             return {
                 "success": False,
@@ -686,7 +683,6 @@ class Plugin:
         This method is called by Decky Loader when the plugin is loaded.
         Any initialization code should go here.
         """
-        import decky
         decky.logger.info("decky-lsfg-vk plugin loaded")
 
     async def _unload(self):
@@ -696,7 +692,6 @@ class Plugin:
         This method is called by Decky Loader when the plugin is being unloaded.
         Any cleanup code should go here.
         """
-        import decky
         decky.logger.info("decky-lsfg-vk plugin unloaded")
 
     async def _uninstall(self):
@@ -707,7 +702,6 @@ class Plugin:
         It automatically cleans up any lsfg-vk files that were installed and
         uninstalls any flatpak extensions.
         """
-        import decky
         decky.logger.info("decky-lsfg-vk plugin uninstalled - starting cleanup")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
@@ -756,7 +750,6 @@ class Plugin:
         This method is called by Decky Loader for plugin migrations.
         Currently migrates logs, settings, and runtime data from old locations.
         """
-        import decky
         decky.logger.info("Running decky-lsfg-vk plugin migrations")
         
         # Migrate logs from old location
