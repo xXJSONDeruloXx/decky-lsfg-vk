@@ -2,7 +2,6 @@ import { PanelSectionRow, ToggleField, SliderField, ButtonItem } from "@decky/ui
 import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
-import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
   FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
@@ -111,8 +110,6 @@ export function ConfigurationSection({
 
       {!configCollapsed && (
         <>
-          <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
-
           <PanelSectionRow>
             <SliderField
               label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`}

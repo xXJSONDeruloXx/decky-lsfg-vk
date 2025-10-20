@@ -10,6 +10,7 @@ import { ProfileManagement } from "./ProfileManagement";
 import { UsageInstructions } from "./UsageInstructions";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
+import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import { NerdStuffModal } from "./NerdStuffModal";
 import { FlatpaksModal } from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
@@ -98,13 +99,13 @@ export function Content() {
           />
         </>
       )}
-      
-      {/* Clipboard buttons - only show if installed */}
+
+      {/* FPS multiplier controls stay above profile selection when installed */}
       {isInstalled && (
-        <>
-          <SmartClipboardButton />
-          <FgmodClipboardButton />
-        </>
+        <FpsMultiplierControl
+          config={config}
+          onConfigChange={handleConfigChange}
+        />
       )}
 
       {/* Profile Management - only show if installed */}
@@ -124,6 +125,14 @@ export function Content() {
           config={config}
           onConfigChange={handleConfigChange}
         />
+      )}
+
+      {/* Clipboard buttons sit beside usage info for quick access */}
+      {isInstalled && (
+        <>
+          <SmartClipboardButton />
+          <FgmodClipboardButton />
+        </>
       )}
 
       {/* Usage instructions - always visible for user guidance */}
