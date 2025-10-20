@@ -8,12 +8,8 @@ import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { ProfileManagement } from "./ProfileManagement";
 import { UsageInstructions } from "./UsageInstructions";
-// import { WikiButton } from "./WikiButton";
-// import { ClipboardButton } from "./ClipboardButton";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
-// import { ClipboardDisplay } from "./ClipboardDisplay";
-// import { PluginUpdateChecker } from "./PluginUpdateChecker";
 import { NerdStuffModal } from "./NerdStuffModal";
 import FlatpaksModal from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
@@ -106,7 +102,6 @@ export function Content() {
       {/* Clipboard buttons - only show if installed */}
       {isInstalled && (
         <>
-          {/* <ClipboardDisplay /> */}
           <SmartClipboardButton />
           <FgmodClipboardButton />
         </>
@@ -131,15 +126,8 @@ export function Content() {
         />
       )}
 
-      {/* Usage instructions - always visible for user guidance */}
-      <UsageInstructions config={config} />
-      
-      {/* Wiki and clipboard buttons - always available for documentation */}
-      {/* <WikiButton /> */}
-      {/* <ClipboardButton /> */}
-      
-      {/* Plugin Update Checker */}
-      {/* <PluginUpdateChecker /> */}
+  {/* Usage instructions - always visible for user guidance */}
+  <UsageInstructions config={config} />
       
       {/* Show installation components at bottom when fully installed */}
       {isInstalled && (
