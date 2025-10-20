@@ -367,10 +367,10 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
           style={{
             fontSize: "14px",
             fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
+            marginTop: "8px",
+            marginBottom: "6px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
+            paddingBottom: "3px",
             color: "white"
           }}
         >
@@ -379,7 +379,10 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div className="LSFG_ProfilesCollapseButton_Container">
+        <div
+          className="LSFG_ProfilesCollapseButton_Container"
+          style={{ marginTop: "-2px", marginBottom: "4px" }}
+        >
           <ButtonItem
             layout="below"
             bottomSeparator={profilesCollapsed ? "standard" : "none"}

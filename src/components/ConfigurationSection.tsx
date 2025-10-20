@@ -77,10 +77,10 @@ export function ConfigurationSection({
           style={{
             fontSize: "14px",
             fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
+            marginTop: "8px",
+            marginBottom: "6px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
+            paddingBottom: "3px",
             color: "white"
           }}
         >
@@ -89,7 +89,10 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div className="LSFG_ConfigCollapseButton_Container">
+        <div
+          className="LSFG_ConfigCollapseButton_Container"
+          style={{ marginTop: "-2px", marginBottom: "4px" }}
+        >
           <ButtonItem
             layout="below"
             bottomSeparator={configCollapsed ? "standard" : "none"}
@@ -169,10 +172,10 @@ export function ConfigurationSection({
           style={{
             fontSize: "14px",
             fontWeight: "bold",
-            marginTop: "16px",
-            marginBottom: "8px",
+            marginTop: "8px",
+            marginBottom: "6px",
             borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
-            paddingBottom: "4px",
+            paddingBottom: "3px",
             color: "white"
           }}
         >
@@ -181,7 +184,10 @@ export function ConfigurationSection({
       </PanelSectionRow>
 
       <PanelSectionRow>
-        <div className="LSFG_WorkaroundsCollapseButton_Container">
+        <div
+          className="LSFG_WorkaroundsCollapseButton_Container"
+          style={{ marginTop: "-2px", marginBottom: "4px" }}
+        >
           <ButtonItem
             layout="below"
             bottomSeparator={workaroundsCollapsed ? "standard" : "none"}
