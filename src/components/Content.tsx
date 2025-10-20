@@ -102,10 +102,28 @@ export function Content() {
 
       {/* FPS multiplier controls stay above profile selection when installed */}
       {isInstalled && (
-        <FpsMultiplierControl
-          config={config}
-          onConfigChange={handleConfigChange}
-        />
+        <>
+          <PanelSectionRow>
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: "bold",
+                marginTop: "8px",
+                marginBottom: "6px",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+                paddingBottom: "3px",
+                color: "white"
+              }}
+            >
+              FPS Multiplier
+            </div>
+          </PanelSectionRow>
+
+          <FpsMultiplierControl
+            config={config}
+            onConfigChange={handleConfigChange}
+          />
+        </>
       )}
 
       {/* Profile Management - only show if installed */}
