@@ -3,7 +3,9 @@ import {
   ModalRoot, 
   Field,
   Focusable,
-  Button
+  DialogControlsSection,
+  PanelSectionRow,
+  ButtonItem
 } from "@decky/ui";
 import { getDllStats, DllStatsResult, getConfigFileContent, getLaunchScriptContent, FileContentResult } from "../api/lsfgApi";
 
@@ -166,9 +168,17 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
             </Field>
           )}
           
-            <Button onClick={closeModal}>
-              Close
-            </Button>
+          {/* Close Button */}
+          <DialogControlsSection>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={closeModal}
+              >
+                Close
+              </ButtonItem>
+            </PanelSectionRow>
+          </DialogControlsSection>
         </>
       )}
     </ModalRoot>
