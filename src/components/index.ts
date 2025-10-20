@@ -4,7 +4,7 @@ export { InstallationButton } from "./InstallationButton";
 export { ConfigurationSection } from "./ConfigurationSection";
 export { FpsMultiplierControl } from "./FpsMultiplierControl";
 export { UsageInstructions } from "./UsageInstructions";
-export { WikiButton } from "./WikiButton";
+// export { WikiButton } from "./WikiButton";
 export { SmartClipboardButton } from "./SmartClipboardButton";
 export { FgmodClipboardButton } from "./FgmodClipboardButton";
 // export { ClipboardDisplay } from "./ClipboardDisplay";

@@ -135,8 +135,8 @@ export function Content() {
       <UsageInstructions config={config} />
       
       {/* Wiki and clipboard buttons - always available for documentation */}
-      <WikiButton />
-      <ClipboardButton />
+      {/* <WikiButton /> */}
+      {/* <ClipboardButton /> */}
       
       {/* Plugin Update Checker */}
       {/* <PluginUpdateChecker /> */}
