@@ -37,7 +37,7 @@ export function InstallationButton({
       return (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <FaTrash />
-          <div>Uninstall lsfg-vk</div>
+          <div>Uninstall LSFG-VK</div>
         </div>
       );
     }
@@ -45,7 +45,7 @@ export function InstallationButton({
     return (
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <FaDownload />
-        <div>Install lsfg-vk</div>
+        <div>Install LSFG-VK</div>
       </div>
     );
   };
