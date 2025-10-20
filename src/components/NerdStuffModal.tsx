@@ -86,7 +86,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
                     </Focusable>
                   </Field>
                   
-                  <Field label="SHA256 Hash">
+                  <Field label="DLL SHA256 Hash">
                     <Focusable
                       onClick={() => dllStats.dll_sha256 && copyToClipboard(dllStats.dll_sha256)}
                       onActivate={() => dllStats.dll_sha256 && copyToClipboard(dllStats.dll_sha256)}
