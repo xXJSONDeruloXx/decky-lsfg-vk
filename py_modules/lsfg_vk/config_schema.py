@@ -208,8 +208,7 @@ class ConfigurationManager:
             lines.append(f'dll = "{dll_path}"')
             lines.append("")
             
-        # Add no_fp16 field - always set to false
-        lines.append(f"# FP16 acceleration (always enabled)")
+        lines.append(f"# FP16 acceleration")
         lines.append(f"no_fp16 = false")
         lines.append("")
         
