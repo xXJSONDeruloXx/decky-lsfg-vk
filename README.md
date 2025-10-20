@@ -1,23 +1,30 @@
-# decky-lsfg-vk
+# Decky LSFG-VK
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/B0B71HZTAX)
+> **Note:**  
+> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3).
+
+<p align="center">
+   <a href="https://ko-fi.com/B0B71HZTAX" target="_blank" rel="noopener noreferrer">
+      <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"/>
+   </a>
+</p>
+
+
 
 <p align="center">
    <img src="assets/decky-lossless-logo.png" alt="decky-lsfg-vk Logo" width="200"/>
 </p>
 
-> **Note:**  
-> This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3).
 
 ## What is this?
 
-A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS or Bazzite. 
+A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
 
 ## Installation
 
 **Note:** This plugin is currently in active development. While functional, some features may change before the official Decky Plugin Store release.
 
-1. **Download the plugin** from the [latest release](https://github.com/xXJSONDeruloXx/decky-lsfg-vk/releases)
+1. **Download the plugin** from the [releases tab](https://github.com/xXJSONDeruloXx/decky-lsfg-vk/releases)
    - Download the "decky-lsfg-vk.zip" file to your Steam Deck
 2. **Install manually through Decky**:
    - In Game Mode, go to the settings cog in the top right of the Decky Loader tab
