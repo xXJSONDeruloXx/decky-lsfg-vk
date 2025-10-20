@@ -1,7 +1,7 @@
 {
   "name": "Decky LSFG-VK",
   "author": "Kurt Himebauch",
-  "flags": ["debug", "_root"],
+  "flags": [],
   "api_version": 1,
   "publish": {
     "tags": ["installer", "vulkan", "lsfg"],
