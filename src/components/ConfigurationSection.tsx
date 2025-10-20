@@ -4,7 +4,7 @@ import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import {
-  NO_FP16, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
+  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
@@ -94,15 +94,6 @@ export function ConfigurationSection({
           description="Uses a lighter model for FG (Recommended for most games)"
           checked={config.performance_mode}
           onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)}
-        />
-      </PanelSectionRow>
-
-      <PanelSectionRow>
-        <ToggleField
-          label="Force Disable FP16"
-          description="Force-disable FP16 acceleration"
-          checked={config.no_fp16}
-          onChange={(value) => onConfigChange(NO_FP16, value)}
         />
       </PanelSectionRow>
 

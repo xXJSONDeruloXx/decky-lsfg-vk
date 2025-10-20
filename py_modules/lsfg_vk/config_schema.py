@@ -182,7 +182,7 @@ class ConfigurationManager:
             "profiles": {DEFAULT_PROFILE_NAME: config},
             "global_config": {
                 "dll": config.get("dll", ""),
-                "no_fp16": config.get("no_fp16", False)
+                "no_fp16": False  # Always enabled even if previously set
             }
         }
         return ConfigurationManager.generate_toml_content_multi_profile(profile_data)
@@ -208,10 +208,9 @@ class ConfigurationManager:
             lines.append(f'dll = "{dll_path}"')
             lines.append("")
             
-        # Add no_fp16 field
-        no_fp16 = profile_data["global_config"].get("no_fp16", False)
-        lines.append(f"# force-disable fp16 (use on older nvidia cards)")
-        lines.append(f"no_fp16 = {str(no_fp16).lower()}")
+        # Add no_fp16 field - always set to false
+        lines.append(f"# FP16 acceleration (always enabled)")
+        lines.append(f"no_fp16 = false")
         lines.append("")
         
         # Add game sections for each profile
@@ -345,7 +344,8 @@ class ConfigurationManager:
                         elif key == "dll":
                             global_config["dll"] = value
                         elif key == "no_fp16":
-                            global_config["no_fp16"] = value.lower() in ('true', '1', 'yes', 'on')
+                            # Always enforce FP16 to be enabled (no_fp16 = false)
+                            global_config["no_fp16"] = False
                     
                     # Handle game section
                     elif in_game_section:
