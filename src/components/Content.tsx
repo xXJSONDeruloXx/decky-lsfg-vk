@@ -126,28 +126,8 @@ export function Content() {
         />
       )}
 
-  {/* Usage instructions - always visible for user guidance */}
-  <UsageInstructions config={config} />
-      
-      {/* Show installation components at bottom when fully installed */}
-      {isInstalled && (
-        <>
-          <InstallationButton
-            isInstalled={isInstalled}
-            isInstalling={isInstalling}
-            isUninstalling={isUninstalling}
-            onInstall={onInstall}
-            onUninstall={onUninstall}
-          />
-
-          <StatusDisplay
-            dllDetected={dllDetected}
-            dllDetectionStatus={dllDetectionStatus}
-            isInstalled={isInstalled}
-            installationStatus={installationStatus}
-          />
-        </>
-      )}
+      {/* Usage instructions - always visible for user guidance */}
+      <UsageInstructions config={config} />
 
       {/* Nerd Stuff Button */}
       <PanelSectionRow>
@@ -168,6 +148,26 @@ export function Content() {
           Flatpak Setup
         </ButtonItem>
       </PanelSectionRow>
+
+      {/* Status and uninstall sit at bottom when installed to match desired layout */}
+      {isInstalled && (
+        <>
+          <StatusDisplay
+            dllDetected={dllDetected}
+            dllDetectionStatus={dllDetectionStatus}
+            isInstalled={isInstalled}
+            installationStatus={installationStatus}
+          />
+
+          <InstallationButton
+            isInstalled={isInstalled}
+            isInstalling={isInstalling}
+            isUninstalling={isUninstalling}
+            onInstall={onInstall}
+            onUninstall={onUninstall}
+          />
+        </>
+      )}
     </PanelSection>
   );
 }
