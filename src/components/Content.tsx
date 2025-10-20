@@ -11,7 +11,7 @@ import { UsageInstructions } from "./UsageInstructions";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
 import { NerdStuffModal } from "./NerdStuffModal";
-import FlatpaksModal from "./FlatpaksModal";
+import { FlatpaksModal } from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
@@ -165,7 +165,7 @@ export function Content() {
           layout="below"
           onClick={handleShowFlatpaks}
         >
-          Flatpaks
+          Flatpak Setup
         </ButtonItem>
       </PanelSectionRow>
     </PanelSection>

@@ -32,7 +32,7 @@ interface FlatpaksModalProps {
   closeModal?: () => void;
 }
 
-const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
+export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
   const [extensionStatus, setExtensionStatus] = useState<FlatpakExtensionStatus | null>(null);
   const [flatpakApps, setFlatpakApps] = useState<FlatpakAppInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -419,5 +419,3 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
     </ModalRoot>
   );
 };
-
-export default FlatpaksModal;
