@@ -2,10 +2,13 @@
 Base service class with common functionality.
 """
 
+import logging
 import os
 import shutil
 from pathlib import Path
 from typing import Any, Optional, TypeVar, Dict
+
+import decky
 
 from .constants import LOCAL_LIB, LOCAL_SHARE_BASE, VULKAN_LAYER_DIR, SCRIPT_NAME, CONFIG_DIR, CONFIG_FILENAME
 
@@ -23,7 +26,6 @@ class BaseService:
             logger: Logger instance, defaults to decky.logger if None
         """
         if logger is None:
-            import decky
             self.log = decky.logger
         else:
             self.log = logger
@@ -90,8 +92,8 @@ class BaseService:
             path.chmod(mode)
             self.log.info(f"Wrote to {path}")
             
-        except Exception:
-            self.log.error(f"Failed to write to {path}")
+        except (OSError, IOError, PermissionError) as e:
+            self.log.error(f"Failed to write to {path}: {e}")
             raise
 
     def _success_response(self, response_type: type, message: str = "", **kwargs) -> Any:

@@ -9,7 +9,7 @@ from typing import Dict, Any, List, Optional
 
 from .base_service import BaseService
 from .constants import (
-    FLATPAK_23_08_FILENAME, FLATPAK_24_08_FILENAME, BIN_DIR, CONFIG_DIR
+    FLATPAK_23_08_FILENAME, FLATPAK_24_08_FILENAME, FLATPAK_25_08_FILENAME, BIN_DIR, CONFIG_DIR
 )
 from .types import BaseResponse
 
@@ -17,10 +17,11 @@ from .types import BaseResponse
 class FlatpakExtensionStatus(BaseResponse):
     """Response for Flatpak extension status"""
     def __init__(self, success: bool = False, message: str = "", error: str = "", 
-                 installed_23_08: bool = False, installed_24_08: bool = False):
+                 installed_23_08: bool = False, installed_24_08: bool = False, installed_25_08: bool = False):
         super().__init__(success, message, error)
         self.installed_23_08 = installed_23_08
         self.installed_24_08 = installed_24_08
+        self.installed_25_08 = installed_25_08
 
 
 class FlatpakAppInfo(BaseResponse):
@@ -48,17 +49,11 @@ class FlatpakService(BaseService):
         super().__init__(logger)
         self.extension_id_23_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/23.08"
         self.extension_id_24_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08"
-        self.flatpak_command = None  # Will be set when flatpak is detected
-    def __init__(self, logger=None):
-        super().__init__(logger)
-        self.extension_id_23_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/23.08"
-        self.extension_id_24_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08"
+        self.extension_id_25_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/25.08"
         self.flatpak_command = None  # Will be set when flatpak is detected
 
     def _get_clean_env(self):
         """Get a clean environment without PyInstaller's bundled libraries"""
-        import os
-
         # Create a clean environment without PyInstaller's bundled libraries
         env = os.environ.copy()
 
@@ -96,8 +91,6 @@ class FlatpakService(BaseService):
 
     def check_flatpak_available(self) -> bool:
         """Check if flatpak command is available and store the working command"""
-        import os
-
         # Log environment info for debugging
         self.log.info(f"PATH: {os.environ.get('PATH', 'Not set')}")
         self.log.info(f"HOME: {os.environ.get('HOME', 'Not set')}")
@@ -137,7 +130,7 @@ class FlatpakService(BaseService):
                 self.log.error(error_msg)
                 return self._error_response(FlatpakExtensionStatus, 
                                           error_msg,
-                                          installed_23_08=False, installed_24_08=False)
+                                          installed_23_08=False, installed_24_08=False, installed_25_08=False)
 
             # Get list of installed runtimes
             result = self._run_flatpak_command(
@@ -147,10 +140,11 @@ class FlatpakService(BaseService):
 
             installed_runtimes = result.stdout
 
-            # Check for both versions by looking for the base extension name and version
+            # Check for all versions by looking for the base extension name and version
             base_extension_name = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
             installed_23_08 = False
             installed_24_08 = False
+            installed_25_08 = False
 
             for line in installed_runtimes.split('\n'):
                 if base_extension_name in line:
@@ -158,12 +152,16 @@ class FlatpakService(BaseService):
                         installed_23_08 = True
                     elif "24.08" in line:
                         installed_24_08 = True
+                    elif "25.08" in line:
+                        installed_25_08 = True
 
             status_msg = []
             if installed_23_08:
                 status_msg.append("23.08 runtime extension installed")
             if installed_24_08:
                 status_msg.append("24.08 runtime extension installed")
+            if installed_25_08:
+                status_msg.append("25.08 runtime extension installed")
 
             if not status_msg:
                 status_msg.append("No lsfg-vk runtime extensions installed")
@@ -171,26 +169,32 @@ class FlatpakService(BaseService):
             return self._success_response(FlatpakExtensionStatus,
                                         "; ".join(status_msg),
                                         installed_23_08=installed_23_08,
-                                        installed_24_08=installed_24_08)
+                                        installed_24_08=installed_24_08,
+                                        installed_25_08=installed_25_08)
 
         except subprocess.CalledProcessError as e:
             error_msg = f"Error checking Flatpak extensions: {e.stderr if e.stderr else str(e)}"
             self.log.error(error_msg)
             return self._error_response(FlatpakExtensionStatus, error_msg,
-                                      installed_23_08=False, installed_24_08=False)
+                                      installed_23_08=False, installed_24_08=False, installed_25_08=False)
 
     def install_extension(self, version: str) -> BaseResponse:
         """Install a specific version of the lsfg-vk Flatpak extension"""
         try:
-            if version not in ["23.08", "24.08"]:
-                return self._error_response(BaseResponse, "Invalid version. Must be '23.08' or '24.08'")
+            if version not in ["23.08", "24.08", "25.08"]:
+                return self._error_response(BaseResponse, "Invalid version. Must be '23.08', '24.08', or '25.08'")
 
             if not self.check_flatpak_available():
                 return self._error_response(BaseResponse, "Flatpak is not available on this system")
 
             # Get the path to the flatpak file
             plugin_dir = Path(__file__).parent.parent.parent
-            filename = FLATPAK_23_08_FILENAME if version == "23.08" else FLATPAK_24_08_FILENAME
+            if version == "23.08":
+                filename = FLATPAK_23_08_FILENAME
+            elif version == "24.08":
+                filename = FLATPAK_24_08_FILENAME
+            else:  # 25.08
+                filename = FLATPAK_25_08_FILENAME
             flatpak_path = plugin_dir / BIN_DIR / filename
 
             if not flatpak_path.exists():
@@ -218,13 +222,18 @@ class FlatpakService(BaseService):
     def uninstall_extension(self, version: str) -> BaseResponse:
         """Uninstall a specific version of the lsfg-vk Flatpak extension"""
         try:
-            if version not in ["23.08", "24.08"]:
-                return self._error_response(BaseResponse, "Invalid version. Must be '23.08' or '24.08'")
+            if version not in ["23.08", "24.08", "25.08"]:
+                return self._error_response(BaseResponse, "Invalid version. Must be '23.08', '24.08', or '25.08'")
 
             if not self.check_flatpak_available():
                 return self._error_response(BaseResponse, "Flatpak is not available on this system")
 
-            extension_id = self.extension_id_23_08 if version == "23.08" else self.extension_id_24_08
+            if version == "23.08":
+                extension_id = self.extension_id_23_08
+            elif version == "24.08":
+                extension_id = self.extension_id_24_08
+            else:  # 25.08
+                extension_id = self.extension_id_25_08
 
             # Uninstall the extension
             result = self._run_flatpak_command(
