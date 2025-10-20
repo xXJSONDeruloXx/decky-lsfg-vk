@@ -1,6 +1,6 @@
 {
   "name": "decky-lsfg-vk",
-  "version": "0.11.4",
+  "version": "0.11.5",
   "description": "Use Lossless Scaling on the Steam Deck using the lsfg-vk vulkan layer",
   "type": "module",
   "scripts": {
