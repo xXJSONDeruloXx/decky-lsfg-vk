@@ -353,7 +353,7 @@ class InstallationService(BaseService):
         default_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
         default_global_config = {
             "dll": default_config.get("dll", ""),
-            "no_fp16": default_config.get("no_fp16", False)
+            "no_fp16": False
         }
         
         # Start with existing data

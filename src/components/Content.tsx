@@ -8,8 +8,8 @@ import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { ProfileManagement } from "./ProfileManagement";
 import { UsageInstructions } from "./UsageInstructions";
-import { WikiButton } from "./WikiButton";
-import { ClipboardButton } from "./ClipboardButton";
+// import { WikiButton } from "./WikiButton";
+// import { ClipboardButton } from "./ClipboardButton";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
 // import { ClipboardDisplay } from "./ClipboardDisplay";
@@ -135,8 +135,8 @@ export function Content() {
       <UsageInstructions config={config} />
       
       {/* Wiki and clipboard buttons - always available for documentation */}
-      <WikiButton />
-      <ClipboardButton />
+      {/* <WikiButton /> */}
+      {/* <ClipboardButton /> */}
       
       {/* Plugin Update Checker */}
       {/* <PluginUpdateChecker /> */}

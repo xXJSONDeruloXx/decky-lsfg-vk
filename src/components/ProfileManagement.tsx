@@ -14,7 +14,7 @@ import {
   AppOverview,
   Router
 } from "@decky/ui";
-import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
+import { RiArrowDownSFill, RiArrowUpSFill, RiEditLine, RiDeleteBinLine } from "react-icons/ri";
 import { 
   getProfiles, 
   createProfile, 
@@ -405,6 +405,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
               label=""
               childrenLayout="below"
               childrenContainerWidth="max"
+              bottomSeparator="none"
             >
               <Dropdown
                 rgOptions={profileOptions}
@@ -416,23 +417,50 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
           </PanelSectionRow>
           
           <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={handleRenameProfile}
-              disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
+            <Focusable
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                width: "100%",
+                padding: "0",
+                margin: "0",
+                marginTop: "8px"
+              }}
+              flow-children="horizontal"
             >
-              Rename
-            </ButtonItem>
-          </PanelSectionRow>
-          
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={handleDeleteProfile}
-              disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
-            >
-              Delete
-            </ButtonItem>
+              <DialogButton
+                style={{
+                  height: "40px",
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px",
+                  minWidth: "0",
+                }}
+                onClick={handleRenameProfile}
+                disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
+              >
+                <RiEditLine size={20} />
+              </DialogButton>
+              
+              <DialogButton
+                style={{
+                  height: "40px",
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "10px",
+                  minWidth: "0",
+                }}
+                onClick={handleDeleteProfile}
+                disabled={isLoading || selectedProfile === "decky-lsfg-vk" || !!mainRunningApp}
+              >
+                <RiDeleteBinLine size={20} />
+              </DialogButton>
+            </Focusable>
           </PanelSectionRow>
         </>
       )}
