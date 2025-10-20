@@ -4,8 +4,8 @@
   "flags": [],
   "api_version": 1,
   "publish": {
-    "tags": ["installer", "vulkan", "lsfg"],
-    "description": "Enable frame generation on the Steam Deck using lsfg-vk compatibility layer.",
+    "tags": ["installer", "vulkan", "lsfg", "framegen", "lossless", "scaling"],
+    "description": "Enable lossless scaling frame generation on the Steam Deck using lsfg-vk compatibility layer.",
     "image": "https://steamcommunity.com/sharedfiles/filedetails/?id=3522791434"
   }
 }
