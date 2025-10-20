@@ -252,7 +252,7 @@ class ConfigurationService(BaseService):
                 profiles={DEFAULT_PROFILE_NAME: default_config},
                 global_config={
                     "dll": default_config.get("dll", ""),
-                    "no_fp16": default_config.get("no_fp16", False)
+                    "no_fp16": False
                 }
             )
         
