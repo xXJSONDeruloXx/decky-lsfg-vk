@@ -405,6 +405,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
               label=""
               childrenLayout="below"
               childrenContainerWidth="max"
+              bottomSeparator="none"
             >
               <Dropdown
                 rgOptions={profileOptions}
@@ -423,7 +424,8 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
                 gap: "8px",
                 width: "100%",
                 padding: "0",
-                margin: "0"
+                margin: "0",
+                marginTop: "8px"
               }}
               flow-children="horizontal"
             >
