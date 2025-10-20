@@ -20,6 +20,7 @@ ZIP_FILENAME = "lsfg-vk_noui.zip"
 # Flatpak files
 FLATPAK_23_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak"
 FLATPAK_24_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak"
+FLATPAK_25_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak"
 
 # File extensions
 SO_EXT = ".so"

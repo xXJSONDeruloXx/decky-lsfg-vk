@@ -216,6 +216,46 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                     </ButtonItem>
                   </Field>
                 </PanelSectionRow>
+
+                {/* 25.08 Runtime */}
+                <PanelSectionRow>
+                  <Field 
+                    label="Runtime 25.08"
+                    description={extensionStatus.installed_25_08 ? "Installed" : "Not installed"}
+                    icon={extensionStatus.installed_25_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
+                  >
+                    <ButtonItem
+                      layout="below"
+                      onClick={() => {
+                        const operation = extensionStatus.installed_25_08 ? 'uninstall' : 'install';
+                        const action = () => handleExtensionOperation(operation, '25.08');
+
+                        if (operation === 'uninstall') {
+                          confirmOperation(
+                            action,
+                            'Uninstall Runtime Extension',
+                            'Are you sure you want to uninstall the 25.08 runtime extension?'
+                          );
+                        } else {
+                          action();
+                        }
+                      }}
+                      disabled={operationInProgress === 'install-25.08' || operationInProgress === 'uninstall-25.08'}
+                    >
+                      {operationInProgress === 'install-25.08' || operationInProgress === 'uninstall-25.08' ? (
+                        <Spinner />
+                      ) : extensionStatus.installed_25_08 ? (
+                        <>
+                          <FaTrash /> Uninstall
+                        </>
+                      ) : (
+                        <>
+                          <FaDownload /> Install
+                        </>
+                      )}
+                    </ButtonItem>
+                  </Field>
+                </PanelSectionRow>
               </>
             ) : (
               <PanelSectionRow>

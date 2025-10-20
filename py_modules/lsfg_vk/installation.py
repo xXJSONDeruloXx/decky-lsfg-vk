@@ -4,6 +4,7 @@ Installation service for lsfg-vk.
 
 import os
 import shutil
+import traceback
 import zipfile
 import tempfile
 import json
@@ -188,8 +189,9 @@ class InstallationService(BaseService):
             final_config = ConfigurationManager.parse_toml_content(final_content)
             if final_config.get(DLL):
                 self.log.info(f"Configured DLL path: {final_config[DLL]}")
-        except Exception:
-            pass  # Don't fail installation if we can't log the DLL path
+        except (OSError, IOError, ValueError, KeyError) as e:
+            # Don't fail installation if we can't log the DLL path
+            self.log.debug(f"Could not log DLL path: {e}")
     
     def _create_lsfg_launch_script(self) -> None:
         """Create the ~/lsfg launch script for easier game setup"""
@@ -328,7 +330,6 @@ class InstallationService(BaseService):
                 
         except Exception as e:
             self.log.error(f"Error cleaning up lsfg-vk files during uninstall: {str(e)}")
-            import traceback
             self.log.error(f"Traceback: {traceback.format_exc()}")
 
     def _merge_config_with_defaults(self, existing_profile_data, dll_service):
