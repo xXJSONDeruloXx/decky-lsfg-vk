@@ -59,23 +59,6 @@ export interface ConfigSchemaResult {
   current_profile?: string;
 }
 
-export interface UpdateCheckResult {
-  success: boolean;
-  update_available: boolean;
-  current_version: string;
-  latest_version: string;
-  release_notes: string;
-  release_date: string;
-  download_url: string;
-  error?: string;
-}
-
-export interface UpdateDownloadResult {
-  success: boolean;
-  download_path?: string;
-  error?: string;
-}
-
 export interface LaunchOptionResult {
   launch_option: string;
   instructions: string;
@@ -178,9 +161,6 @@ export const updateLsfgConfigFromObject = async (config: ConfigurationData): Pro
 };
 
 // Self-updater API functions
-export const checkForPluginUpdate = callable<[], UpdateCheckResult>("check_for_plugin_update");
-export const downloadPluginUpdate = callable<[string], UpdateDownloadResult>("download_plugin_update");
-
 // Profile management API functions
 export const getProfiles = callable<[], ProfilesResult>("get_profiles");
 export const createProfile = callable<[string, string?], ProfileResult>("create_profile");

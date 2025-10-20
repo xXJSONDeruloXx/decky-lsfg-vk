@@ -3,16 +3,14 @@
 > **Note:**  
 > This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3).
 
+
+<p align="center">
+   <img src="assets/decky-lossless-logo.png" alt="decky-lsfg-vk Logo" width="200"/>
+</p>
 <p align="center">
    <a href="https://ko-fi.com/B0B71HZTAX" target="_blank" rel="noopener noreferrer">
       <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support on Ko-fi"/>
    </a>
-</p>
-
-
-
-<p align="center">
-   <img src="assets/decky-lossless-logo.png" alt="decky-lsfg-vk Logo" width="200"/>
 </p>
 
 
