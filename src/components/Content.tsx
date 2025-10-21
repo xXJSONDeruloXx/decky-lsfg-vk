@@ -8,14 +8,11 @@ import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { ProfileManagement } from "./ProfileManagement";
 import { UsageInstructions } from "./UsageInstructions";
-// import { WikiButton } from "./WikiButton";
-// import { ClipboardButton } from "./ClipboardButton";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
-// import { ClipboardDisplay } from "./ClipboardDisplay";
-// import { PluginUpdateChecker } from "./PluginUpdateChecker";
+import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import { NerdStuffModal } from "./NerdStuffModal";
-import FlatpaksModal from "./FlatpaksModal";
+import { FlatpaksModal } from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
 
 export function Content() {
@@ -102,13 +99,30 @@ export function Content() {
           />
         </>
       )}
-      
-      {/* Clipboard buttons - only show if installed */}
+
+      {/* FPS multiplier controls stay above profile selection when installed */}
       {isInstalled && (
         <>
-          {/* <ClipboardDisplay /> */}
-          <SmartClipboardButton />
-          <FgmodClipboardButton />
+          <PanelSectionRow>
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: "bold",
+                marginTop: "8px",
+                marginBottom: "6px",
+                borderBottom: "1px solid rgba(255, 255, 255, 0.2)",
+                paddingBottom: "3px",
+                color: "white"
+              }}
+            >
+              FPS Multiplier
+            </div>
+          </PanelSectionRow>
+
+          <FpsMultiplierControl
+            config={config}
+            onConfigChange={handleConfigChange}
+          />
         </>
       )}
 
@@ -131,35 +145,16 @@ export function Content() {
         />
       )}
 
-      {/* Usage instructions - always visible for user guidance */}
-      <UsageInstructions config={config} />
-      
-      {/* Wiki and clipboard buttons - always available for documentation */}
-      {/* <WikiButton /> */}
-      {/* <ClipboardButton /> */}
-      
-      {/* Plugin Update Checker */}
-      {/* <PluginUpdateChecker /> */}
-      
-      {/* Show installation components at bottom when fully installed */}
+      {/* Clipboard buttons sit beside usage info for quick access */}
       {isInstalled && (
         <>
-          <InstallationButton
-            isInstalled={isInstalled}
-            isInstalling={isInstalling}
-            isUninstalling={isUninstalling}
-            onInstall={onInstall}
-            onUninstall={onUninstall}
-          />
-
-          <StatusDisplay
-            dllDetected={dllDetected}
-            dllDetectionStatus={dllDetectionStatus}
-            isInstalled={isInstalled}
-            installationStatus={installationStatus}
-          />
+          <SmartClipboardButton />
+          <FgmodClipboardButton />
         </>
       )}
+
+      {/* Usage instructions - always visible for user guidance */}
+      <UsageInstructions config={config} />
 
       {/* Nerd Stuff Button */}
       <PanelSectionRow>
@@ -177,9 +172,29 @@ export function Content() {
           layout="below"
           onClick={handleShowFlatpaks}
         >
-          Flatpaks
+          Flatpak Setup
         </ButtonItem>
       </PanelSectionRow>
+
+      {/* Status and uninstall sit at bottom when installed to match desired layout */}
+      {isInstalled && (
+        <>
+          <StatusDisplay
+            dllDetected={dllDetected}
+            dllDetectionStatus={dllDetectionStatus}
+            isInstalled={isInstalled}
+            installationStatus={installationStatus}
+          />
+
+          <InstallationButton
+            isInstalled={isInstalled}
+            isInstalling={isInstalling}
+            isUninstalling={isUninstalling}
+            onInstall={onInstall}
+            onUninstall={onUninstall}
+          />
+        </>
+      )}
     </PanelSection>
   );
 }

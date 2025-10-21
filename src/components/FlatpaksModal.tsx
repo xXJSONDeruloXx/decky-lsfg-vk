@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, CSSProperties } from 'react';
 import {
   ModalRoot,
   DialogBody,
@@ -32,7 +32,7 @@ interface FlatpaksModalProps {
   closeModal?: () => void;
 }
 
-const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
+export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
   const [extensionStatus, setExtensionStatus] = useState<FlatpakExtensionStatus | null>(null);
   const [flatpakApps, setFlatpakApps] = useState<FlatpakAppInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,6 +125,40 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
       </ModalRoot>
     );
   }
+
+  const instructionSteps = [
+    {
+      id: 'try-first',
+      title: 'Try first:',
+      command: '~/lsfg'
+    },
+    {
+      id: 'try-full-path',
+      title: "If that doesn't work, try full path:",
+      command: '/home/(username)/lsfg'
+    },
+    {
+      id: 'final-result',
+      title: 'Final result should look like:',
+      command: '~/lsfg "usr/bin/flatpak"'
+    }
+  ];
+
+  const focusableInstructionStyle: CSSProperties = {
+    padding: '10px',
+    background: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: '6px',
+    marginBottom: '12px'
+  };
+
+  const commandStyle: CSSProperties = {
+    fontFamily: 'monospace',
+    fontSize: '0.85em',
+    background: 'rgba(0, 0, 0, 0.45)',
+    padding: '8px',
+    borderRadius: '4px',
+    marginTop: '6px'
+  };
 
   return (
     <ModalRoot closeModal={closeModal}>
@@ -327,80 +361,57 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
           {/* Steam Configuration Instructions */}
           <DialogControlsSection>
             <DialogControlsSectionHeader>Steam Configuration</DialogControlsSectionHeader>
-            
-            <Focusable>
-              <div style={{ 
-                padding: '12px', 
-                background: 'rgba(255, 255, 255, 0.1)', 
-                borderRadius: '8px', 
-                margin: '8px 0'
-              }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>
-                  Configure Steam Flatpak Shortcuts
-                </div>
-                <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '8px' }}>
-                  In Steam, open your flatpak game and click the cog wheel."
-                </div>
-                <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '12px', color: '#ffa500' }}>
-                  <strong>IMPORTANT:</strong> Set this in TARGET (NOT LAUNCH OPTIONS)
-                </div>
-                
-                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
-                  Try first:
-                </div>
-                <div style={{ 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.85em', 
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  marginBottom: '12px'
-                }}>
-                  ~/lsfg
-                </div>
-                
-                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
-                  If that doesn't work, try full path:
-                </div>
-                <div style={{ 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.85em', 
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  marginBottom: '12px'
-                }}>
-                  /home/(username)/lsfg
-                </div>
-                
-                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>
-                  Final result should look like:
-                </div>
-                <div style={{ 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.85em', 
-                  background: 'rgba(0, 0, 0, 0.3)',
-                  padding: '8px',
-                  borderRadius: '4px'
-                }}>
-                  ~/lsfg "usr/bin/flatpak"
-                </div>
-                
-                {/* Visual example image */}
-                <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                  <img 
-                    src={flatpakTargetImage} 
+            <div
+              style={{
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                margin: '8px 0',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>
+                Configure Steam Flatpak Shortcuts
+              </div>
+              <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '8px' }}>
+                In Steam, open your flatpak game and click the cog wheel.
+              </div>
+              <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '12px', color: '#ffa500' }}>
+                <strong>IMPORTANT:</strong> Set this in TARGET (NOT LAUNCH OPTIONS)
+              </div>
+
+              {instructionSteps.map((step) => (
+                <Focusable
+                  key={step.id}
+                  focusWithinClassName="gpfocuswithin"
+                  onActivate={() => {}}
+                  style={focusableInstructionStyle}
+                >
+                  <div style={{ fontWeight: 'bold' }}>{step.title}</div>
+                  <div style={commandStyle}>{step.command}</div>
+                </Focusable>
+              ))}
+
+              <Focusable
+                focusWithinClassName="gpfocuswithin"
+                onActivate={() => {}}
+                style={{ marginTop: '4px' }}
+              >
+                <div style={{ textAlign: 'center' }}>
+                  <img
+                    src={flatpakTargetImage}
                     alt="Steam Properties Target Field Example"
-                    style={{ 
-                      maxWidth: '100%', 
+                    style={{
+                      maxWidth: '100%',
                       height: 'auto',
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                       borderRadius: '4px'
                     }}
                   />
                 </div>
-              </div>
-            </Focusable>
+              </Focusable>
+            </div>
           </DialogControlsSection>
 
           {/* Close Button */}
@@ -419,5 +430,3 @@ const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
     </ModalRoot>
   );
 };
-
-export default FlatpaksModal;

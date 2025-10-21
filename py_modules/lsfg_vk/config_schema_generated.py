@@ -81,6 +81,8 @@ def get_script_parsing_logic():
                         script_values["force_enable_vkbasalt"] = value == "1"
                 if key == "ENABLE_GAMESCOPE_WSI":
                         script_values["enable_wsi"] = value != "0"
+                if key == "DXVK_HDR":
+                        script_values["enable_wsi"] = value != "0"
                 if key == "__GLX_VENDOR_LIBRARY_NAME" and value == "mesa":
                         script_values["enable_zink"] = True
                 if key == "MESA_LOADER_DRIVER_OVERRIDE" and value == "zink":
@@ -111,6 +113,7 @@ def get_script_generation_logic():
             lines.append("export ENABLE_VKBASALT=1")
         if not config.get("enable_wsi", False):
             lines.append("export ENABLE_GAMESCOPE_WSI=0")
+            lines.append("export DXVK_HDR=0")
         if config.get("enable_zink", False):
             lines.append("export __GLX_VENDOR_LIBRARY_NAME=mesa")
             lines.append("export MESA_LOADER_DRIVER_OVERRIDE=zink")
