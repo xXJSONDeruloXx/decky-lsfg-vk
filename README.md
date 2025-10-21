@@ -97,6 +97,6 @@ The plugin:
 
 - **[PancakeTAS](https://github.com/PancakeTAS/lsfg-vk)** for creating the lsfg-vk Vulkan compatibility layer
 - **[Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/)** developers for the original frame generation technology
-- **[Deck Wizard](https://www.youtube.com/@DeckWizard)** for the helpful video tutorial
+- **[Deck Wizard](https://www.youtube.com/@DeckWizard)**  - Extensive community support including comprehensive guides, promotional content, thorough testing and feedback, custom artworks, and tutorial videos. His passionate advocacy and continuous support have been instrumental in this plugin's success.
 - The **Decky Loader** team for the plugin framework
 - Community contributors and testers for feedback and bug reports
