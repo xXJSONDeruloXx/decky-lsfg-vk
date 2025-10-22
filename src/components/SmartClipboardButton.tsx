@@ -9,7 +9,6 @@ export function SmartClipboardButton() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Reset success state after 3 seconds
   useEffect(() => {
     if (showSuccess) {
       const timer = setTimeout(() => {
@@ -38,10 +37,8 @@ export function SmartClipboardButton() {
       const { success, verified } = await copyWithVerification(text);
       
       if (success) {
-        // Show success feedback in the button instead of toast
         setShowSuccess(true);
         if (!verified) {
-          // Copy worked but verification failed - still show success
           console.log('Copy verification failed but copy likely worked');
         }
       } else {
@@ -64,9 +61,7 @@ export function SmartClipboardButton() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {showSuccess ? (
-            <FaCheck style={{ 
-              color: "#4CAF50" // Green color for success
-            }} />
+            <FaCheck style={{ color: "#4CAF50" }} />
           ) : isLoading ? (
             <FaClipboard style={{ 
               animation: "pulse 1s ease-in-out infinite",

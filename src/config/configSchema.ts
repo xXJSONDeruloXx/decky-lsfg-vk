@@ -10,7 +10,6 @@ import type { ConfigurationData } from './generatedConfigSchema';
 import { getDefaults } from './generatedConfigSchema';
 import { updateLsfgConfig } from "../api/lsfgApi";
 
-// Re-export all auto-generated configuration constants
 export {
   ConfigFieldType,
   ConfigField,
@@ -19,7 +18,6 @@ export {
   getFieldNames,
   getDefaults,
   getFieldTypes,
-  // Field name constants for type-safe access
   DLL, NO_FP16, MULTIPLIER, FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, ENABLE_WOW64,
   DISABLE_STEAMDECK_MODE, MANGOHUD_WORKAROUND, DISABLE_VKBASALT,
@@ -34,7 +32,6 @@ export class ConfigurationManager {
   private static instance: ConfigurationManager;
   private _config: ConfigurationData | null = null;
 
-  // Callable methods for backend communication
   private getConfiguration = callable<[], { success: boolean; data?: ConfigurationData; error?: string }>("get_configuration");
   private resetConfiguration = callable<[], { success: boolean; data?: ConfigurationData; error?: string }>("reset_configuration");
 
@@ -131,5 +128,4 @@ export class ConfigurationManager {
   }
 }
 
-// Export singleton instance
 export const configManager = ConfigurationManager.getInstance();

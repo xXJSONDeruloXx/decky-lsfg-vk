@@ -26,7 +26,6 @@ class InstallationService(BaseService):
     def __init__(self, logger=None):
         super().__init__(logger)
         
-        # File paths using constants
         self.lib_file = self.local_lib_dir / LIB_FILENAME
         self.json_file = self.local_share_dir / JSON_FILENAME
     
@@ -37,26 +36,20 @@ class InstallationService(BaseService):
             InstallationResponse with success status and message/error
         """
         try:
-            # Get the path to the zip file - need to go up to plugin root from py_modules/lsfg_vk/
             plugin_dir = Path(__file__).parent.parent.parent
             zip_path = plugin_dir / BIN_DIR / ZIP_FILENAME
             
-            # Check if the zip file exists
             if not zip_path.exists():
                 error_msg = f"{ZIP_FILENAME} not found at {zip_path}"
                 self.log.error(error_msg)
                 return self._error_response(InstallationResponse, error_msg, message="")
             
-            # Create directories if they don't exist
             self._ensure_directories()
             
-            # Extract and install files
             self._extract_and_install_files(zip_path)
             
-            # Create the config file
             self._create_config_file()
             
-            # Create the lsfg launch script
             self._create_lsfg_launch_script()
             
             self.log.info("lsfg-vk installed successfully")
@@ -67,7 +60,6 @@ class InstallationService(BaseService):
             self.log.error(error_msg)
             return self._error_response(InstallationResponse, str(e), message="")
         except Exception as e:
-            # Catch unexpected errors but log them separately
             error_msg = f"Unexpected error installing lsfg-vk: {str(e)}"
             self.log.error(error_msg)
             return self._error_response(InstallationResponse, str(e), message="")

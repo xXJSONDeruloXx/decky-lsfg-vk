@@ -50,22 +50,18 @@ class FlatpakService(BaseService):
         self.extension_id_23_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/23.08"
         self.extension_id_24_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08"
         self.extension_id_25_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/25.08"
-        self.flatpak_command = None  # Will be set when flatpak is detected
+        self.flatpak_command = None
 
     def _get_clean_env(self):
         """Get a clean environment without PyInstaller's bundled libraries"""
-        # Create a clean environment without PyInstaller's bundled libraries
         env = os.environ.copy()
 
-        # Remove LD_LIBRARY_PATH that might point to PyInstaller's bundled libs
         if 'LD_LIBRARY_PATH' in env:
             del env['LD_LIBRARY_PATH']
 
-        # Ensure PATH includes standard binary locations
         standard_paths = ['/usr/bin', '/usr/local/bin', '/bin']
         current_path = env.get('PATH', '')
 
-        # Add standard paths if they're not already there
         path_parts = current_path.split(':') if current_path else []
         for std_path in standard_paths:
             if std_path not in path_parts:
@@ -82,21 +78,17 @@ class FlatpakService(BaseService):
 
         env = self._get_clean_env()
 
-        # Log environment info for debugging
         self.log.info(f"Running flatpak with PATH: {env.get('PATH')}")
         self.log.info(f"LD_LIBRARY_PATH removed: {'LD_LIBRARY_PATH' not in env}")
 
-        # Run the command with the clean environment
         return subprocess.run([self.flatpak_command] + args, env=env, **kwargs)
 
     def check_flatpak_available(self) -> bool:
         """Check if flatpak command is available and store the working command"""
-        # Log environment info for debugging
         self.log.info(f"PATH: {os.environ.get('PATH', 'Not set')}")
         self.log.info(f"HOME: {os.environ.get('HOME', 'Not set')}")
         self.log.info(f"USER: {os.environ.get('USER', 'Not set')}")
 
-        # Try common flatpak installation paths, starting with the standard command
         flatpak_paths = [
             "flatpak",
             "/usr/bin/flatpak",
@@ -132,7 +124,6 @@ class FlatpakService(BaseService):
                                           error_msg,
                                           installed_23_08=False, installed_24_08=False, installed_25_08=False)
 
-            # Get list of installed runtimes
             result = self._run_flatpak_command(
                 ["list", "--runtime"],
                 capture_output=True, text=True, check=True
@@ -140,7 +131,6 @@ class FlatpakService(BaseService):
 
             installed_runtimes = result.stdout
 
-            # Check for all versions by looking for the base extension name and version
             base_extension_name = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
             installed_23_08 = False
             installed_24_08 = False
@@ -187,20 +177,18 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 return self._error_response(BaseResponse, "Flatpak is not available on this system")
 
-            # Get the path to the flatpak file
             plugin_dir = Path(__file__).parent.parent.parent
             if version == "23.08":
                 filename = FLATPAK_23_08_FILENAME
             elif version == "24.08":
                 filename = FLATPAK_24_08_FILENAME
-            else:  # 25.08
+            else:
                 filename = FLATPAK_25_08_FILENAME
             flatpak_path = plugin_dir / BIN_DIR / filename
 
             if not flatpak_path.exists():
                 return self._error_response(BaseResponse, f"Flatpak file not found: {flatpak_path}")
 
-            # Install the extension
             result = self._run_flatpak_command(
                 ["install", "--user", "--noninteractive", str(flatpak_path)],
                 capture_output=True, text=True
@@ -232,10 +220,9 @@ class FlatpakService(BaseService):
                 extension_id = self.extension_id_23_08
             elif version == "24.08":
                 extension_id = self.extension_id_24_08
-            else:  # 25.08
+            else:
                 extension_id = self.extension_id_25_08
 
-            # Uninstall the extension
             result = self._run_flatpak_command(
                 ["uninstall", "--user", "--noninteractive", extension_id],
                 capture_output=True, text=True
@@ -265,7 +252,6 @@ class FlatpakService(BaseService):
                                           error_msg,
                                           apps=[], total_apps=0)
 
-            # Get list of installed apps
             result = self._run_flatpak_command(
                 ["list", "--app"],
                 capture_output=True, text=True, check=True
@@ -276,7 +262,6 @@ class FlatpakService(BaseService):
                 if not line.strip():
                     continue
 
-                # Parse flatpak list output (Name\tApp ID\tVersion\tBranch\tInstallation)
                 parts = line.split('\t')
                 if len(parts) >= 2:
                     app_name = parts[0].strip()
@@ -318,9 +303,6 @@ class FlatpakService(BaseService):
             dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
             lsfg_path = f"{home_path}/lsfg"
 
-            # More precise checking - look for exact filesystem entries
-            # Flatpak output format typically shows filesystem entries like:
-            # filesystems=/path1;/path2;/path3
             filesystem_section = ""
             in_context = False
             
@@ -334,15 +316,12 @@ class FlatpakService(BaseService):
                     filesystem_section = line
                     break
             
-            # Check each required filesystem override
             has_config_fs = config_path in filesystem_section
             has_dll_fs = dll_path in filesystem_section
             has_lsfg_fs = lsfg_path in filesystem_section
 
-            # All three filesystem overrides must be present
             filesystem_override = has_config_fs and has_dll_fs and has_lsfg_fs
 
-            # Check for environment override in the [Environment] section
             env_override = False
             in_environment = False
             
@@ -377,14 +356,12 @@ class FlatpakService(BaseService):
             dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
             lsfg_path = f"{home_path}/lsfg"
 
-            # Set all filesystem overrides
             filesystem_overrides = [
                 f"--filesystem={dll_path}",
                 f"--filesystem={config_path}:rw", 
                 f"--filesystem={lsfg_path}:rw"
             ]
             
-            # Apply filesystem overrides
             for override in filesystem_overrides:
                 result = self._run_flatpak_command(
                     ["override", "--user", override, app_id],
@@ -395,7 +372,6 @@ class FlatpakService(BaseService):
                     return self._error_response(FlatpakOverrideResponse, error_msg,
                                               app_id=app_id, operation="set")
 
-            # Set environment override
             result = self._run_flatpak_command(
                 ["override", "--user", f"--env=LSFG_CONFIG={config_path}/conf.toml", app_id],
                 capture_output=True, text=True
@@ -430,7 +406,6 @@ class FlatpakService(BaseService):
             dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
             lsfg_path = f"{home_path}/lsfg"
 
-            # First, try to reset all overrides for this app to clean slate
             reset_result = self._run_flatpak_command(
                 ["override", "--user", "--reset", app_id],
                 capture_output=True, text=True
@@ -442,10 +417,8 @@ class FlatpakService(BaseService):
                                             f"All overrides reset for {app_id}",
                                             app_id=app_id, operation="remove")
             
-            # If reset fails, try individual removal (fallback)
             self.log.debug(f"Reset failed, trying individual removal: {reset_result.stderr}")
             
-            # Remove all filesystem overrides individually
             filesystem_overrides = [
                 f"--nofilesystem={dll_path}",
                 f"--nofilesystem={config_path}",
@@ -463,7 +436,6 @@ class FlatpakService(BaseService):
                 if result.returncode != 0:
                     removal_errors.append(f"{override}: {result.stderr}")
 
-            # Remove environment override
             result = self._run_flatpak_command(
                 ["override", "--user", "--unset-env=LSFG_CONFIG", app_id],
                 capture_output=True, text=True
