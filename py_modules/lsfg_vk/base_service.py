@@ -12,7 +12,6 @@ import decky
 
 from .constants import LOCAL_LIB, LOCAL_SHARE_BASE, VULKAN_LAYER_DIR, SCRIPT_NAME, CONFIG_DIR, CONFIG_FILENAME
 
-# Generic type for response dictionaries
 ResponseType = TypeVar('ResponseType', bound=Dict[str, Any])
 
 
@@ -30,12 +29,11 @@ class BaseService:
         else:
             self.log = logger
             
-        # Initialize common paths using pathlib
         self.user_home = Path.home()
         self.local_lib_dir = self.user_home / LOCAL_LIB
         self.local_share_dir = self.user_home / VULKAN_LAYER_DIR
         self.lsfg_script_path = self.user_home / SCRIPT_NAME
-        self.lsfg_launch_script_path = self.user_home / SCRIPT_NAME  # ~/lsfg launch script
+        self.lsfg_launch_script_path = self.user_home / SCRIPT_NAME
         self.config_dir = self.user_home / CONFIG_DIR
         self.config_file_path = self.config_dir / CONFIG_FILENAME
     
@@ -82,13 +80,11 @@ class BaseService:
             OSError: If write fails
         """
         try:
-            # Write directly to the file
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(content)
-                f.flush()  # Ensure data is written to disk
-                os.fsync(f.fileno())  # Force filesystem sync
+                f.flush()
+                os.fsync(f.fileno())
             
-            # Set permissions
             path.chmod(mode)
             self.log.info(f"Wrote to {path}")
             

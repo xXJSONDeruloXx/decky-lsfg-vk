@@ -34,13 +34,11 @@ class Plugin:
     
     def __init__(self):
         """Initialize the plugin with all necessary services"""
-        # Initialize services - they will use decky.logger by default
         self.installation_service = InstallationService()
         self.dll_detection_service = DllDetectionService()
         self.configuration_service = ConfigurationService()
         self.flatpak_service = FlatpakService()
 
-    # Installation methods
     async def install_lsfg_vk(self) -> Dict[str, Any]:
         """Install lsfg-vk by extracting the zip file to ~/.local
         
@@ -65,7 +63,6 @@ class Plugin:
         """
         return self.installation_service.uninstall()
 
-    # DLL detection methods
     async def check_lossless_scaling_dll(self) -> Dict[str, Any]:
         """Check if Lossless Scaling DLL is available at the expected paths
         
@@ -85,14 +82,12 @@ class Plugin:
         """
         result = self.dll_detection_service.check_lossless_scaling_dll()
         
-        # Convert to dict to allow modification
         result_dict = dict(result)
         
-        # If DLL was detected, automatically update the configuration
         if result.get("detected") and result.get("path"):
             try:
                 dll_path = result["path"]
-                if dll_path:  # Type guard
+                if dll_path:
                     update_result = self.configuration_service.update_dll_path(dll_path)
                     if update_result.get("success"):
                         result_dict["config_updated"] = True
@@ -113,7 +108,6 @@ class Plugin:
             Dict containing DLL path, SHA256 hash, and other stats
         """
         try:
-            # First check if DLL is detected
             dll_result = self.dll_detection_service.check_lossless_scaling_dll()
             
             if not dll_result.get("detected") or not dll_result.get("path"):
@@ -135,11 +129,9 @@ class Plugin:
             
             dll_path_obj = Path(dll_path)
             
-            # Calculate SHA256 hash
             sha256_hash = hashlib.sha256()
             try:
                 with open(dll_path_obj, "rb") as f:
-                    # Read file in chunks to handle large files efficiently
                     for chunk in iter(lambda: f.read(4096), b""):
                         sha256_hash.update(chunk)
                 dll_sha256 = sha256_hash.hexdigest()
@@ -167,7 +159,6 @@ class Plugin:
                 "dll_sha256": None
             }
 
-    # Configuration methods
     async def get_lsfg_config(self) -> Dict[str, Any]:
         """Read current lsfg script configuration
         
@@ -183,7 +174,6 @@ class Plugin:
             Dict with field names, types, defaults, and profile information
         """
         try:
-            # Get profile information
             profiles_response = self.configuration_service.get_profiles()
             
             schema_data = {
@@ -192,7 +182,6 @@ class Plugin:
                 "defaults": ConfigurationManager.get_defaults()
             }
             
-            # Add profile information if available
             if profiles_response.get("success"):
                 schema_data["profiles"] = profiles_response.get("profiles", [])
                 schema_data["current_profile"] = profiles_response.get("current_profile")
@@ -203,7 +192,6 @@ class Plugin:
             return schema_data
             
         except (ValueError, KeyError, AttributeError) as e:
-            # Fallback to basic schema without profile info
             self.configuration_service.log.warning(f"Failed to get full schema, using fallback: {e}")
             return {
                 "field_names": ConfigurationManager.get_field_names(),
@@ -222,10 +210,8 @@ class Plugin:
         Returns:
             ConfigurationResponse dict with success status
         """
-        # Validate and extract configuration from the config dict
         validated_config = ConfigurationManager.validate_config(config)
         
-        # Use dynamic parameter passing based on schema
         return self.configuration_service.update_config_from_dict(validated_config)
 
     async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
@@ -239,7 +225,6 @@ class Plugin:
         """
         return self.configuration_service.update_dll_path(dll_path)
 
-    # Profile management methods
     async def get_profiles(self) -> Dict[str, Any]:
         """Get list of all profiles and current profile
         
@@ -304,12 +289,10 @@ class Plugin:
         Returns:
             ConfigurationResponse dict with success status
         """
-        # Validate and extract configuration from the config dict
         validated_config = ConfigurationManager.validate_config(config)
         
         return self.configuration_service.update_profile_config(profile_name, validated_config)
 
-    # Self-updater methods
     async def check_for_plugin_update(self) -> Dict[str, Any]:
         """Check for plugin updates by comparing current version with most recent GitHub release
         
@@ -328,7 +311,6 @@ class Plugin:
             }
         """
         try:
-            # Read current version from package.json
             package_json_path = Path(decky.DECKY_PLUGIN_DIR) / "package.json"
             current_version = "0.0.0"
             
@@ -340,21 +322,16 @@ class Plugin:
                 except Exception as e:
                     decky.logger.warning(f"Failed to read package.json: {e}")
             
-            # Fetch most recent release from GitHub (including pre-releases)
             api_url = "https://api.github.com/repos/xXJSONDeruloXx/decky-lsfg-vk/releases"
             
             try:
-                # Create SSL context that doesn't verify certificates
-                # This is needed on Steam Deck where certificate verification often fails
                 ssl_context = ssl.create_default_context()
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
                 
-                # Use urllib to fetch all releases (sorted by most recent first)
                 with urllib.request.urlopen(api_url, context=ssl_context) as response:
                     releases_data = json.loads(response.read().decode('utf-8'))
                 
-                # Get the most recent release (first item in the array)
                 if not releases_data:
                     raise Exception("No releases found")
                     
@@ -364,14 +341,12 @@ class Plugin:
                 release_notes = release_data.get('body', '')
                 release_date = release_data.get('published_at', '')
                 
-                # Find the plugin zip download URL
                 download_url = ""
                 for asset in release_data.get('assets', []):
                     if asset.get('name', '').endswith('.zip'):
                         download_url = asset.get('browser_download_url', '')
                         break
                 
-                # Compare versions
                 update_available = self._compare_versions(current_version, latest_version)
                 
                 return {
@@ -412,31 +387,24 @@ class Plugin:
             }
         """
         try:
-            # Create download path
             downloads_dir = Path.home() / "Downloads"
             downloads_dir.mkdir(exist_ok=True)
             download_path = downloads_dir / "decky-lsfg-vk.zip"
             
-            # Remove existing file if it exists
             if download_path.exists():
                 download_path.unlink()
             
-            # Download the file
             decky.logger.info(f"Downloading plugin update from {download_url}")
             
             try:
-                # Create SSL context that doesn't verify certificates
-                # This is needed on Steam Deck where certificate verification often fails
                 ssl_context = ssl.create_default_context()
                 ssl_context.check_hostname = False
                 ssl_context.verify_mode = ssl.CERT_NONE
                 
-                # Use urllib to download the file with SSL context
                 with urllib.request.urlopen(download_url, context=ssl_context) as response:
                     with open(download_path, 'wb') as f:
                         f.write(response.read())
                 
-                # Verify the file was downloaded successfully
                 if download_path.exists() and download_path.stat().st_size > 0:
                     decky.logger.info(f"Plugin update downloaded successfully to {download_path}")
                     return {
@@ -473,16 +441,13 @@ class Plugin:
             True if latest version is newer than current version
         """
         try:
-            # Remove 'v' prefix if present and split by dots
             current_parts = current.lstrip('v').split('.')
             latest_parts = latest.lstrip('v').split('.')
             
-            # Pad with zeros if needed to ensure equal length
             max_len = max(len(current_parts), len(latest_parts))
             current_parts.extend(['0'] * (max_len - len(current_parts)))
             latest_parts.extend(['0'] * (max_len - len(latest_parts)))
             
-            # Compare each part numerically
             for i in range(max_len):
                 try:
                     current_num = int(current_parts[i])
@@ -492,24 +457,18 @@ class Plugin:
                         return True
                     elif latest_num < current_num:
                         return False
-                    # If equal, continue to next part
                 except ValueError:
-                    # If conversion fails, do string comparison
                     if latest_parts[i] > current_parts[i]:
                         return True
                     elif latest_parts[i] < current_parts[i]:
                         return False
             
-            # All parts are equal
             return False
             
         except (IndexError, AttributeError, TypeError) as e:
-            # If comparison fails, assume no update available
             self.configuration_service.log.warning(f"Version comparison failed: {e}")
             return False
 
-    # Plugin lifecycle methods
-    # Launch option methods
     async def get_launch_option(self) -> Dict[str, Any]:
         """Get the launch option that users need to set for their games
         
@@ -522,7 +481,6 @@ class Plugin:
             "explanation": "The lsfg script is created during installation and sets up the environment for the plugin"
         }
 
-    # File content methods
     async def get_config_file_content(self) -> Dict[str, Any]:
         """Get the current config file content
         
@@ -612,7 +570,6 @@ class Plugin:
                 "error": str(e)
             }
 
-    # Flatpak management methods
     async def check_flatpak_extension_status(self) -> Dict[str, Any]:
         """Check status of lsfg-vk Flatpak runtime extensions
         
@@ -673,9 +630,6 @@ class Plugin:
         """
         return self.flatpak_service.remove_app_override(app_id)
     
-    # Decky Loader lifecycle methods
-
-    # Lifecycle methods
     async def _main(self):
         """
         Main entry point for the plugin.
@@ -696,13 +650,12 @@ class Plugin:
 
     async def _uninstall(self):
         """
-        Cleanup tasks when the plugin is uninstalled.
+        Called when the plugin is uninstalled.
         
         This method is called by Decky Loader when the plugin is being uninstalled.
-        It automatically cleans up any lsfg-vk files that were installed and
-        uninstalls any flatpak extensions.
+        Performs cleanup of plugin files and flatpak extensions.
         """
-        decky.logger.info("decky-lsfg-vk plugin uninstalled - starting cleanup")
+        decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
         self.installation_service.cleanup_on_uninstall()
@@ -711,11 +664,9 @@ class Plugin:
         try:
             decky.logger.info("Checking for flatpak extensions to uninstall")
             
-            # Get current extension status
             extension_status = self.flatpak_service.get_extension_status()
             
             if extension_status.get("success"):
-                # Uninstall 23.08 runtime if installed
                 if extension_status.get("installed_23_08"):
                     decky.logger.info("Uninstalling lsfg-vk flatpak runtime 23.08")
                     result = self.flatpak_service.uninstall_extension("23.08")
@@ -724,7 +675,6 @@ class Plugin:
                     else:
                         decky.logger.warning(f"Failed to uninstall flatpak runtime 23.08: {result.get('error')}")
                 
-                # Uninstall 24.08 runtime if installed
                 if extension_status.get("installed_24_08"):
                     decky.logger.info("Uninstalling lsfg-vk flatpak runtime 24.08")
                     result = self.flatpak_service.uninstall_extension("24.08")
@@ -739,7 +689,6 @@ class Plugin:
                 
         except Exception as e:
             decky.logger.error(f"Error during flatpak cleanup: {e}")
-            # Don't fail the uninstall if flatpak cleanup fails
         
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
@@ -752,21 +701,13 @@ class Plugin:
         """
         decky.logger.info("Running decky-lsfg-vk plugin migrations")
         
-        # Migrate logs from old location
-        # ~/.config/decky-lossless-scaling-vk/lossless-scaling-vk.log -> decky.DECKY_LOG_DIR/lossless-scaling-vk.log
         decky.migrate_logs(os.path.join(decky.DECKY_USER_HOME,
                                        ".config", "decky-lossless-scaling-vk", "lossless-scaling-vk.log"))
         
-        # Migrate settings from old locations
-        # ~/homebrew/settings/lossless-scaling-vk.json -> decky.DECKY_SETTINGS_DIR/lossless-scaling-vk.json
-        # ~/.config/decky-lossless-scaling-vk/ -> decky.DECKY_SETTINGS_DIR/
         decky.migrate_settings(
             os.path.join(decky.DECKY_HOME, "settings", "lossless-scaling-vk.json"),
             os.path.join(decky.DECKY_USER_HOME, ".config", "decky-lossless-scaling-vk"))
         
-        # Migrate runtime data from old locations
-        # ~/homebrew/lossless-scaling-vk/ -> decky.DECKY_RUNTIME_DIR/
-        # ~/.local/share/decky-lossless-scaling-vk/ -> decky.DECKY_RUNTIME_DIR/
         decky.migrate_runtime(
             os.path.join(decky.DECKY_HOME, "lossless-scaling-vk"),
             os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-lossless-scaling-vk"))

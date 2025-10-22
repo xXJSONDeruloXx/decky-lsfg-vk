@@ -8,11 +8,9 @@ from enum import Enum
 import sys
 from pathlib import Path
 
-# Import shared configuration constants
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 
-# Field name constants for type-safe access
 DLL = "dll"
 NO_FP16 = "no_fp16"
 MULTIPLIER = "multiplier"
@@ -63,7 +61,6 @@ def get_script_parsing_logic():
                 key = key.strip()
                 value = value.strip()
 
-                # Auto-generated parsing logic:
                 if key == "DXVK_FRAME_RATE":
                         try:
                             script_values["dxvk_frame_rate"] = int(value)
@@ -162,7 +159,6 @@ def create_config_dict(**kwargs) -> ConfigurationData:
     })
 
 
-# Field lists for dynamic operations
 TOML_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
 SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
 ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']

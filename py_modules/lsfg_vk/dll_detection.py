@@ -31,27 +31,22 @@ class DllDetectionService(BaseService):
             DllDetectionResponse with detection status and path information
         """
         try:
-            # Check environment variable first
             dll_path = self._check_env_dll_path()
             if dll_path:
                 return dll_path
             
-            # Check XDG_DATA_HOME path
             xdg_path = self._check_xdg_data_home()
             if xdg_path:
                 return xdg_path
             
-            # Check HOME/.local/share path
             home_path = self._check_home_local_share()
             if home_path:
                 return home_path
             
-            # Check all Steam library folders (including SD cards)
             steam_libraries_path = self._check_steam_library_folders()
             if steam_libraries_path:
                 return steam_libraries_path
             
-            # DLL not found in any expected location
             return {
                 "detected": False,
                 "path": None,
@@ -164,25 +159,20 @@ class DllDetectionService(BaseService):
         """
         library_paths = []
         
-        # Try different possible Steam installation locations
         steam_paths = []
         
-        # XDG_DATA_HOME path
         data_dir = os.getenv(ENV_XDG_DATA_HOME)
         if data_dir and data_dir.strip():
             steam_paths.append(Path(data_dir.strip()) / "Steam")
         
-        # HOME/.local/share path (most common on Steam Deck)
         home_dir = os.getenv(ENV_HOME)
         if home_dir and home_dir.strip():
             steam_paths.append(Path(home_dir.strip()) / ".local" / "share" / "Steam")
         
         for steam_path in steam_paths:
             if steam_path.exists():
-                # Add the main Steam directory as a library
                 library_paths.append(str(steam_path))
                 
-                # Parse libraryfolders.vdf for additional libraries
                 vdf_path = steam_path / "steamapps" / "libraryfolders.vdf"
                 if vdf_path.exists():
                     try:
@@ -191,7 +181,6 @@ class DllDetectionService(BaseService):
                     except Exception as e:
                         self.log.warning(f"Failed to parse {vdf_path}: {str(e)}")
         
-        # Remove duplicates while preserving order
         seen = set()
         unique_paths = []
         for path in library_paths:
@@ -217,17 +206,13 @@ class DllDetectionService(BaseService):
             with open(vdf_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
             
-            # Look for "path" entries in the VDF file
-            # The format is typically: "path"		"/path/to/library"
             path_pattern = r'"path"\s*"([^"]+)"'
             matches = re.findall(path_pattern, content, re.IGNORECASE)
             
             for path_match in matches:
-                # Convert Windows paths to Unix paths if needed
                 path = path_match.replace('\\\\', '/').replace('\\', '/')
                 library_path = Path(path)
                 
-                # Verify the library folder exists and has a steamapps directory
                 if library_path.exists() and (library_path / "steamapps").exists():
                     library_paths.append(str(library_path))
                     self.log.info(f"Found additional Steam library: {library_path}")
