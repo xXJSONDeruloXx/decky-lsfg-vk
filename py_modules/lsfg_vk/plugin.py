@@ -68,36 +68,6 @@ class Plugin:
         """
         return self.dll_detection_service.check_lossless_scaling_dll()
 
-    async def check_lossless_scaling_dll_and_update_config(self) -> Dict[str, Any]:
-        """Check for DLL and automatically update configuration if found
-        
-        This method should only be used during installation or when explicitly
-        requested by the user, not for routine DLL detection checks.
-        
-        Returns:
-            DllDetectionResponse dict with detection status and path info
-        """
-        result = self.dll_detection_service.check_lossless_scaling_dll()
-        
-        result_dict = dict(result)
-        
-        if result.get("detected") and result.get("path"):
-            try:
-                dll_path = result["path"]
-                if dll_path:
-                    update_result = self.configuration_service.update_dll_path(dll_path)
-                    if update_result.get("success"):
-                        result_dict["config_updated"] = True
-                        result_dict["message"] = f"DLL detected and configuration updated: {dll_path}"
-                    else:
-                        result_dict["config_updated"] = False
-                        result_dict["message"] = f"DLL detected but config update failed: {update_result.get('error', 'Unknown error')}"
-            except Exception as e:
-                result_dict["config_updated"] = False
-                result_dict["message"] = f"DLL detected but config update failed: {str(e)}"
-        
-        return result_dict
-
     async def get_dll_stats(self) -> Dict[str, Any]:
         """Get detailed statistics about the detected DLL
         
@@ -210,17 +180,6 @@ class Plugin:
         validated_config = ConfigurationManager.validate_config(config)
         
         return self.configuration_service.update_config_from_dict(validated_config)
-
-    async def update_dll_path(self, dll_path: str) -> Dict[str, Any]:
-        """Update the DLL path in the configuration when detected
-        
-        Args:
-            dll_path: Path to the detected Lossless.dll file
-            
-        Returns:
-            ConfigurationResponse dict with success status
-        """
-        return self.configuration_service.update_dll_path(dll_path)
 
     async def get_profiles(self) -> Dict[str, Any]:
         """Get list of all profiles and current profile

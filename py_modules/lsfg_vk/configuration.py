@@ -104,41 +104,6 @@ class ConfigurationService(BaseService):
             self.log.error(error_msg)
             return self._error_response(ConfigurationResponse, str(e), config=None)
     
-    def update_dll_path(self, dll_path: str) -> ConfigurationResponse:
-        """Update just the DLL path in the configuration
-        
-        Args:
-            dll_path: Path to the Lossless.dll file
-            
-        Returns:
-            ConfigurationResponse with success status
-        """
-        try:
-            profile_data = self._get_profile_data()
-            
-            profile_data["global_config"]["dll"] = dll_path
-            
-            current_profile = profile_data["current_profile"]
-            from .config_schema_generated import DLL
-            profile_data["profiles"][current_profile][DLL] = dll_path
-            
-            self._save_profile_data(profile_data)
-            
-            script_result = self.update_lsfg_script_from_profile_data(profile_data)
-            if not script_result["success"]:
-                self.log.warning(f"Failed to update launch script: {script_result['error']}")
-            
-            self.log.info(f"Updated DLL path in lsfg configuration: '{dll_path}'")
-            
-            return self._success_response(ConfigurationResponse,
-                                        f"DLL path updated to: {dll_path}",
-                                        config=profile_data["profiles"][current_profile])
-            
-        except Exception as e:
-            error_msg = f"Error updating DLL path: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
-    
     def update_lsfg_script(self, config: ConfigurationData) -> ConfigurationResponse:
         """Update the ~/lsfg launch script with current configuration
         
