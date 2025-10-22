@@ -7,7 +7,6 @@
  * This is especially important in gaming mode where clipboard APIs may behave differently
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
-  // Use the proven input simulation method
   const tempInput = document.createElement('input');
   tempInput.value = text;
   tempInput.style.position = 'absolute';
@@ -15,18 +14,15 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   document.body.appendChild(tempInput);
   
   try {
-    // Focus and select the text
     tempInput.focus();
     tempInput.select();
     
-    // Try copying using execCommand first (most reliable in gaming mode)
     let copySuccess = false;
     try {
       if (document.execCommand('copy')) {
         copySuccess = true;
       }
     } catch (e) {
-      // If execCommand fails, try navigator.clipboard as fallback
       try {
         await navigator.clipboard.writeText(text);
         copySuccess = true;
@@ -37,7 +33,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     
     return copySuccess;
   } finally {
-    // Clean up
     document.body.removeChild(tempInput);
   }
 }
@@ -50,7 +45,6 @@ export async function verifyCopy(expectedText: string): Promise<boolean> {
     const readBack = await navigator.clipboard.readText();
     return readBack === expectedText;
   } catch (e) {
-    // Verification not available, assume success
     return true;
   }
 }

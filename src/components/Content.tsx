@@ -39,25 +39,20 @@ export function Content() {
 
   const { isInstalling, isUninstalling, handleInstall, handleUninstall } = useInstallationActions();
 
-  // Reload config when installation status changes
   useEffect(() => {
     if (isInstalled) {
       loadLsfgConfig();
     }
   }, [isInstalled, loadLsfgConfig]);
 
-  // Generic configuration change handler
   const handleConfigChange = async (fieldName: keyof ConfigurationData, value: boolean | number | string) => {
-    // If we have a current profile, update that profile specifically
     if (currentProfile) {
       const newConfig = { ...config, [fieldName]: value };
       const result = await updateProfileConfig(currentProfile, newConfig);
       if (result.success) {
-        // Reload config to reflect the changes from the backend
         await loadLsfgConfig();
       }
     } else {
-      // Fallback to the original method for backward compatibility
       await updateField(fieldName, value);
     }
   };
@@ -80,7 +75,6 @@ export function Content() {
 
   return (
     <PanelSection>
-      {/* Show installation components at top when not fully installed */}
       {!isInstalled && (
         <>
           <InstallationButton
@@ -100,7 +94,6 @@ export function Content() {
         </>
       )}
 
-      {/* FPS multiplier controls stay above profile selection when installed */}
       {isInstalled && (
         <>
           <PanelSectionRow>
@@ -126,7 +119,6 @@ export function Content() {
         </>
       )}
 
-      {/* Profile Management - only show if installed */}
       {isInstalled && (
         <ProfileManagement
           currentProfile={currentProfile}
@@ -137,7 +129,6 @@ export function Content() {
         />
       )}
 
-      {/* Configuration Section - only show if installed */}
       {isInstalled && (
         <ConfigurationSection
           config={config}
@@ -145,7 +136,6 @@ export function Content() {
         />
       )}
 
-      {/* Clipboard buttons sit beside usage info for quick access */}
       {isInstalled && (
         <>
           <SmartClipboardButton />
@@ -153,10 +143,8 @@ export function Content() {
         </>
       )}
 
-      {/* Usage instructions - always visible for user guidance */}
       <UsageInstructions config={config} />
 
-      {/* Nerd Stuff Button */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
@@ -166,7 +154,6 @@ export function Content() {
         </ButtonItem>
       </PanelSectionRow>
 
-      {/* Flatpaks Button */}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
@@ -176,7 +163,6 @@ export function Content() {
         </ButtonItem>
       </PanelSectionRow>
 
-      {/* Status and uninstall sit at bottom when installed to match desired layout */}
       {isInstalled && (
         <>
           <StatusDisplay

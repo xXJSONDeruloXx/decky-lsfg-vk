@@ -18,14 +18,13 @@ class ConfigFieldType(str, Enum):
     STRING = "string"
 
 
-# Canonical configuration schema - source of truth
 CONFIG_SCHEMA_DEF = {
     "dll": {
         "name": "dll",
         "fieldType": ConfigFieldType.STRING,
         "default": "/games/Lossless Scaling/Lossless.dll",
         "description": "specify where Lossless.dll is stored",
-        "location": "toml"  # where this field is stored/used
+        "location": "toml"
     },
     
     "no_fp16": {
@@ -81,7 +80,7 @@ CONFIG_SCHEMA_DEF = {
         "fieldType": ConfigFieldType.INTEGER,
         "default": 0,
         "description": "base framerate cap for DirectX games before frame multiplier",
-        "location": "script"  # script-only field
+        "location": "script"
     },
     
     "enable_wow64": {

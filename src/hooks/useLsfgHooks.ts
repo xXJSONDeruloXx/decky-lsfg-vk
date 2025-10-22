@@ -71,7 +71,6 @@ export function useDllDetection() {
 }
 
 export function useLsfgConfig() {
-  // Use centralized configuration for initial state
   const [config, setConfig] = useState<ConfigurationData>(() => ConfigurationManager.getDefaults());
 
   const loadLsfgConfig = useCallback(async () => {
@@ -114,7 +113,7 @@ export function useLsfgConfig() {
 
   useEffect(() => {
     loadLsfgConfig();
-  }, []); // Empty dependency array to prevent infinite loop
+  }, []);
 
   return {
     config,

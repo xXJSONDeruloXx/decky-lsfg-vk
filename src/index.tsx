@@ -7,17 +7,11 @@ export default definePlugin(() => {
   console.log("decky-lsfg-vk plugin initializing");
 
   return {
-    // The name shown in various decky menus
     name: "Decky LSFG-VK",
-    // The element displayed at the top of your plugin's menu
     titleView: <div className={staticClasses.Title}>Decky LSFG-VK</div>,
-    // Always render to retain state when panel is toggled
     alwaysRender: true,
-    // The content of your plugin's menu
     content: <Content />,
-    // The icon displayed in the plugin list
     icon: <GiPlasticDuck />,
-    // The function triggered when your plugin unloads
     onDismount() {
       console.log("decky-lsfg-vk unloading");
     }
