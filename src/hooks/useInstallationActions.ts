@@ -23,7 +23,7 @@ export function useInstallationActions() {
       const result = await installLsfgVk();
       if (result.success) {
         setIsInstalled(true);
-        setInstallationStatus("lsfg-vk installed successfully!");
+        setInstallationStatus("lsfg-vk installed");
         showInstallSuccessToast();
 
         // Reload lsfg config after installation

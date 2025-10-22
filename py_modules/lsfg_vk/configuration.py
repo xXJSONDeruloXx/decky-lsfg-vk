@@ -390,8 +390,10 @@ class ConfigurationService(BaseService):
                                           f"Profile '{profile_name}' does not exist", 
                                           config=None)
             
-            profile_data = ConfigurationManager.update_profile_config(profile_data, profile_name, config)
+            # Update the profile's config
+            profile_data["profiles"][profile_name] = config
             
+            # Update global config fields if they're in the config
             for field_name in ["dll", "no_fp16"]:
                 if field_name in config:
                     profile_data["global_config"][field_name] = config[field_name]
