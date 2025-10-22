@@ -20,8 +20,6 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 
 ## Installation
 
-**Note:** This plugin is currently in active development. While functional, some features may change before the official Decky Plugin Store release.
-
 1. **Download the plugin** from the [releases tab](https://github.com/xXJSONDeruloXx/decky-lsfg-vk/releases)
    - Download the "decky-lsfg-vk.zip" file to your Steam Deck
 2. **Install manually through Decky**:
@@ -41,8 +39,6 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
    - Or use the "Launch Option Clipboard" button in the plugin to copy the command
 6. **Launch your game** - frame generation will activate automatically using your plugin configuration
 
-**Note**: Configuration changes are applied in real-time and will take effect immediately without restarting your game.
-
 ## Configuration Options
 
 The plugin provides several configuration options to optimize frame generation for your games:
@@ -52,12 +48,6 @@ The plugin provides several configuration options to optimize frame generation f
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
 - **Performance Mode**: Uses a lighter processing model - recommended for most games
 - **HDR Mode**: Enable for games that support HDR output
-
-### Experimental Features
-- **Present Mode Override**: Force specific Vulkan presentation modes for compatibility
-- **Base FPS Limit**: Set a base framerate cap before the multiplier is applied (useful for DirectX games)
-
-All settings (except base FPS limit) are saved automatically and can be changed while games are running.
 
 ## Feedback and Support
 
