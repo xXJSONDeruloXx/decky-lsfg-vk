@@ -1,11 +1,11 @@
 {
   "name": "Decky LSFG-VK",
-  "author": "Kurt Himebauch",
+  "author": "Kurt Himebauch (xXJSONDeruloXx)",
   "flags": [],
   "api_version": 1,
   "publish": {
     "tags": ["installer", "vulkan", "lsfg", "framegen", "lossless", "scaling"],
     "description": "Enable lossless scaling frame generation on the Steam Deck using lsfg-vk compatibility layer.",
-    "image": "https://steamcommunity.com/sharedfiles/filedetails/?id=3522791434"
+    "image": "https://raw.githubusercontent.com/xXJSONDeruloXx/decky-lsfg-vk/refs/heads/main/assets/Decky_LSFG-VK_Master_1.png"
   }
 }
