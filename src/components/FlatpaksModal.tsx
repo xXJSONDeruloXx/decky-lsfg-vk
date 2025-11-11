@@ -400,7 +400,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
               >
                 <div style={{ textAlign: 'center' }}>
                   <img
-                    src={flatpakTargetImage}
+                    src={flatpakTargetImage.replace(/ /g, '%20')}
                     alt="Steam Properties Target Field Example"
                     style={{
                       maxWidth: '100%',
