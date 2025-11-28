@@ -53,11 +53,8 @@ class InstallationService(BaseService):
             if self._is_arm_architecture():
                 self.log.info("Detected ARM architecture, using ARM binary")
                 arm_so_path = plugin_dir / BIN_DIR / ARM_LIB_FILENAME
-                if arm_so_path.exists():
-                    shutil.copy2(arm_so_path, self.lib_file)
-                    self.log.info(f"Overwrote with ARM binary: {self.lib_file}")
-                else:
-                    self.log.warning(f"ARM binary not found at {arm_so_path}, using x86_64 version")
+                shutil.copy2(arm_so_path, self.lib_file)
+                self.log.info(f"Overwrote with ARM binary: {self.lib_file}")
             
             self._create_config_file()
             
