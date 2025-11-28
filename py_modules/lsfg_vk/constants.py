@@ -14,6 +14,7 @@ CONFIG_FILENAME = "conf.toml"
 LIB_FILENAME = "liblsfg-vk.so"
 JSON_FILENAME = "VkLayer_LS_frame_generation.json"
 ZIP_FILENAME = "lsfg-vk_noui.zip"
+ARM_LIB_FILENAME = "liblsfg-vk-arm64.so"
 
 FLATPAK_23_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak"
 FLATPAK_24_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak"
