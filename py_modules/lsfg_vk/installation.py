@@ -76,10 +76,9 @@ class InstallationService(BaseService):
         """Check if running on ARM architecture
         
         Returns:
-            True if running on ARM (aarch64/arm64), False otherwise
+            True if running on ARM (aarch64), False otherwise
         """
-        machine = platform.machine().lower()
-        return machine in ('aarch64', 'arm64', 'armv8l', 'armv8b')
+        return platform.machine().lower() == 'aarch64'
     
     def _extract_and_install_files(self, zip_path: Path) -> None:
         """Extract zip file and install files to appropriate locations
