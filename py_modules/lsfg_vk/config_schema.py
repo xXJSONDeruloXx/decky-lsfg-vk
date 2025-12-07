@@ -454,19 +454,54 @@ class ConfigurationManager:
         return create_config_dict(**kwargs)
     
     @staticmethod
+    def normalize_profile_name(profile_name: str) -> str:
+        """Normalize profile name by converting spaces to dashes and trimming
+        
+        This allows users to enter names with spaces, which are then safely
+        converted to dashes for storage and shell script compatibility.
+        
+        Args:
+            profile_name: The raw profile name from user input
+            
+        Returns:
+            Normalized profile name with spaces converted to dashes
+        """
+        if not profile_name:
+            return profile_name
+        
+        # Trim whitespace and convert spaces to dashes
+        normalized = profile_name.strip().replace(' ', '-')
+        
+        # Collapse multiple consecutive dashes into one
+        while '--' in normalized:
+            normalized = normalized.replace('--', '-')
+        
+        # Remove leading/trailing dashes
+        normalized = normalized.strip('-')
+        
+        return normalized
+    
+    @staticmethod
     def validate_profile_name(profile_name: str) -> bool:
-        """Validate profile name for safety"""
+        """Validate profile name for safety (after normalization)"""
         if not profile_name:
             return False
         
+        # Normalize first - this converts spaces to dashes
+        normalized = ConfigurationManager.normalize_profile_name(profile_name)
+        
+        if not normalized:
+            return False
+        
         # Check for invalid characters that could cause issues in shell scripts or TOML
-        invalid_chars = set(' \t\n\r\'"\\/$|&;()<>{}[]`*?')
-        if any(char in invalid_chars for char in profile_name):
+        # Note: spaces are now allowed as input (they get converted to dashes)
+        invalid_chars = set('\t\n\r\'"\\/$|&;()<>{}[]`*?')
+        if any(char in invalid_chars for char in normalized):
             return False
         
         # Check for reserved names
         reserved_names = {'global', 'game', 'current_profile'}
-        if profile_name.lower() in reserved_names:
+        if normalized.lower() in reserved_names:
             return False
         
         return True
@@ -476,6 +511,9 @@ class ConfigurationManager:
         """Create a new profile by copying from source profile or defaults"""
         if not ConfigurationManager.validate_profile_name(profile_name):
             raise ValueError(f"Invalid profile name: {profile_name}")
+        
+        # Normalize the profile name (converts spaces to dashes)
+        profile_name = ConfigurationManager.normalize_profile_name(profile_name)
         
         if profile_name in profile_data["profiles"]:
             raise ValueError(f"Profile '{profile_name}' already exists")
@@ -532,6 +570,9 @@ class ConfigurationManager:
         
         if not ConfigurationManager.validate_profile_name(new_name):
             raise ValueError(f"Invalid profile name: {new_name}")
+        
+        # Normalize the new name (converts spaces to dashes)
+        new_name = ConfigurationManager.normalize_profile_name(new_name)
         
         if old_name not in profile_data["profiles"]:
             raise ValueError(f"Profile '{old_name}' does not exist")
