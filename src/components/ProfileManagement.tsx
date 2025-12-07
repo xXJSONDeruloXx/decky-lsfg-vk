@@ -217,10 +217,12 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
     try {
       const result: ProfileResult = await createProfile(profileName, selectedProfile);
       if (result.success) {
-        showSuccessToast("Profile created", `Created profile: ${profileName}`);
+        // Use the normalized name returned from backend (spaces converted to dashes)
+        const actualProfileName = result.profile_name || profileName;
+        showSuccessToast("Profile created", `Created profile: ${actualProfileName}`);
         await loadProfiles();
-        // Automatically switch to the newly created profile
-        await handleProfileChange(profileName);
+        // Automatically switch to the newly created profile using the normalized name
+        await handleProfileChange(actualProfileName);
       } else {
         console.error("Failed to create profile:", result.error);
         showErrorToast("Failed to create profile", result.error || "Unknown error");
@@ -307,10 +309,12 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
     try {
       const result: ProfileResult = await renameProfile(selectedProfile, newName);
       if (result.success) {
-        showSuccessToast("Profile renamed", `Renamed profile to: ${newName}`);
+        // Use the normalized name returned from backend (spaces converted to dashes)
+        const actualNewName = result.profile_name || newName;
+        showSuccessToast("Profile renamed", `Renamed profile to: ${actualNewName}`);
         await loadProfiles();
-        setSelectedProfile(newName);
-        onProfileChange?.(newName);
+        setSelectedProfile(actualNewName);
+        onProfileChange?.(actualNewName);
       } else {
         console.error("Failed to rename profile:", result.error);
         showErrorToast("Failed to rename profile", result.error || "Unknown error");

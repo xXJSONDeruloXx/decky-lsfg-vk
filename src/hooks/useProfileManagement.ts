@@ -46,7 +46,9 @@ export function useProfileManagement() {
     try {
       const result: ProfileResult = await createProfile(profileName, sourceProfile || currentProfile);
       if (result.success) {
-        showSuccessToast("Profile created", `Created profile: ${profileName}`);
+        // Use the normalized name returned from backend (spaces converted to dashes)
+        const actualProfileName = result.profile_name || profileName;
+        showSuccessToast("Profile created", `Created profile: ${actualProfileName}`);
         await loadProfiles();
         return result;
       } else {
@@ -106,11 +108,13 @@ export function useProfileManagement() {
     try {
       const result: ProfileResult = await renameProfile(oldName, newName);
       if (result.success) {
-        showSuccessToast("Profile renamed", `Renamed profile to: ${newName}`);
+        // Use the normalized name returned from backend (spaces converted to dashes)
+        const actualNewName = result.profile_name || newName;
+        showSuccessToast("Profile renamed", `Renamed profile to: ${actualNewName}`);
         await loadProfiles();
         // Update current profile if it was renamed
         if (currentProfile === oldName) {
-          setCurrentProfileState(newName);
+          setCurrentProfileState(actualNewName);
         }
         return result;
       } else {

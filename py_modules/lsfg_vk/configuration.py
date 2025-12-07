@@ -235,11 +235,11 @@ class ConfigurationService(BaseService):
         """Create a new profile
         
         Args:
-            profile_name: Name for the new profile
+            profile_name: Name for the new profile (spaces will be converted to dashes)
             source_profile: Optional source profile to copy from (default: current profile)
             
         Returns:
-            ProfileResponse with success status
+            ProfileResponse with success status and the normalized profile name
         """
         try:
             profile_data = self._get_profile_data()
@@ -247,15 +247,19 @@ class ConfigurationService(BaseService):
             if not source_profile:
                 source_profile = profile_data["current_profile"]
             
+            # Get the normalized name that will be used for storage
+            normalized_name = ConfigurationManager.normalize_profile_name(profile_name)
+            
             new_profile_data = ConfigurationManager.create_profile(profile_data, profile_name, source_profile)
             
             self._save_profile_data(new_profile_data)
             
-            self.log.info(f"Created profile '{profile_name}' from '{source_profile}'")
+            self.log.info(f"Created profile '{normalized_name}' from '{source_profile}'")
             
+            # Return the normalized name so frontend can use the actual stored name
             return self._success_response(ProfileResponse,
-                                        f"Profile '{profile_name}' created successfully",
-                                        profile_name=profile_name)
+                                        f"Profile '{normalized_name}' created successfully",
+                                        profile_name=normalized_name)
             
         except ValueError as e:
             error_msg = f"Invalid profile operation: {str(e)}"
@@ -306,13 +310,16 @@ class ConfigurationService(BaseService):
         
         Args:
             old_name: Current profile name
-            new_name: New profile name
+            new_name: New profile name (spaces will be converted to dashes)
             
         Returns:
-            ProfileResponse with success status
+            ProfileResponse with success status and the normalized profile name
         """
         try:
             profile_data = self._get_profile_data()
+            
+            # Get the normalized name that will be used for storage
+            normalized_name = ConfigurationManager.normalize_profile_name(new_name)
             
             new_profile_data = ConfigurationManager.rename_profile(profile_data, old_name, new_name)
             
@@ -322,11 +329,12 @@ class ConfigurationService(BaseService):
             if not script_result["success"]:
                 self.log.warning(f"Failed to update launch script: {script_result['error']}")
             
-            self.log.info(f"Renamed profile '{old_name}' to '{new_name}'")
+            self.log.info(f"Renamed profile '{old_name}' to '{normalized_name}'")
             
+            # Return the normalized name so frontend can use the actual stored name
             return self._success_response(ProfileResponse,
-                                        f"Profile renamed from '{old_name}' to '{new_name}' successfully",
-                                        profile_name=new_name)
+                                        f"Profile renamed from '{old_name}' to '{normalized_name}' successfully",
+                                        profile_name=normalized_name)
             
         except ValueError as e:
             error_msg = f"Invalid profile operation: {str(e)}"
