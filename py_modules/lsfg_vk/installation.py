@@ -3,6 +3,7 @@ Installation service for lsfg-vk.
 """
 
 import os
+import platform
 import shutil
 import traceback
 import zipfile
@@ -14,7 +15,7 @@ from typing import Dict, Any
 from .base_service import BaseService
 from .constants import (
     LIB_FILENAME, JSON_FILENAME, ZIP_FILENAME, BIN_DIR,
-    SO_EXT, JSON_EXT
+    SO_EXT, JSON_EXT, ARM_LIB_FILENAME
 )
 from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
@@ -48,6 +49,13 @@ class InstallationService(BaseService):
             
             self._extract_and_install_files(zip_path)
             
+            # If on ARM, overwrite the .so with the ARM version
+            if self._is_arm_architecture():
+                self.log.info("Detected ARM architecture, using ARM binary")
+                arm_so_path = plugin_dir / BIN_DIR / ARM_LIB_FILENAME
+                shutil.copy2(arm_so_path, self.lib_file)
+                self.log.info(f"Overwrote with ARM binary: {self.lib_file}")
+            
             self._create_config_file()
             
             self._create_lsfg_launch_script()
@@ -63,6 +71,14 @@ class InstallationService(BaseService):
             error_msg = f"Unexpected error installing lsfg-vk: {str(e)}"
             self.log.error(error_msg)
             return self._error_response(InstallationResponse, str(e), message="")
+    
+    def _is_arm_architecture(self) -> bool:
+        """Check if running on ARM architecture
+        
+        Returns:
+            True if running on ARM (aarch64), False otherwise
+        """
+        return platform.machine().lower() == 'aarch64'
     
     def _extract_and_install_files(self, zip_path: Path) -> None:
         """Extract zip file and install files to appropriate locations
