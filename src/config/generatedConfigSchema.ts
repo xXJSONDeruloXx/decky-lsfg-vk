@@ -13,8 +13,7 @@ export const NO_FP16 = "no_fp16" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
-export const HDR_MODE = "hdr_mode" as const;
-export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
+export const PACING = "pacing" as const;
 export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
 export const ENABLE_WOW64 = "enable_wow64" as const;
 export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
@@ -64,17 +63,11 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     default: false,
     description: "use a lighter model for FG (recommended for most games)"
   },
-  hdr_mode: {
-    name: "hdr_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable HDR mode (only for games that support HDR)"
-  },
-  experimental_present_mode: {
-    name: "experimental_present_mode",
+  pacing: {
+    name: "pacing",
     fieldType: ConfigFieldType.STRING,
-    default: "fifo",
-    description: "override Vulkan present mode (may cause crashes)"
+    default: "none",
+    description: "frame pacing mode (currently only 'none' supported)"
   },
   dxvk_frame_rate: {
     name: "dxvk_frame_rate",
@@ -133,8 +126,7 @@ export interface ConfigurationData {
   multiplier: number;
   flow_scale: number;
   performance_mode: boolean;
-  hdr_mode: boolean;
-  experimental_present_mode: string;
+  pacing: string;
   dxvk_frame_rate: number;
   enable_wow64: boolean;
   disable_steamdeck_mode: boolean;
@@ -157,8 +149,7 @@ export function getDefaults(): ConfigurationData {
     multiplier: 1,
     flow_scale: 0.8,
     performance_mode: false,
-    hdr_mode: false,
-    experimental_present_mode: "fifo",
+    pacing: "none",
     dxvk_frame_rate: 0,
     enable_wow64: false,
     disable_steamdeck_mode: false,
@@ -177,8 +168,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
-    hdr_mode: ConfigFieldType.BOOLEAN,
-    experimental_present_mode: ConfigFieldType.STRING,
+    pacing: ConfigFieldType.STRING,
     dxvk_frame_rate: ConfigFieldType.INTEGER,
     enable_wow64: ConfigFieldType.BOOLEAN,
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,

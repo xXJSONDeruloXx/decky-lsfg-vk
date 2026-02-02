@@ -59,21 +59,15 @@ CONFIG_SCHEMA_DEF = {
         "location": "toml"
     },
     
-    "hdr_mode": {
-        "name": "hdr_mode",
-        "fieldType": ConfigFieldType.BOOLEAN,
-        "default": False,
-        "description": "enable HDR mode (only for games that support HDR)",
+    "pacing": {
+        "name": "pacing",
+        "fieldType": ConfigFieldType.STRING,
+        "default": "none",
+        "description": "frame pacing mode (currently only 'none' supported)",
         "location": "toml"
     },
     
-    "experimental_present_mode": {
-        "name": "experimental_present_mode",
-        "fieldType": ConfigFieldType.STRING,
-        "default": "fifo",
-        "description": "override Vulkan present mode (may cause crashes)",
-        "location": "toml"
-    },
+    # Removed in v2.0: hdr_mode and experimental_present_mode no longer supported
     
     "dxvk_frame_rate": {
         "name": "dxvk_frame_rate",

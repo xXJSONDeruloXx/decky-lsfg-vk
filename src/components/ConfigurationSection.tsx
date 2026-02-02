@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
-  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
-  EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
+  FLOW_SCALE, PERFORMANCE_MODE, PACING,
+  DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
 
@@ -139,28 +139,10 @@ export function ConfigurationSection({
 
           <PanelSectionRow>
             <ToggleField
-              label={`Present Mode (${(config.experimental_present_mode || "fifo") === "fifo" ? "FIFO - VSync" : "Mailbox"})`}
-              description="Toggle between FIFO - VSync (default) and Mailbox presentation modes for better performance or compatibility"
-              checked={(config.experimental_present_mode || "fifo") === "fifo"}
-              onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ToggleField
               label="Performance Mode"
               description="Uses a lighter model for FG (Recommended for most games)"
               checked={config.performance_mode}
               onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ToggleField
-              label="HDR Mode"
-              description="Enables HDR mode (only for games that support HDR)"
-              checked={config.hdr_mode}
-              onChange={(value) => onConfigChange(HDR_MODE, value)}
             />
           </PanelSectionRow>
         </>

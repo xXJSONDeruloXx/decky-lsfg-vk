@@ -11,8 +11,9 @@ CONFIG_DIR = ".config/lsfg-vk"
 
 SCRIPT_NAME = "lsfg"
 CONFIG_FILENAME = "conf.toml"
-LIB_FILENAME = "liblsfg-vk.so"
-JSON_FILENAME = "VkLayer_LS_frame_generation.json"
+# v2.0 file names
+LIB_FILENAME = "libVkLayer_LSFGVK_frame_generation.so"
+JSON_FILENAME = "VkLayer_LSFGVK_frame_generation.json"
 ZIP_FILENAME = "lsfg-vk_noui.zip"
 
 FLATPAK_23_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak"

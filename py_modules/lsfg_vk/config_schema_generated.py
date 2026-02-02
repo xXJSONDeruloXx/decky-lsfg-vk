@@ -18,8 +18,7 @@ NO_FP16 = "no_fp16"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
 PERFORMANCE_MODE = "performance_mode"
-HDR_MODE = "hdr_mode"
-EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode"
+PACING = "pacing"
 DXVK_FRAME_RATE = "dxvk_frame_rate"
 ENABLE_WOW64 = "enable_wow64"
 DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
@@ -37,8 +36,7 @@ class ConfigurationData(TypedDict):
     multiplier: int
     flow_scale: float
     performance_mode: bool
-    hdr_mode: bool
-    experimental_present_mode: str
+    pacing: str
     dxvk_frame_rate: int
     enable_wow64: bool
     disable_steamdeck_mode: bool
@@ -129,8 +127,7 @@ def get_function_parameters() -> str:
                      multiplier: int = 1,
                      flow_scale: float = 0.8,
                      performance_mode: bool = False,
-                     hdr_mode: bool = False,
-                     experimental_present_mode: str = "fifo",
+                     pacing: str = "none",
                      dxvk_frame_rate: int = 0,
                      enable_wow64: bool = False,
                      disable_steamdeck_mode: bool = False,
@@ -149,8 +146,7 @@ def create_config_dict(**kwargs) -> ConfigurationData:
         "multiplier": kwargs.get("multiplier"),
         "flow_scale": kwargs.get("flow_scale"),
         "performance_mode": kwargs.get("performance_mode"),
-        "hdr_mode": kwargs.get("hdr_mode"),
-        "experimental_present_mode": kwargs.get("experimental_present_mode"),
+        "pacing": kwargs.get("pacing"),
         "dxvk_frame_rate": kwargs.get("dxvk_frame_rate"),
         "enable_wow64": kwargs.get("enable_wow64"),
         "disable_steamdeck_mode": kwargs.get("disable_steamdeck_mode"),
@@ -163,6 +159,6 @@ def create_config_dict(**kwargs) -> ConfigurationData:
 
 
 # Field lists for dynamic operations
-TOML_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode']
+TOML_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing']
 SCRIPT_FIELDS = ['dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
-ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
