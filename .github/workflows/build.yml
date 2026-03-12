@@ -1,0 +1,101 @@
+name: Build Plugin
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ main, language, gh-workflow ]
+  pull_request:
+    branches: [ main, language, gh-workflow ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Build i18n languages.json
+        run: |
+          TARGET_DIR="defaults/i18n"
+          if [ -d "$TARGET_DIR" ]; then
+            jq -n '
+              reduce inputs as $i ( {}; . + { (input_filename | split("/") | last | split(".json")[0]): $i } )
+            ' "$TARGET_DIR"/*.json > './src/i18n/languages.json'
+            echo "languages.json generated:"
+            cat src/i18n/languages.json | jq 'keys'
+          else
+            echo "No i18n directory found, skipping."
+          fi
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build frontend
+        run: pnpm run build
+
+      - name: Create CLI directory
+        run: mkdir -p cli
+
+      - name: Download Decky CLI
+        run: |
+          curl -L -o cli/decky "https://github.com/SteamDeckHomebrew/cli/releases/latest/download/decky-linux-x86_64"
+          chmod +x cli/decky
+
+      - name: Verify Decky CLI
+        run: ./cli/decky --version
+
+      - name: Build plugin package
+        run: |
+          $(pwd)/cli/decky plugin build $(pwd)
+
+      - name: Show build output
+        run: |
+          ls out/
+          7z l out/*.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: decky-lsfg-vk
+          path: out/*.zip
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - run: mkdir /tmp/artifacts
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/artifacts
+
+      - run: ls -R /tmp/artifacts
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/artifacts/decky-lsfg-vk/*.zip
+          tag_name: ${{ github.ref_name }}
+          body: |
+            Decky LSFG-VK
+          draft: true
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref, 'pre') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
