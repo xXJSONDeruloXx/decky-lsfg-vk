@@ -14,6 +14,7 @@ import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import { NerdStuffModal } from "./NerdStuffModal";
 import { FlatpaksModal } from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
+import t from '../i18n/i18n';
 
 export function Content() {
   const {
@@ -108,7 +109,7 @@ export function Content() {
                 color: "white"
               }}
             >
-              FPS Multiplier
+              {t('CONTENT_FPS_MULTIPLIER', 'FPS Multiplier')}
             </div>
           </PanelSectionRow>
 
@@ -150,7 +151,7 @@ export function Content() {
           layout="below"
           onClick={handleShowNerdStuff}
         >
-          Nerd Stuff
+          {t('CONTENT_NERD_STUFF', 'Nerd Stuff')}
         </ButtonItem>
       </PanelSectionRow>
 
@@ -159,7 +160,7 @@ export function Content() {
           layout="below"
           onClick={handleShowFlatpaks}
         >
-          Flatpak Setup
+          {t('CONTENT_FLATPAK_SETUP', 'Flatpak Setup')}
         </ButtonItem>
       </PanelSectionRow>
 

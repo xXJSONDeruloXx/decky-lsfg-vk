@@ -4,6 +4,7 @@ import { FaClipboard, FaCheck } from "react-icons/fa";
 import { checkFgmodDirectory } from "../api/lsfgApi";
 import { showClipboardErrorToast } from "../utils/toastUtils";
 import { copyWithVerification } from "../utils/clipboardUtils";
+import t from '../i18n/i18n';
 
 export function FgmodClipboardButton() {
   const [isLoading, setIsLoading] = useState(false);
@@ -93,7 +94,7 @@ export function FgmodClipboardButton() {
             color: showSuccess ? "#4CAF50" : "inherit",
             fontWeight: showSuccess ? "bold" : "normal"
           }}>
-            {showSuccess ? "Copied to clipboard" : isLoading ? "Copying..." : "LSFG + DeckyFG"}
+            {showSuccess ? t('CLIPBOARD_COPIED', 'Copied to clipboard') : isLoading ? t('CLIPBOARD_COPYING', 'Copying...') : t('CLIPBOARD_LSFG_FGMOD', 'LSFG + DeckyFG')}
           </div>
         </div>
       </ButtonItem>

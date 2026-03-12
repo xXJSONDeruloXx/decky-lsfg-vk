@@ -4,6 +4,7 @@ import { FaClipboard, FaCheck } from "react-icons/fa";
 import { getLaunchOption } from "../api/lsfgApi";
 import { showClipboardErrorToast } from "../utils/toastUtils";
 import { copyWithVerification } from "../utils/clipboardUtils";
+import t from '../i18n/i18n';
 
 export function SmartClipboardButton() {
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +75,7 @@ export function SmartClipboardButton() {
             color: showSuccess ? "#4CAF50" : "inherit",
             fontWeight: showSuccess ? "bold" : "normal"
           }}>
-            {showSuccess ? "Copied to clipboard" : isLoading ? "Copying..." : "Copy Launch Option"}
+            {showSuccess ? t('CLIPBOARD_COPIED', 'Copied to clipboard') : isLoading ? t('CLIPBOARD_COPYING', 'Copying...') : t('CLIPBOARD_COPY_LAUNCH', 'Copy Launch Option')}
           </div>
         </div>
       </ButtonItem>

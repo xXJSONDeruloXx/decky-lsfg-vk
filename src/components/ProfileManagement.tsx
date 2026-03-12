@@ -25,6 +25,7 @@ import {
   ProfileResult
 } from "../api/lsfgApi";
 import { showSuccessToast, showErrorToast } from "../utils/toastUtils";
+import t from '../i18n/i18n';
 
 const PROFILES_COLLAPSED_KEY = 'lsfg-profiles-collapsed';
 
@@ -63,8 +64,8 @@ function TextInputModal({
         <p style={{ marginBottom: "24px" }}>{description}</p>
         
         <div style={{ marginBottom: "24px" }}>
-          <Field 
-            label="Name"
+          <Field
+            label={t('PROFILE_NAME_LABEL', 'Name')}
             childrenLayout="below"
             childrenContainerWidth="max"
           >
@@ -199,10 +200,10 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   const handleCreateProfile = () => {
     showModal(
       <TextInputModal
-        title="Create New Profile"
-        description="Enter a name for the new profile. The current profile's settings will be copied."
-        okText="Create"
-        cancelText="Cancel"
+        title={t('PROFILE_CREATE_TITLE', 'Create New Profile')}
+        description={t('PROFILE_CREATE_DESC', "Enter a name for the new profile. The current profile's settings will be copied.")}
+        okText={t('PROFILE_CREATE_BTN', 'Create')}
+        cancelText={t('PROFILE_CANCEL_BTN', 'Cancel')}
         onOK={(name: string) => {
           if (name.trim()) {
             createNewProfile(name.trim());
@@ -237,16 +238,16 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
 
   const handleDeleteProfile = () => {
     if (selectedProfile === "decky-lsfg-vk") {
-      showErrorToast("Cannot delete default profile", "The default profile cannot be deleted");
+      showErrorToast(t('PROFILE_CANNOT_DELETE_TITLE', 'Cannot delete default profile'), t('PROFILE_CANNOT_DELETE_MSG', 'The default profile cannot be deleted'));
       return;
     }
 
     showModal(
       <ConfirmModal
-        strTitle="Delete Profile"
-        strDescription={`Are you sure you want to delete the profile "${selectedProfile}"? This action cannot be undone.`}
-        strOKButtonText="Delete"
-        strCancelButtonText="Cancel"
+        strTitle={t('PROFILE_DELETE_TITLE', 'Delete Profile')}
+        strDescription={`${t('PROFILE_DELETE_DESC_PREFIX', 'Are you sure you want to delete the profile')} "${selectedProfile}"${t('PROFILE_DELETE_DESC_SUFFIX', '? This action cannot be undone.')}`}
+        strOKButtonText={t('PROFILE_DELETE_BTN', 'Delete')}
+        strCancelButtonText={t('PROFILE_CANCEL_BTN', 'Cancel')}
         onOK={() => deleteSelectedProfile()}
       />
     );
@@ -284,17 +285,17 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
 
   const handleRenameProfile = () => {
     if (selectedProfile === "decky-lsfg-vk") {
-      showErrorToast("Cannot rename default profile", "The default profile cannot be renamed");
+      showErrorToast(t('PROFILE_CANNOT_RENAME_TITLE', 'Cannot rename default profile'), t('PROFILE_CANNOT_RENAME_MSG', 'The default profile cannot be renamed'));
       return;
     }
 
     showModal(
       <TextInputModal
-        title="Rename Profile"
-        description={`Enter a new name for the profile "${selectedProfile}".`}
+        title={t('PROFILE_RENAME_TITLE', 'Rename Profile')}
+        description={`${t('PROFILE_RENAME_DESC_PREFIX', 'Enter a new name for the profile')} "${selectedProfile}".`}
         defaultValue={selectedProfile}
-        okText="Rename"
-        cancelText="Cancel"
+        okText={t('PROFILE_RENAME_BTN', 'Rename')}
+        cancelText={t('PROFILE_CANCEL_BTN', 'Cancel')}
         onOK={(newName: string) => {
           if (newName.trim() && newName.trim() !== selectedProfile) {
             renameSelectedProfile(newName.trim());
@@ -330,11 +331,11 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
   const profileOptions: DropdownOption[] = [
     ...profiles.map((profile: string) => ({
       data: profile,
-      label: profile === "decky-lsfg-vk" ? "Default" : profile
+      label: profile === "decky-lsfg-vk" ? t('PROFILE_DEFAULT', 'Default') : profile
     })),
     {
       data: "__NEW_PROFILE__",
-      label: "New Profile"
+      label: t('PROFILE_NEW', 'New Profile')
     }
   ];
 
@@ -361,7 +362,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
             border: "1px solid rgba(0, 255, 0, 0.3)",
             fontSize: "13px"
           }}>
-            <strong>{mainRunningApp.display_name}</strong> running. Close game to change profile.
+            <strong>{mainRunningApp.display_name}</strong> running. {t('PROFILE_CLOSE_GAME', 'Close game to change profile.')}
           </div>
         </PanelSectionRow>
       )}
@@ -378,7 +379,7 @@ export function ProfileManagement({ currentProfile, onProfileChange }: ProfileMa
             color: "white"
           }}
         >
-          Profile: {selectedProfile === "decky-lsfg-vk" ? "Default" : selectedProfile}
+          {t('PROFILE_SECTION_TITLE', 'Profile:')} {selectedProfile === "decky-lsfg-vk" ? t('PROFILE_DEFAULT', 'Default') : selectedProfile}
         </div>
       </PanelSectionRow>
 
