@@ -10,12 +10,10 @@ class ARM64Installer:
         pass
 
     def after_extract(self):
-        pass
+        ArmadaRuntime(self.service).install_layer()
 
     def after_config(self):
         pass
 
-    def after_install(self):
-        pass
     def after_install(self):
         ArmadaRuntime(self.service).enable_fex_vulkan()
