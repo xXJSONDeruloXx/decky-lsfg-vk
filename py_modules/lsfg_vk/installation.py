@@ -8,9 +8,10 @@ import traceback
 import zipfile
 import tempfile
 import json
+import tarfile
 from pathlib import Path
 from typing import Dict, Any
-
+from .archive import ArchiveExtractor
 from .base_service import BaseService
 from .constants import (
     BIN_DIR,
@@ -61,7 +62,13 @@ class InstallationService(BaseService):
             return self._success_response(InstallationResponse, "lsfg-vk installed successfully")
             
 
-        except (OSError, zipfile.BadZipFile, shutil.Error) as e:
+        except (
+            OSError,
+            shutil.Error,
+            RuntimeError,
+            tarfile.TarError,
+            zipfile.BadZipFile,
+        ) as e:
             error_msg = f"Error installing lsfg-vk: {str(e)}"
             self.log.error(error_msg)
             return self._error_response(InstallationResponse, str(e), message="")
@@ -86,30 +93,34 @@ class InstallationService(BaseService):
             JSON_EXT: self.local_share_dir
         }
         
-        with zipfile.ZipFile(archive_path, "r") as zip_ref:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_path = Path(temp_dir)
-                zip_ref.extractall(temp_path)
-                
-                # Process extracted files
-                for root, dirs, files in os.walk(temp_path):
-                    root_path = Path(root)
-                    for file in files:
-                        src_file = root_path / file
-                        file_path = Path(file)
-                        
-                        # Check if we know where this file type should go
-                        dst_dir = dest_map.get(file_path.suffix)
-                        if dst_dir:
-                            dst_file = dst_dir / file
-                            
-                            # Special handling for JSON files - need to modify library_path
-                            if file_path.suffix == JSON_EXT and file == self.runtime.manifest_name:
-                                self._copy_and_fix_json_file(src_file, dst_file)
-                            else:
-                                shutil.copy2(src_file, dst_file)
-                            
-                            self.log.info(f"Copied {file} to {dst_file}")
+        with tempfile.TemporaryDirectory() as temp_dir:
+
+            temp_path = Path(temp_dir)
+
+            ArchiveExtractor.extract(
+                archive_path,
+                temp_path,
+            )
+
+            # Process extracted files
+            for root, dirs, files in os.walk(temp_path):
+                root_path = Path(root)
+                for file in files:
+                    src_file = root_path / file
+                    file_path = Path(file)
+
+                    # Check if we know where this file type should go
+                    dst_dir = dest_map.get(file_path.suffix)
+                    if dst_dir:
+                        dst_file = dst_dir / file
+
+                        # Special handling for JSON files - need to modify library_path
+                        if file_path.suffix == JSON_EXT and file == self.runtime.manifest_name:
+                            self._copy_and_fix_json_file(src_file, dst_file)
+                        else:
+                            shutil.copy2(src_file, dst_file)
+
+                        self.log.info(f"Copied {file} to {dst_file}")
     
     def _copy_and_fix_json_file(self, src_file: Path, dst_file: Path) -> None:
         """Copy JSON file and fix the library_path to use relative path
