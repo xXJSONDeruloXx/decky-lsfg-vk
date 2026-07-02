@@ -19,9 +19,18 @@ from .constants import (
     JSON_EXT,
 )
 
-from .paths import FEX_CONFIG
-from .installers import X86Installer, ARM64Installer
-from .platform import Architecture, architecture`
+from .installer import (
+    X86Installer,
+    ARM64Installer,
+)
+
+from .platform import (
+    Architecture,
+    architecture,
+)
+
+
+from .platform import Architecture, architecture
 from .runtime import current_runtime
 from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
@@ -30,10 +39,11 @@ from .types import InstallationResponse, UninstallationResponse, InstallationChe
 class InstallationService(BaseService):
     """Service for handling lsfg-vk installation and uninstallation"""
     
-   def __init__(self, logger=None):
+    def __init__(self, logger=None):
         super().__init__(logger)
 
         self.runtime = current_runtime()
+
 
         if architecture() == Architecture.ARM64:
             self.installer = ARM64Installer(self)
@@ -250,8 +260,11 @@ class InstallationService(BaseService):
         config_service.lsfg_script_path = self.lsfg_launch_script_path
         
         # Generate script content with default configuration
-        script_content = config_service._generate_script_content(default_config)
-        
+        from .launcher import LauncherGenerator
+
+        launcher = LauncherGenerator(self)
+
+        script_content = launcher.generate(default_config)
         # Write the script file
         self._write_file(self.lsfg_launch_script_path, script_content, 0o755)
         self.log.info(f"Created lsfg launch script at {self.lsfg_launch_script_path}")
