@@ -16,18 +16,11 @@ from .paths import LIB_DIR
 @dataclass(frozen=True)
 class Runtime:
     name: str
-
-    # bundled archive
     archive_name: str
-
-    # installed library
     library_name: str
-
-    # Vulkan manifest
     manifest_name: str
-
-    # value written into library_path
     manifest_library_path: str
+    native: bool
 
 
 X86_RUNTIME = Runtime(
@@ -36,6 +29,8 @@ X86_RUNTIME = Runtime(
     library_name="liblsfg-vk.so",
     manifest_name="VkLayer_LS_frame_generation.json",
     manifest_library_path="../../../lib/liblsfg-vk.so",
+    native=True,
+
 )
 
 ARM64_RUNTIME = Runtime(

@@ -18,6 +18,8 @@ from .constants import (
     SO_EXT,
     JSON_EXT,
 )
+
+from .paths import FEX_CONFIG
 from .installers import X86Installer, ARM64Installer
 from .platform import Architecture, architecture`
 from .runtime import current_runtime
@@ -28,44 +30,60 @@ from .types import InstallationResponse, UninstallationResponse, InstallationChe
 class InstallationService(BaseService):
     """Service for handling lsfg-vk installation and uninstallation"""
     
-    def __init__(self, logger=None):
-        if architecture() == Architecture.ARM64:
-            self.installer = ARM64Installer(self)
-        else:
-            self.installer = X86Installer(self)
+   def __init__(self, logger=None):
         super().__init__(logger)
 
         self.runtime = current_runtime()
 
+        if architecture() == Architecture.ARM64:
+            self.installer = ARM64Installer(self)
+        else:
+            self.installer = X86Installer(self)
+
         self.lib_file = self.local_lib_dir / self.runtime.library_name
         self.json_file = self.local_share_dir / self.runtime.manifest_name
-    
-    def install(self) -> InstallationResponse:
-        """Install lsfg-vk by extracting the zip file to ~/.local
-        
-        Returns:
-            InstallationResponse with success status and message/error
-        """
-        try:
-            plugin_dir = Path(__file__).parent.parent.parent
-            archive_path = plugin_dir / BIN_DIR / self.runtime.archive_name
 
-            if not archive_path.exists():
-                error_msg = f"{self.runtime.archive_name} not found at {archive_path}"
-                self.log.error(error_msg)
-                return self._error_response(InstallationResponse, error_msg, message="")
-            
+    def _get_archive_path(self) -> Path:
+        plugin_dir = Path(__file__).parent.parent.parent
+        archive = plugin_dir / BIN_DIR / self.runtime.archive_name
+
+        if not archive.exists():
+            raise RuntimeError(
+                f"Missing runtime archive:\n{archive}"
+            )
+
+        return archive
+
+    def install(self) -> InstallationResponse:
+        try:
+            archive = self._get_archive_path()
+
             self._ensure_directories()
-            
-            self.installer.install_runtime(archive_path)
-            
+
+            self.installer.before_install()
+
+            self._extract_and_install_files(archive)
+
+            self.installer.after_extract()
+
             self._create_config_file()
-            
+
+            self.installer.after_config()
+
             self._create_lsfg_launch_script()
-            
-            self.log.info("lsfg-vk installed successfully")
-            return self._success_response(InstallationResponse, "lsfg-vk installed successfully")
-            
+
+            self.installer.after_install()
+
+            RuntimeValidation.validate(
+                self.runtime,
+                self.lib_file,
+                self.json_file,
+            )
+
+            return self._success_response(
+                InstallationResponse,
+                "lsfg-vk installed successfully",
+            )
 
         except (
             OSError,
@@ -74,14 +92,21 @@ class InstallationService(BaseService):
             tarfile.TarError,
             zipfile.BadZipFile,
         ) as e:
-            error_msg = f"Error installing lsfg-vk: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(InstallationResponse, str(e), message="")
+            self.log.error(f"Installation failed: {e}")
+            return self._error_response(
+                InstallationResponse,
+                str(e),
+                message="",
+            )
+
         except Exception as e:
-            error_msg = f"Unexpected error installing lsfg-vk: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(InstallationResponse, str(e), message="")
-    
+            self.log.exception("Unexpected installation failure")
+            return self._error_response(
+                InstallationResponse,
+                str(e),
+                message="",
+            )
+
     def _extract_and_install_files(self, archive_path: Path) -> None:
         """Extract runtime archive and install files.
 
@@ -126,6 +151,8 @@ class InstallationService(BaseService):
                             shutil.copy2(src_file, dst_file)
 
                         self.log.info(f"Copied {file} to {dst_file}")
+
+
     
     def _copy_and_fix_json_file(self, src_file: Path, dst_file: Path) -> None:
         """Copy JSON file and fix the library_path to use relative path
