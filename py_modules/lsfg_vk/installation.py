@@ -18,7 +18,8 @@ from .constants import (
     SO_EXT,
     JSON_EXT,
 )
-
+from .installers import X86Installer, ARM64Installer
+from .platform import Architecture, architecture`
 from .runtime import current_runtime
 from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
@@ -28,6 +29,10 @@ class InstallationService(BaseService):
     """Service for handling lsfg-vk installation and uninstallation"""
     
     def __init__(self, logger=None):
+        if architecture() == Architecture.ARM64:
+            self.installer = ARM64Installer(self)
+        else:
+            self.installer = X86Installer(self)
         super().__init__(logger)
 
         self.runtime = current_runtime()
@@ -52,7 +57,7 @@ class InstallationService(BaseService):
             
             self._ensure_directories()
             
-            self._extract_and_install_files(archive_path)
+            self.installer.install_runtime(archive_path)
             
             self._create_config_file()
             
