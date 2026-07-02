@@ -44,6 +44,20 @@ class OverlayManager:
             f"Installed overlay manifest {dst}"
         )
 
+        lib = (
+            Path.home()
+            / ".local/lib"
+            / "liblsfg-vk-arm64.so"
+        )
+
+        dst = self.upper / "liblsfg-vk-arm64.so"
+
+        shutil.copy2(lib, dst)
+
+        self.service.log.info(
+            f"Installed overlay library {dst}"
+        )
+
     def uninstall(self):
 
         shutil.rmtree(self.upper, ignore_errors=True)

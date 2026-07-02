@@ -1,5 +1,6 @@
 from pathlib import Path
 from .armada import ArmadaRuntime
+from .overlay import OverlayManager
 
 
 class ARM64Installer:
@@ -10,7 +11,11 @@ class ARM64Installer:
         pass
 
     def after_extract(self):
-        ArmadaRuntime(self.service).install_layer()
+        runtime = ArmadaRuntime(self)
+
+        runtime.install_layer()
+
+        OverlayManager(self.service).install()
 
     def after_config(self):
         pass
