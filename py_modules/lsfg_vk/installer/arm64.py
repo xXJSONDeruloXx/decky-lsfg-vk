@@ -1,4 +1,5 @@
 from pathlib import Path
+from .armada import ArmadaRuntime
 
 
 class ARM64Installer:
@@ -16,3 +17,5 @@ class ARM64Installer:
 
     def after_install(self):
         pass
+    def after_install(self):
+        ArmadaRuntime(self.service).enable_fex_vulkan()
