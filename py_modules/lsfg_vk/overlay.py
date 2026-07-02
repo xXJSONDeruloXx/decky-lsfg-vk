@@ -30,6 +30,19 @@ class OverlayManager:
         self.service.log.info(
             f"Created overlay directory {self.override}"
         )
+        manifest = (
+            Path.home()
+            / ".local/share/vulkan/implicit_layer.d"
+            / "VkLayer_LSFGVK_frame_generation.json"
+        )
+
+        dst = self.override / manifest.name
+
+        shutil.copy2(manifest, dst)
+
+        self.service.log.info(
+            f"Installed overlay manifest {dst}"
+        )
 
     def uninstall(self):
 
