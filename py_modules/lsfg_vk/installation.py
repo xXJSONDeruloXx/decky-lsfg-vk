@@ -13,9 +13,12 @@ from typing import Dict, Any
 
 from .base_service import BaseService
 from .constants import (
-    LIB_FILENAME, JSON_FILENAME, ZIP_FILENAME, BIN_DIR,
-    SO_EXT, JSON_EXT
+    BIN_DIR,
+    SO_EXT,
+    JSON_EXT,
 )
+
+from .runtime import current_runtime
 from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
 
@@ -25,9 +28,11 @@ class InstallationService(BaseService):
     
     def __init__(self, logger=None):
         super().__init__(logger)
-        
-        self.lib_file = self.local_lib_dir / LIB_FILENAME
-        self.json_file = self.local_share_dir / JSON_FILENAME
+
+        self.runtime = current_runtime()
+
+        self.lib_file = self.local_lib_dir / self.runtime.library_name
+        self.json_file = self.local_share_dir / self.runtime.manifest_name
     
     def install(self) -> InstallationResponse:
         """Install lsfg-vk by extracting the zip file to ~/.local
@@ -37,16 +42,16 @@ class InstallationService(BaseService):
         """
         try:
             plugin_dir = Path(__file__).parent.parent.parent
-            zip_path = plugin_dir / BIN_DIR / ZIP_FILENAME
-            
-            if not zip_path.exists():
-                error_msg = f"{ZIP_FILENAME} not found at {zip_path}"
+            archive_path = plugin_dir / BIN_DIR / self.runtime.archive_name
+
+            if not archive_path.exists():
+                error_msg = f"{self.runtime.archive_name} not found at {archive_path}"
                 self.log.error(error_msg)
                 return self._error_response(InstallationResponse, error_msg, message="")
             
             self._ensure_directories()
             
-            self._extract_and_install_files(zip_path)
+            self._extract_and_install_files(archive_path)
             
             self._create_config_file()
             
@@ -55,6 +60,7 @@ class InstallationService(BaseService):
             self.log.info("lsfg-vk installed successfully")
             return self._success_response(InstallationResponse, "lsfg-vk installed successfully")
             
+
         except (OSError, zipfile.BadZipFile, shutil.Error) as e:
             error_msg = f"Error installing lsfg-vk: {str(e)}"
             self.log.error(error_msg)
@@ -64,12 +70,12 @@ class InstallationService(BaseService):
             self.log.error(error_msg)
             return self._error_response(InstallationResponse, str(e), message="")
     
-    def _extract_and_install_files(self, zip_path: Path) -> None:
-        """Extract zip file and install files to appropriate locations
-        
+    def _extract_and_install_files(self, archive_path: Path) -> None:
+        """Extract runtime archive and install files.
+
         Args:
-            zip_path: Path to the zip file to extract
-            
+            archive_path: Path to the zip file to extract
+
         Raises:
             zipfile.BadZipFile: If zip file is corrupted
             OSError: If file operations fail
@@ -80,7 +86,7 @@ class InstallationService(BaseService):
             JSON_EXT: self.local_share_dir
         }
         
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(archive_path, "r") as zip_ref:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
                 zip_ref.extractall(temp_path)
@@ -98,7 +104,7 @@ class InstallationService(BaseService):
                             dst_file = dst_dir / file
                             
                             # Special handling for JSON files - need to modify library_path
-                            if file_path.suffix == JSON_EXT and file == JSON_FILENAME:
+                            if file_path.suffix == JSON_EXT and file == self.runtime.manifest_name:
                                 self._copy_and_fix_json_file(src_file, dst_file)
                             else:
                                 shutil.copy2(src_file, dst_file)
@@ -118,11 +124,14 @@ class InstallationService(BaseService):
                 json_data = json.load(f)
             
             # Fix the library_path from "liblsfg-vk.so" to "../../../lib/liblsfg-vk.so"
-            if 'layer' in json_data and 'library_path' in json_data['layer']:
-                current_path = json_data['layer']['library_path']
-                if current_path == "liblsfg-vk.so":
-                    json_data['layer']['library_path'] = "../../../lib/liblsfg-vk.so"
-                    self.log.info(f"Fixed library_path from '{current_path}' to '../../../lib/liblsfg-vk.so'")
+            if "layer" in json_data and "library_path" in json_data["layer"]:
+                current_path = json_data["layer"]["library_path"]
+                json_data["layer"]["library_path"] = self.runtime.manifest_library_path
+
+                self.log.info(
+                    f"Fixed library_path from '{current_path}' "
+                    f"to '{self.runtime.manifest_library_path}'"
+                )
             
             # Write the modified JSON file
             with open(dst_file, 'w') as f:
