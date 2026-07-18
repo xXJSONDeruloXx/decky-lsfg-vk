@@ -66,8 +66,8 @@
     },
     {
       "name": "liblsfg-vk-arm64.so",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/arm-test/liblsfg-vk.so",
-      "sha256hash": "c745893b3798eb1acb422775a43107fc3f2efb2ae2711090b90b04941d8de309"
+      "url": "https://github.com/Janleyx/decky-lsfg-vk-for-Ayn-Odin-2/releases/download/arm64-layer-3e89e54/liblsfg-vk-arm64.so",
+      "sha256hash": "2e84f8d1a1dd0344474846f6252d6f948f72caaaeab3cd316c04254be05a9949"
     }
   ],
   "pnpm": {
