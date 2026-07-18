@@ -256,6 +256,8 @@ class Plugin:
         Returns:
             Dict containing the launch option string and instructions
         """
+        # Armada-specific: other distributions do not ship this wrapper and
+        # continue through the unchanged generic launch option below.
         if ARMADA_GAME_LAUNCH.is_file():
             return {
                 "launch_option": f"~/lsfg {ARMADA_GAME_LAUNCH} %command%",

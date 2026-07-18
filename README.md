@@ -53,6 +53,11 @@ The plugin detects Armada and copies this combined command automatically. LSFG
 sets its environment first, then Armada applies the game's settings and launches
 Proton normally.
 
+This is an Armada-specific compatibility path, not a change to the standard
+launch flow. It activates only when Armada's
+`/usr/libexec/armada/armada-game-launch` wrapper is present. SteamOS, Bazzite,
+and other systems continue to receive the existing `~/lsfg %command%` option.
+
 ## Configuration Options
 
 The plugin provides several configuration options to optimize frame generation for your games:
