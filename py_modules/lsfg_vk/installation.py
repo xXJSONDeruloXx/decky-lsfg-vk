@@ -15,7 +15,7 @@ from typing import Dict, Any
 from .base_service import BaseService
 from .constants import (
     LIB_FILENAME, JSON_FILENAME, ZIP_FILENAME, BIN_DIR,
-    SO_EXT, JSON_EXT, ARM_LIB_FILENAME
+    SO_EXT, JSON_EXT, ARM_LIB_FILENAME, ARMADA_DEVICE_ENV
 )
 from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
@@ -84,7 +84,7 @@ class InstallationService(BaseService):
         # Decky runs through FEX on Armada, so Python reports x86_64 even
         # though the host is AArch64. Armada exposes this native helper only
         # on its ARM image, including inside Decky's FEX rootfs.
-        if Path('/usr/libexec/armada/device-env').is_file():
+        if ARMADA_DEVICE_ENV.is_file():
             self.log.info("Detected native AArch64 Armada host through device-env")
             return True
 

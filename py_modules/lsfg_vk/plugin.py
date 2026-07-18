@@ -18,7 +18,7 @@ from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
 from .config_schema import ConfigurationManager
 from .flatpak_service import FlatpakService
-from .constants import ARMADA_GAME_LAUNCH
+from .constants import ARMADA_DEVICE_ENV, ARMADA_GAME_LAUNCH
 
 
 class Plugin:
@@ -256,9 +256,9 @@ class Plugin:
         Returns:
             Dict containing the launch option string and instructions
         """
-        # Armada-specific: other distributions do not ship this wrapper and
-        # continue through the unchanged generic launch option below.
-        if ARMADA_GAME_LAUNCH.is_file():
+        # Decky runs through FEX on Armada, so the guest OS identity is not a
+        # reliable host check. Require both Armada's native marker and wrapper.
+        if ARMADA_DEVICE_ENV.is_file() and ARMADA_GAME_LAUNCH.is_file():
             return {
                 "launch_option": f"~/lsfg {ARMADA_GAME_LAUNCH} %command%",
                 "instructions": "Use this combined command in Steam Properties, preserving Armada's game-launch wrapper",

@@ -54,9 +54,11 @@ sets its environment first, then Armada applies the game's settings and launches
 Proton normally.
 
 This is an Armada-specific compatibility path, not a change to the standard
-launch flow. It activates only when Armada's
-`/usr/libexec/armada/armada-game-launch` wrapper is present. SteamOS, Bazzite,
-and other systems continue to receive the existing `~/lsfg %command%` option.
+launch flow. Because Decky runs through FEX on Armada, the guest's OS identity
+is not a reliable way to identify the native host. The compatibility path
+therefore activates only when both Armada's native `device-env` marker and its
+`armada-game-launch` wrapper are present. SteamOS, Bazzite, and other systems
+continue to receive the existing `~/lsfg %command%` option.
 
 ## Configuration Options
 

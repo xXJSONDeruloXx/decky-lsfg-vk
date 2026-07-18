@@ -25,6 +25,7 @@ JSON_EXT = ".json"
 
 BIN_DIR = "bin"
 
+ARMADA_DEVICE_ENV = Path("/usr/libexec/armada/device-env")
 ARMADA_GAME_LAUNCH = Path("/usr/libexec/armada/armada-game-launch")
 
 STEAM_COMMON_PATH = Path("steamapps/common/Lossless Scaling")
