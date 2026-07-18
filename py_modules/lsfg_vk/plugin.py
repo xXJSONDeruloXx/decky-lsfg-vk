@@ -18,6 +18,7 @@ from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
 from .config_schema import ConfigurationManager
 from .flatpak_service import FlatpakService
+from .constants import ARMADA_GAME_LAUNCH
 
 
 class Plugin:
@@ -255,6 +256,13 @@ class Plugin:
         Returns:
             Dict containing the launch option string and instructions
         """
+        if ARMADA_GAME_LAUNCH.is_file():
+            return {
+                "launch_option": f"~/lsfg {ARMADA_GAME_LAUNCH} %command%",
+                "instructions": "Use this combined command in Steam Properties, preserving Armada's game-launch wrapper",
+                "explanation": "LSFG sets its environment first, then Armada applies the game's FEX profile and launches Proton"
+            }
+
         return {
             "launch_option": "~/lsfg %command%",
             "instructions": "Add this to your game's launch options in Steam Properties",

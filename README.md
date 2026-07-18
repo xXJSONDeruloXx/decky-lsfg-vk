@@ -39,6 +39,20 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
    - Or use the "Launch Option Clipboard" button in the plugin to copy the command
 6. **Launch your game** - frame generation will activate automatically using your plugin configuration
 
+### Armada launch options
+
+Armada games already use `/usr/libexec/armada/armada-game-launch %command%`
+to apply their FEX profile and controller/runtime fixes. Preserve that wrapper by
+prepending LSFG to the existing option:
+
+```bash
+~/lsfg /usr/libexec/armada/armada-game-launch %command%
+```
+
+The plugin detects Armada and copies this combined command automatically. LSFG
+sets its environment first, then Armada applies the game's settings and launches
+Proton normally.
+
 ## Configuration Options
 
 The plugin provides several configuration options to optimize frame generation for your games:

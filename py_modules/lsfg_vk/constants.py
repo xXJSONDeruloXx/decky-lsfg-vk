@@ -25,6 +25,8 @@ JSON_EXT = ".json"
 
 BIN_DIR = "bin"
 
+ARMADA_GAME_LAUNCH = Path("/usr/libexec/armada/armada-game-launch")
+
 STEAM_COMMON_PATH = Path("steamapps/common/Lossless Scaling")
 LOSSLESS_DLL_NAME = "Lossless.dll"
 

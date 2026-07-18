@@ -1,6 +1,31 @@
+import { useEffect, useState } from "react";
 import { PanelSectionRow } from "@decky/ui";
+import { getLaunchOption } from "../api/lsfgApi";
 
 export function UsageInstructions() {
+  const [launchOption, setLaunchOption] = useState("~/lsfg %command%");
+  const [launchExplanation, setLaunchExplanation] = useState(
+    "The LSFG wrapper configures frame generation before launching the game."
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    getLaunchOption()
+      .then((result) => {
+        if (!active) return;
+        if (result.launch_option) setLaunchOption(result.launch_option);
+        if (result.explanation) setLaunchExplanation(result.explanation);
+      })
+      .catch(() => {
+        // Keep the standard launch option visible if the backend is unavailable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <>
       <PanelSectionRow>
@@ -47,7 +72,20 @@ export function UsageInstructions() {
         textAlign: "center"
           }}
         >
-          <strong>~/lsfg %command%</strong>
+          <strong>{launchOption}</strong>
+        </div>
+      </PanelSectionRow>
+
+      <PanelSectionRow>
+        <div
+          style={{
+            fontSize: "11px",
+            lineHeight: "1.3",
+            opacity: "0.7",
+            marginTop: "4px"
+          }}
+        >
+          {launchExplanation}
         </div>
       </PanelSectionRow>
 
@@ -60,7 +98,7 @@ export function UsageInstructions() {
             marginTop: "8px"
           }}
         >
-The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
+          The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
         </div>
       </PanelSectionRow>
     </>
