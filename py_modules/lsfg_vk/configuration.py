@@ -164,8 +164,14 @@ class ConfigurationService(BaseService):
         device_env = ARMADA_DEVICE_ENV.as_posix()
         game_launch = ARMADA_GAME_LAUNCH.as_posix()
         return [
-            f'if [ -f "{device_env}" ] && [ -x "{game_launch}" ]; then',
-            f'    exec "{game_launch}" "$@"',
+            f'armada_game_launch="{game_launch}"',
+            'for argument in "$@"; do',
+            '    if [ "$argument" = "$armada_game_launch" ]; then',
+            '        exec "$@"',
+            "    fi",
+            "done",
+            f'if [ -f "{device_env}" ] && [ -x "$armada_game_launch" ]; then',
+            '    exec "$armada_game_launch" "$@"',
             "fi",
             'exec "$@"',
         ]
