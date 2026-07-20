@@ -20,11 +20,12 @@ export function SmartClipboardButton() {
   }, [showSuccess]);
 
   const getLaunchOptionText = async (): Promise<string> => {
-    const result = await getLaunchOption();
-    if (!result.launch_option) {
-      throw new Error("Launch option is unavailable");
+    try {
+      const result = await getLaunchOption();
+      return result.launch_option || "~/lsfg %command%";
+    } catch (error) {
+      return "~/lsfg %command%";
     }
-    return result.launch_option;
   };
 
   const copyToClipboard = async () => {
