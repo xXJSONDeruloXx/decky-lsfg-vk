@@ -15,7 +15,7 @@ from typing import Dict, Any
 from .base_service import BaseService
 from .constants import (
     LIB_FILENAME, JSON_FILENAME, ZIP_FILENAME, BIN_DIR,
-    SO_EXT, JSON_EXT, ARM_LIB_FILENAME
+    SO_EXT, JSON_EXT, ARM_LIB_FILENAME, ARMADA_DEVICE_ENV
 )
 from .config_schema import ConfigurationManager
 from .types import InstallationResponse, UninstallationResponse, InstallationCheckResponse
@@ -53,7 +53,7 @@ class InstallationService(BaseService):
             if self._is_arm_architecture():
                 self.log.info("Detected ARM architecture, using ARM binary")
                 arm_so_path = plugin_dir / BIN_DIR / ARM_LIB_FILENAME
-                shutil.copy2(arm_so_path, self.lib_file)
+                self._copy_plugin_file(arm_so_path, self.lib_file)
                 self.log.info(f"Overwrote with ARM binary: {self.lib_file}")
             
             self._create_config_file()
@@ -78,7 +78,35 @@ class InstallationService(BaseService):
         Returns:
             True if running on ARM (aarch64), False otherwise
         """
-        return platform.machine().lower() == 'aarch64'
+        if platform.machine().lower() in ('aarch64', 'arm64'):
+            return True
+
+        # Decky runs through FEX on Armada, so Python reports x86_64 even
+        # though the host is AArch64. Armada exposes this native helper only
+        # on its ARM image, including inside Decky's FEX rootfs.
+        if ARMADA_DEVICE_ENV.is_file():
+            self.log.info("Detected native AArch64 Armada host through device-env")
+            return True
+
+        # Fall back to the native PID 1 ELF header. e_machine 183 is AArch64.
+        try:
+            with Path('/proc/1/exe').open('rb') as host_executable:
+                elf_header = host_executable.read(20)
+            if elf_header[:4] == b'\x7fELF' and elf_header[5] in (1, 2):
+                byte_order = 'little' if elf_header[5] == 1 else 'big'
+                if int.from_bytes(elf_header[18:20], byte_order) == 183:
+                    self.log.info("Detected native AArch64 host through PID 1")
+                    return True
+        except OSError as e:
+            self.log.debug(f"Could not inspect native host architecture: {e}")
+
+        return False
+
+    @staticmethod
+    def _copy_plugin_file(src_file: Path, dst_file: Path) -> None:
+        """Copy plugin content without preserving FEX-incompatible metadata."""
+        shutil.copyfile(src_file, dst_file)
+        dst_file.chmod(0o644)
     
     def _extract_and_install_files(self, zip_path: Path) -> None:
         """Extract zip file and install files to appropriate locations
@@ -117,7 +145,7 @@ class InstallationService(BaseService):
                             if file_path.suffix == JSON_EXT and file == JSON_FILENAME:
                                 self._copy_and_fix_json_file(src_file, dst_file)
                             else:
-                                shutil.copy2(src_file, dst_file)
+                                self._copy_plugin_file(src_file, dst_file)
                             
                             self.log.info(f"Copied {file} to {dst_file}")
     
@@ -147,7 +175,7 @@ class InstallationService(BaseService):
         except (json.JSONDecodeError, KeyError, OSError) as e:
             self.log.error(f"Error fixing JSON file {src_file}: {e}")
             # Fallback to simple copy if JSON modification fails
-            shutil.copy2(src_file, dst_file)
+            self._copy_plugin_file(src_file, dst_file)
     
     def _create_config_file(self) -> None:
         """Create or update the TOML config file in ~/.config/lsfg-vk with default configuration and detected DLL path

@@ -8,6 +8,7 @@ from typing import Dict, Any
 from .base_service import BaseService
 from .config_schema import ConfigurationManager, CONFIG_SCHEMA, ProfileData, DEFAULT_PROFILE_NAME
 from .config_schema_generated import ConfigurationData, get_script_generation_logic
+from .constants import ARMADA_DEVICE_ENV, ARMADA_GAME_LAUNCH
 from .types import ConfigurationResponse, ProfilesResponse, ProfileResponse
 
 
@@ -123,10 +124,8 @@ class ConfigurationService(BaseService):
         generate_script_lines = get_script_generation_logic()
         lines.extend(generate_script_lines(config))
         
-        lines.extend([
-            "export LSFG_PROCESS=decky-lsfg-vk",
-            'exec "$@"'
-        ])
+        lines.append("export LSFG_PROCESS=decky-lsfg-vk")
+        lines.extend(self._generate_game_launch_lines())
         
         return "\n".join(lines) + "\n"
     
@@ -154,12 +153,28 @@ class ConfigurationService(BaseService):
         generate_script_lines = get_script_generation_logic()
         lines.extend(generate_script_lines(merged_config))
         
-        lines.extend([
-            f"export LSFG_PROCESS={current_profile}",
-            'exec "$@"'
-        ])
+        lines.append(f"export LSFG_PROCESS={current_profile}")
+        lines.extend(self._generate_game_launch_lines())
         
         return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _generate_game_launch_lines() -> list[str]:
+        """Generate a portable exec block with Armada's host wrapper."""
+        device_env = ARMADA_DEVICE_ENV.as_posix()
+        game_launch = ARMADA_GAME_LAUNCH.as_posix()
+        return [
+            f'armada_game_launch="{game_launch}"',
+            'for argument in "$@"; do',
+            '    if [ "$argument" = "$armada_game_launch" ]; then',
+            '        exec "$@"',
+            "    fi",
+            "done",
+            f'if [ -f "{device_env}" ] && [ -x "$armada_game_launch" ]; then',
+            '    exec "$armada_game_launch" "$@"',
+            "fi",
+            'exec "$@"',
+        ]
     
     def _get_profile_data(self) -> ProfileData:
         """Get current profile data from config file"""
