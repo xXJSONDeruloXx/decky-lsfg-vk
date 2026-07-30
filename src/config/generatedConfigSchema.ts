@@ -9,12 +9,14 @@ export enum ConfigFieldType {
 
 // Field name constants for type-safe access
 export const DLL = "dll" as const;
-export const NO_FP16 = "no_fp16" as const;
+export const ALLOW_FP16 = "allow_fp16" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
-export const HDR_MODE = "hdr_mode" as const;
-export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
+export const PACING = "pacing" as const;
+export const ACTIVE_IN = "active_in" as const;
+export const GPU = "gpu" as const;
+export const DISABLE_LSFGVK = "disable_lsfgvk" as const;
 export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
 export const ENABLE_WOW64 = "enable_wow64" as const;
 export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
@@ -37,44 +39,56 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   dll: {
     name: "dll",
     fieldType: ConfigFieldType.STRING,
-    default: "/games/Lossless Scaling/Lossless.dll",
-    description: "specify where Lossless.dll is stored"
+    default: "",
+    description: "optional full path to Lossless.dll; leave blank for automatic discovery"
   },
-  no_fp16: {
-    name: "no_fp16",
+  allow_fp16: {
+    name: "allow_fp16",
     fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "force-disable fp16 (use on older nvidia cards)"
+    default: true,
+    description: "allow FP16 acceleration (disable on older NVIDIA GPUs)"
   },
   multiplier: {
     name: "multiplier",
     fieldType: ConfigFieldType.INTEGER,
-    default: 1,
-    description: "change the fps multiplier"
+    default: 2,
+    description: "frame generation multiplier"
   },
   flow_scale: {
     name: "flow_scale",
     fieldType: ConfigFieldType.FLOAT,
-    default: 0.8,
-    description: "change the flow scale"
+    default: 0.9,
+    description: "motion-estimation resolution scale"
   },
   performance_mode: {
     name: "performance_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "use a lighter model for FG (recommended for most games)"
+    description: "use the lighter frame-generation model"
   },
-  hdr_mode: {
-    name: "hdr_mode",
+  pacing: {
+    name: "pacing",
+    fieldType: ConfigFieldType.STRING,
+    default: "none",
+    description: "frame pacing mode (currently only none is supported)"
+  },
+  active_in: {
+    name: "active_in",
+    fieldType: ConfigFieldType.STRING,
+    default: "",
+    description: "optional executable or process names, separated by commas"
+  },
+  gpu: {
+    name: "gpu",
+    fieldType: ConfigFieldType.STRING,
+    default: "",
+    description: "optional GPU name, vendor:device ID, or PCI bus ID"
+  },
+  disable_lsfgvk: {
+    name: "disable_lsfgvk",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "enable HDR mode (only for games that support HDR)"
-  },
-  experimental_present_mode: {
-    name: "experimental_present_mode",
-    fieldType: ConfigFieldType.STRING,
-    default: "fifo",
-    description: "override Vulkan present mode (may cause crashes)"
+    description: "disable lsfg-vk on the next game launch"
   },
   dxvk_frame_rate: {
     name: "dxvk_frame_rate",
@@ -86,55 +100,57 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "enable_wow64",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
+    description: "enable PROTON_USE_WOW64=1 for 32-bit games"
   },
   disable_steamdeck_mode: {
     name: "disable_steamdeck_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "disable Steam Deck mode (unlocks hidden settings in some games)"
+    description: "disable Steam Deck mode"
   },
   mangohud_workaround: {
     name: "mangohud_workaround",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+    description: "enable a transparent MangoHud overlay workaround"
   },
   disable_vkbasalt: {
     name: "disable_vkbasalt",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+    description: "disable vkBasalt for games where it conflicts with lsfg-vk"
   },
   force_enable_vkbasalt: {
     name: "force_enable_vkbasalt",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Force vkBasalt to engage to fix framepacing issues in gamemode"
+    description: "force-enable vkBasalt for games that require it"
   },
   enable_wsi: {
     name: "enable_wsi",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)"
+    description: "enable the Gamescope WSI layer"
   },
   enable_zink: {
     name: "enable_zink",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games"
+    description: "enable Zink for OpenGL games"
   },
 };
 
 // Type-safe configuration data structure
 export interface ConfigurationData {
   dll: string;
-  no_fp16: boolean;
+  allow_fp16: boolean;
   multiplier: number;
   flow_scale: number;
   performance_mode: boolean;
-  hdr_mode: boolean;
-  experimental_present_mode: string;
+  pacing: string;
+  active_in: string;
+  gpu: string;
+  disable_lsfgvk: boolean;
   dxvk_frame_rate: number;
   enable_wow64: boolean;
   disable_steamdeck_mode: boolean;
@@ -152,13 +168,15 @@ export function getFieldNames(): string[] {
 
 export function getDefaults(): ConfigurationData {
   return {
-    dll: "/games/Lossless Scaling/Lossless.dll",
-    no_fp16: false,
-    multiplier: 1,
-    flow_scale: 0.8,
+    dll: "",
+    allow_fp16: true,
+    multiplier: 2,
+    flow_scale: 0.9,
     performance_mode: false,
-    hdr_mode: false,
-    experimental_present_mode: "fifo",
+    pacing: "none",
+    active_in: "",
+    gpu: "",
+    disable_lsfgvk: false,
     dxvk_frame_rate: 0,
     enable_wow64: false,
     disable_steamdeck_mode: false,
@@ -173,12 +191,14 @@ export function getDefaults(): ConfigurationData {
 export function getFieldTypes(): Record<string, ConfigFieldType> {
   return {
     dll: ConfigFieldType.STRING,
-    no_fp16: ConfigFieldType.BOOLEAN,
+    allow_fp16: ConfigFieldType.BOOLEAN,
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
-    hdr_mode: ConfigFieldType.BOOLEAN,
-    experimental_present_mode: ConfigFieldType.STRING,
+    pacing: ConfigFieldType.STRING,
+    active_in: ConfigFieldType.STRING,
+    gpu: ConfigFieldType.STRING,
+    disable_lsfgvk: ConfigFieldType.BOOLEAN,
     dxvk_frame_rate: ConfigFieldType.INTEGER,
     enable_wow64: ConfigFieldType.BOOLEAN,
     disable_steamdeck_mode: ConfigFieldType.BOOLEAN,

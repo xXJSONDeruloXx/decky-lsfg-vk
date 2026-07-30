@@ -14,12 +14,14 @@ from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 
 # Field name constants for type-safe access
 DLL = "dll"
-NO_FP16 = "no_fp16"
+ALLOW_FP16 = "allow_fp16"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
 PERFORMANCE_MODE = "performance_mode"
-HDR_MODE = "hdr_mode"
-EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode"
+PACING = "pacing"
+ACTIVE_IN = "active_in"
+GPU = "gpu"
+DISABLE_LSFGVK = "disable_lsfgvk"
 DXVK_FRAME_RATE = "dxvk_frame_rate"
 ENABLE_WOW64 = "enable_wow64"
 DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode"
@@ -33,12 +35,14 @@ ENABLE_ZINK = "enable_zink"
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure - AUTO-GENERATED"""
     dll: str
-    no_fp16: bool
+    allow_fp16: bool
     multiplier: int
     flow_scale: float
     performance_mode: bool
-    hdr_mode: bool
-    experimental_present_mode: str
+    pacing: str
+    active_in: str
+    gpu: str
+    disable_lsfgvk: bool
     dxvk_frame_rate: int
     enable_wow64: bool
     disable_steamdeck_mode: bool
@@ -64,6 +68,8 @@ def get_script_parsing_logic():
                 value = value.strip()
 
                 # Auto-generated parsing logic:
+                if key == "DISABLE_LSFGVK":
+                        script_values["disable_lsfgvk"] = value == "1"
                 if key == "DXVK_FRAME_RATE":
                         try:
                             script_values["dxvk_frame_rate"] = int(value)
@@ -81,8 +87,6 @@ def get_script_parsing_logic():
                         script_values["force_enable_vkbasalt"] = value == "1"
                 if key == "ENABLE_GAMESCOPE_WSI":
                         script_values["enable_wsi"] = value != "0"
-                if key == "DXVK_HDR":
-                        script_values["enable_wsi"] = value != "0"
                 if key == "__GLX_VENDOR_LIBRARY_NAME" and value == "mesa":
                         script_values["enable_zink"] = True
                 if key == "MESA_LOADER_DRIVER_OVERRIDE" and value == "zink":
@@ -98,6 +102,8 @@ def get_script_generation_logic():
     """Return the script generation logic as a callable"""
     def generate_script_lines(config):
         lines = []
+        if config.get("disable_lsfgvk", False):
+            lines.append("export DISABLE_LSFGVK=1")
         dxvk_frame_rate = config.get("dxvk_frame_rate", 0)
         if dxvk_frame_rate > 0:
             lines.append(f"export DXVK_FRAME_RATE={dxvk_frame_rate}")
@@ -113,7 +119,6 @@ def get_script_generation_logic():
             lines.append("export ENABLE_VKBASALT=1")
         if not config.get("enable_wsi", False):
             lines.append("export ENABLE_GAMESCOPE_WSI=0")
-            lines.append("export DXVK_HDR=0")
         if config.get("enable_zink", False):
             lines.append("export __GLX_VENDOR_LIBRARY_NAME=mesa")
             lines.append("export MESA_LOADER_DRIVER_OVERRIDE=zink")
@@ -122,4 +127,4 @@ def get_script_generation_logic():
     return generate_script_lines
 
 
-ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+ALL_FIELDS = ['dll', 'allow_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing', 'active_in', 'gpu', 'disable_lsfgvk', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']

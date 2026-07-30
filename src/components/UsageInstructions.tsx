@@ -60,7 +60,7 @@ export function UsageInstructions() {
             marginTop: "8px"
           }}
         >
-The configuration is stored in ~/.config/lsfg-vk/conf.toml and hot-reloads while games are running.
+The configuration is stored in ~/.config/lsfg-vk/conf.toml. Multiplier, flow scale, and performance mode hot-reload while games are running.
         </div>
       </PanelSectionRow>
     </>

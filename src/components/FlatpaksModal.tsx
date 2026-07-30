@@ -175,7 +175,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                 <PanelSectionRow>
                   <Field 
                     label="Runtime 23.08"
-                    description={extensionStatus.installed_23_08 ? "Installed" : "Not installed"}
+                    description={extensionStatus.installed_23_08 ? "Installed (manual)" : "Manual installation only; use runtime 24.08 or 25.08 when possible"}
                     icon={extensionStatus.installed_23_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
                   >
                     <ButtonItem
@@ -194,7 +194,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                           action();
                         }
                       }}
-                      disabled={operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08'}
+                      disabled={!extensionStatus.installed_23_08 || operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08'}
                     >
                       {operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08' ? (
                         <Spinner />

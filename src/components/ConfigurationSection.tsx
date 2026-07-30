@@ -1,10 +1,10 @@
-import { PanelSectionRow, ToggleField, SliderField, ButtonItem } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, ButtonItem, TextField } from "@decky/ui";
 import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
-  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
-  EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
+  ACTIVE_IN, ALLOW_FP16, DISABLE_LSFGVK, DLL, FLOW_SCALE, GPU,
+  PERFORMANCE_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
 
@@ -114,6 +114,15 @@ export function ConfigurationSection({
       {!configCollapsed && (
         <>
           <PanelSectionRow>
+            <TextField
+              label="Lossless.dll Path"
+              description="Optional full path to Lossless.dll. Leave blank for lsfg-vk automatic discovery."
+              value={config.dll}
+              onChange={(event) => onConfigChange(DLL, event.currentTarget.value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
             <SliderField
               label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`}
               description="Lowers internal motion estimation resolution, improving performance slightly"
@@ -122,6 +131,42 @@ export function ConfigurationSection({
               max={1.0}
               step={0.01}
               onChange={(value) => onConfigChange(FLOW_SCALE, value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Disable Frame Generation"
+              description="Disables lsfg-vk on the next game launch. Requires a game restart."
+              checked={config.disable_lsfgvk}
+              onChange={(value) => onConfigChange(DISABLE_LSFGVK, value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Allow FP16"
+              description="Improves performance on AMD; disable for older NVIDIA GPUs."
+              checked={config.allow_fp16}
+              onChange={(value) => onConfigChange(ALLOW_FP16, value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <TextField
+              label="GPU"
+              description="Optional GPU name, vendor:device ID, or PCI bus ID."
+              value={config.gpu}
+              onChange={(event) => onConfigChange(GPU, event.currentTarget.value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <TextField
+              label="Active In"
+              description="Executable/process names separated by commas. When set, lsfg-vk matches profiles automatically."
+              value={config.active_in}
+              onChange={(event) => onConfigChange(ACTIVE_IN, event.currentTarget.value)}
             />
           </PanelSectionRow>
 
@@ -139,15 +184,6 @@ export function ConfigurationSection({
 
           <PanelSectionRow>
             <ToggleField
-              label={`Present Mode (${(config.experimental_present_mode || "fifo") === "fifo" ? "FIFO - VSync" : "Mailbox"})`}
-              description="Toggle between FIFO - VSync (default) and Mailbox presentation modes for better performance or compatibility"
-              checked={(config.experimental_present_mode || "fifo") === "fifo"}
-              onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ToggleField
               label="Performance Mode"
               description="Uses a lighter model for FG (Recommended for most games)"
               checked={config.performance_mode}
@@ -155,14 +191,6 @@ export function ConfigurationSection({
             />
           </PanelSectionRow>
 
-          <PanelSectionRow>
-            <ToggleField
-              label="HDR Mode"
-              description="Enables HDR mode (only for games that support HDR)"
-              checked={config.hdr_mode}
-              onChange={(value) => onConfigChange(HDR_MODE, value)}
-            />
-          </PanelSectionRow>
         </>
       )}
 

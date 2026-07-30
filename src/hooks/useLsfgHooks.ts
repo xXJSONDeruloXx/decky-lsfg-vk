@@ -18,7 +18,9 @@ export function useInstallationStatus() {
       const status = await checkLsfgVkInstalled();
       setIsInstalled(status.installed);
       if (status.installed) {
-        setInstallationStatus("lsfg-vk Installed");
+        setInstallationStatus("lsfg-vk v2 Installed");
+      } else if (status.legacy_installed) {
+        setInstallationStatus("lsfg-vk v1 detected — update available");
       } else {
         setInstallationStatus("lsfg-vk Not Installed");
       }

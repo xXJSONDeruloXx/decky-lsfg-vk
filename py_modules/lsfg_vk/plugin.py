@@ -433,43 +433,16 @@ class Plugin:
         Called when the plugin is uninstalled.
         
         This method is called by Decky Loader when the plugin is being uninstalled.
-        Performs cleanup of plugin files and flatpak extensions.
+        Removes plugin-owned layer files while leaving shared Flatpak extensions installed.
         """
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
         self.installation_service.cleanup_on_uninstall()
         
-        # Also clean up flatpak extensions if they are installed
-        try:
-            decky.logger.info("Checking for flatpak extensions to uninstall")
-            
-            extension_status = self.flatpak_service.get_extension_status()
-            
-            if extension_status.get("success"):
-                if extension_status.get("installed_23_08"):
-                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 23.08")
-                    result = self.flatpak_service.uninstall_extension("23.08")
-                    if result.get("success"):
-                        decky.logger.info("Successfully uninstalled flatpak runtime 23.08")
-                    else:
-                        decky.logger.warning(f"Failed to uninstall flatpak runtime 23.08: {result.get('error')}")
-                
-                if extension_status.get("installed_24_08"):
-                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 24.08")
-                    result = self.flatpak_service.uninstall_extension("24.08")
-                    if result.get("success"):
-                        decky.logger.info("Successfully uninstalled flatpak runtime 24.08")
-                    else:
-                        decky.logger.warning(f"Failed to uninstall flatpak runtime 24.08: {result.get('error')}")
-                        
-                decky.logger.info("Flatpak extension cleanup completed")
-            else:
-                decky.logger.info(f"Could not check flatpak status for cleanup: {extension_status.get('error')}")
-                
-        except Exception as e:
-            decky.logger.error(f"Error during flatpak cleanup: {e}")
-        
+        # Runtime extensions are shared by all Flatpak lsfg-vk installations.
+        # Do not remove them automatically: another application or plugin may use them.
+        decky.logger.info("Leaving shared Flatpak runtime extensions installed")
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
     async def _migration(self):

@@ -45,7 +45,7 @@ export function InstallationButton({
     return (
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <FaDownload />
-        <div>Install LSFG-VK</div>
+        <div>Install / Update LSFG-VK</div>
       </div>
     );
   };

@@ -37,6 +37,7 @@ class UninstallationResponse(BaseResponse):
 class InstallationCheckResponse(TypedDict):
     """Response for installation check"""
     installed: bool
+    legacy_installed: bool
     lib_exists: bool
     json_exists: bool
     script_exists: bool
@@ -64,7 +65,7 @@ class ConfigurationResponse(BaseResponse):
 
 class ProfileConfig(TypedDict):
     """Configuration for a single profile"""
-    exe: str
+    name: str
     config: ConfigurationData
 
 

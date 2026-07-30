@@ -1,17 +1,10 @@
-"""
-Shared configuration schema constants.
+"""Canonical Decky configuration schema for lsfg-vk v2."""
 
-This file contains the canonical configuration schema that should be used
-by both Python and TypeScript code. Any changes to the configuration
-structure should be made here first.
-"""
-
-from typing import Dict, Any, Union
+from typing import Dict, Union
 from enum import Enum
 
 
 class ConfigFieldType(str, Enum):
-    """Configuration field types - must match TypeScript enum"""
     BOOLEAN = "boolean"
     INTEGER = "integer"
     FLOAT = "float"
@@ -22,141 +15,132 @@ CONFIG_SCHEMA_DEF = {
     "dll": {
         "name": "dll",
         "fieldType": ConfigFieldType.STRING,
-        "default": "/games/Lossless Scaling/Lossless.dll",
-        "description": "specify where Lossless.dll is stored",
-        "location": "toml"
+        "default": "",
+        "description": "optional full path to Lossless.dll; leave blank for automatic discovery",
+        "location": "global",
     },
-    
-    "no_fp16": {
-        "name": "no_fp16",
+    "allow_fp16": {
+        "name": "allow_fp16",
         "fieldType": ConfigFieldType.BOOLEAN,
-        "default": False,
-        "description": "force-disable fp16 (use on older nvidia cards)",
-        "location": "toml"
+        "default": True,
+        "description": "allow FP16 acceleration (disable on older NVIDIA GPUs)",
+        "location": "global",
     },
-    
     "multiplier": {
         "name": "multiplier",
         "fieldType": ConfigFieldType.INTEGER,
-        "default": 1,
-        "description": "change the fps multiplier",
-        "location": "toml"
+        "default": 2,
+        "description": "frame generation multiplier",
+        "location": "profile",
     },
-    
     "flow_scale": {
         "name": "flow_scale",
         "fieldType": ConfigFieldType.FLOAT,
-        "default": 0.8,
-        "description": "change the flow scale",
-        "location": "toml"
+        "default": 0.9,
+        "description": "motion-estimation resolution scale",
+        "location": "profile",
     },
-    
     "performance_mode": {
         "name": "performance_mode",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "use a lighter model for FG (recommended for most games)",
-        "location": "toml"
+        "description": "use the lighter frame-generation model",
+        "location": "profile",
     },
-    
-    "hdr_mode": {
-        "name": "hdr_mode",
+    "pacing": {
+        "name": "pacing",
+        "fieldType": ConfigFieldType.STRING,
+        "default": "none",
+        "description": "frame pacing mode (currently only none is supported)",
+        "location": "profile",
+    },
+    "active_in": {
+        "name": "active_in",
+        "fieldType": ConfigFieldType.STRING,
+        "default": "",
+        "description": "optional executable or process names, separated by commas",
+        "location": "profile",
+    },
+    "gpu": {
+        "name": "gpu",
+        "fieldType": ConfigFieldType.STRING,
+        "default": "",
+        "description": "optional GPU name, vendor:device ID, or PCI bus ID",
+        "location": "profile",
+    },
+    "disable_lsfgvk": {
+        "name": "disable_lsfgvk",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "enable HDR mode (only for games that support HDR)",
-        "location": "toml"
+        "description": "disable lsfg-vk on the next game launch",
+        "location": "script",
     },
-    
-    "experimental_present_mode": {
-        "name": "experimental_present_mode",
-        "fieldType": ConfigFieldType.STRING,
-        "default": "fifo",
-        "description": "override Vulkan present mode (may cause crashes)",
-        "location": "toml"
-    },
-    
     "dxvk_frame_rate": {
         "name": "dxvk_frame_rate",
         "fieldType": ConfigFieldType.INTEGER,
         "default": 0,
         "description": "base framerate cap for DirectX games before frame multiplier",
-        "location": "script"
+        "location": "script",
     },
-    
     "enable_wow64": {
         "name": "enable_wow64",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)",
-        "location": "script"
+        "description": "enable PROTON_USE_WOW64=1 for 32-bit games",
+        "location": "script",
     },
-    
     "disable_steamdeck_mode": {
         "name": "disable_steamdeck_mode",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "disable Steam Deck mode (unlocks hidden settings in some games)",
-        "location": "script"
+        "description": "disable Steam Deck mode",
+        "location": "script",
     },
-    
     "mangohud_workaround": {
         "name": "mangohud_workaround",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode",
-        "location": "script"
+        "description": "enable a transparent MangoHud overlay workaround",
+        "location": "script",
     },
-    
     "disable_vkbasalt": {
         "name": "disable_vkbasalt",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)",
-        "location": "script"
+        "description": "disable vkBasalt for games where it conflicts with lsfg-vk",
+        "location": "script",
     },
-    
     "force_enable_vkbasalt": {
         "name": "force_enable_vkbasalt",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "Force vkBasalt to engage to fix framepacing issues in gamemode",
-        "location": "script"
+        "description": "force-enable vkBasalt for games that require it",
+        "location": "script",
     },
-    
     "enable_wsi": {
         "name": "enable_wsi",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)",
-        "location": "script"
+        "description": "enable the Gamescope WSI layer",
+        "location": "script",
     },
-    
     "enable_zink": {
         "name": "enable_zink",
         "fieldType": ConfigFieldType.BOOLEAN,
         "default": False,
-        "description": "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games",
-        "location": "script"
-    }
+        "description": "enable Zink for OpenGL games",
+        "location": "script",
+    },
 }
 
 
 def get_field_names() -> list[str]:
-    """Get ordered list of configuration field names"""
     return list(CONFIG_SCHEMA_DEF.keys())
 
 
 def get_defaults() -> Dict[str, Union[bool, int, float, str]]:
-    """Get default configuration values"""
-    return {
-        field_name: field_def["default"]
-        for field_name, field_def in CONFIG_SCHEMA_DEF.items()
-    }
+    return {name: definition["default"] for name, definition in CONFIG_SCHEMA_DEF.items()}
 
 
 def get_field_types() -> Dict[str, str]:
-    """Get field type mapping"""
-    return {
-        field_name: field_def["fieldType"].value
-        for field_name, field_def in CONFIG_SCHEMA_DEF.items()
-    }
+    return {name: definition["fieldType"].value for name, definition in CONFIG_SCHEMA_DEF.items()}

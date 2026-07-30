@@ -5,12 +5,13 @@ Base service class with common functionality.
 import logging
 import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Optional, TypeVar, Dict
 
 import decky
 
-from .constants import LOCAL_LIB, LOCAL_SHARE_BASE, VULKAN_LAYER_DIR, SCRIPT_NAME, CONFIG_DIR, CONFIG_FILENAME
+from .constants import LOCAL_LIB, VULKAN_LAYER_DIR, SCRIPT_NAME, CONFIG_DIR, CONFIG_FILENAME
 
 ResponseType = TypeVar('ResponseType', bound=Dict[str, Any])
 
@@ -79,16 +80,24 @@ class BaseService:
         Raises:
             OSError: If write fails
         """
+        temp_path = None
         try:
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(content)
-                f.flush()
-                os.fsync(f.fileno())
-            
-            path.chmod(mode)
-            self.log.info(f"Wrote to {path}")
-            
+            with tempfile.NamedTemporaryFile(
+                mode='w', encoding='utf-8', dir=path.parent,
+                prefix=f'.{path.name}.', delete=False,
+            ) as temp_file:
+                temp_path = Path(temp_file.name)
+                temp_file.write(content)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())
+
+            temp_path.chmod(mode)
+            os.replace(temp_path, path)
+            self.log.info(f"Atomically wrote {path}")
+
         except (OSError, IOError, PermissionError) as e:
+            if temp_path is not None:
+                temp_path.unlink(missing_ok=True)
             self.log.error(f"Failed to write to {path}: {e}")
             raise
 

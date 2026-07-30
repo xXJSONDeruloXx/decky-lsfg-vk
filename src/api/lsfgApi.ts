@@ -11,6 +11,7 @@ export interface InstallationResult {
 
 export interface InstallationStatus {
   installed: boolean;
+  legacy_installed?: boolean;
   lib_exists: boolean;
   json_exists: boolean;
   script_exists: boolean;

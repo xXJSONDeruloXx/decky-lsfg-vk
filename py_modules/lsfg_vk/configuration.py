@@ -3,7 +3,8 @@ Configuration service for TOML-based lsfg configuration management.
 """
 
 from pathlib import Path
-from typing import Dict, Any
+import shlex
+from typing import Dict, Any, cast
 
 from .base_service import BaseService
 from .config_schema import ConfigurationManager, CONFIG_SCHEMA, ProfileData, DEFAULT_PROFILE_NAME
@@ -14,6 +15,14 @@ from .types import ConfigurationResponse, ProfilesResponse, ProfileResponse
 
 class ConfigurationService(BaseService):
     """Service for managing TOML-based lsfg configuration"""
+
+    @staticmethod
+    def _profile_selection_lines(profile_name: str, config: ConfigurationData) -> list[str]:
+        """Use native matching when a selected profile declares active_in."""
+        active_in = str(config.get("active_in", "")).strip()
+        if active_in:
+            return ["# active_in is configured; lsfg-vk will select a matching profile automatically."]
+        return [f"export LSFGVK_PROFILE={shlex.quote(profile_name)}"]
     
     def get_config(self) -> ConfigurationResponse:
         """Read current TOML configuration merged with launch script environment variables
@@ -124,7 +133,10 @@ class ConfigurationService(BaseService):
         generate_script_lines = get_script_generation_logic()
         lines.extend(generate_script_lines(config))
         
-        lines.append("export LSFG_PROCESS=decky-lsfg-vk")
+        lines.extend([
+            f"export LSFGVK_CONFIG={shlex.quote(str(self.config_file_path))}",
+            *self._profile_selection_lines(DEFAULT_PROFILE_NAME, config),
+        ])
         lines.extend(self._generate_game_launch_lines())
         
         return "\n".join(lines) + "\n"
@@ -153,7 +165,10 @@ class ConfigurationService(BaseService):
         generate_script_lines = get_script_generation_logic()
         lines.extend(generate_script_lines(merged_config))
         
-        lines.append(f"export LSFG_PROCESS={current_profile}")
+        lines.extend([
+            f"export LSFGVK_CONFIG={shlex.quote(str(self.config_file_path))}",
+            *self._profile_selection_lines(current_profile, cast(ConfigurationData, merged_config)),
+        ])
         lines.extend(self._generate_game_launch_lines())
         
         return "\n".join(lines) + "\n"
@@ -187,12 +202,21 @@ class ConfigurationService(BaseService):
                 profiles={DEFAULT_PROFILE_NAME: default_config},
                 global_config={
                     "dll": default_config.get("dll", ""),
-                    "no_fp16": False
+                    "allow_fp16": default_config.get("allow_fp16", True)
                 }
             )
         
         content = self.config_file_path.read_text(encoding='utf-8')
-        return ConfigurationManager.parse_toml_content_multi_profile(content)
+        profile_data = ConfigurationManager.parse_toml_content_multi_profile(content)
+        if self.lsfg_script_path.exists():
+            script_values = ConfigurationManager.parse_script_content(
+                self.lsfg_script_path.read_text(encoding='utf-8')
+            )
+            current_profile = profile_data["current_profile"]
+            profile_data["profiles"][current_profile] = ConfigurationManager.merge_config_with_script(
+                profile_data["profiles"][current_profile], script_values
+            )
+        return profile_data
     
     def _save_profile_data(self, profile_data: ProfileData) -> None:
         """Save profile data to config file"""
@@ -393,7 +417,7 @@ class ConfigurationService(BaseService):
             profile_data["profiles"][profile_name] = config
             
             # Update global config fields if they're in the config
-            for field_name in ["dll", "no_fp16"]:
+            for field_name in ["dll", "allow_fp16"]:
                 if field_name in config:
                     profile_data["global_config"][field_name] = config[field_name]
             

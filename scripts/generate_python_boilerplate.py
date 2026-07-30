@@ -34,6 +34,7 @@ def get_env_var_name(field_name: str) -> str:
         "enable_wow64": "PROTON_USE_WOW64", 
         "disable_steamdeck_mode": "SteamDeck",
         "mangohud_workaround": "MANGOHUD",
+        "disable_lsfgvk": "DISABLE_LSFGVK",
         "disable_vkbasalt": "DISABLE_VKBASALT",
         "force_enable_vkbasalt": "ENABLE_VKBASALT",
         "enable_wsi": "ENABLE_GAMESCOPE_WSI",
@@ -76,10 +77,8 @@ def generate_script_parsing() -> str:
                 lines.append(f'                    elif key == "{env_var}":')
                 lines.append(f'                        script_values["{field_name}"] = value == "0"')
             elif field_name == "enable_wsi":
-                # Special case: ENABLE_GAMESCOPE_WSI=0 or DXVK_HDR=0 means enable_wsi=False
+                # ENABLE_GAMESCOPE_WSI=0 means enable_wsi=False.
                 lines.append(f'                    elif key == "{env_var}":')
-                lines.append(f'                        script_values["{field_name}"] = value != "0"')
-                lines.append(f'                    elif key == "DXVK_HDR":')
                 lines.append(f'                        script_values["{field_name}"] = value != "0"')
             elif field_name == "enable_zink":
                 # Special case: Zink uses multiple environment variables
@@ -131,10 +130,9 @@ def generate_script_generation() -> str:
                 lines.append(f'        if config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=0")')
             elif field_name == "enable_wsi":
-                # Special case: enable_wsi=False should export ENABLE_GAMESCOPE_WSI=0 and DXVK_HDR=0
+                # enable_wsi=False should export ENABLE_GAMESCOPE_WSI=0.
                 lines.append(f'        if not config.get("{field_name}", False):')
                 lines.append(f'            lines.append("export {env_var}=0")')
-                lines.append(f'            lines.append("export DXVK_HDR=0")')
             elif field_name == "enable_zink":
                 # Special case: enable_zink=True should export multiple Zink environment variables
                 lines.append(f'        if config.get("{field_name}", False):')

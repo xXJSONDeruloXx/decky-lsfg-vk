@@ -1,12 +1,12 @@
 {
   "name": "decky-lsfg-vk",
-  "version": "0.12.5",
+  "version": "0.13.0",
   "description": "Use Lossless Scaling on the Steam Deck using the lsfg-vk vulkan layer",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
     "watch": "rollup -c -w",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "python3 -m unittest discover -s tests -v"
   },
   "repository": {
     "type": "git",
@@ -45,29 +45,14 @@
   "remote_binary_bundling" : true,
   "remote_binary": [
     {
-      "name": "lsfg-vk_noui.zip",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/fp16-test-2/lsfg-vk_noui.zip",
-      "sha256hash": "a406b3730144c2011e2c2acd3cf44f3ec6c048ee86099bc9c3ac90aa1515e5ec"
+      "name": "lsfg-vk-layer-x86_64.tar.xz",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.1/lsfg-vk-layer-x86_64.tar.xz",
+      "sha256hash": "b96c60d838cd778797406bafc31e17a3698e8145248113c2bc41151b2823a6a0"
     },
     {
-      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
-      "url": "https://github.com/PancakeTAS/lsfg-vk/releases/download/v0.9.0/org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
-      "sha256hash": "8381d1eff0b0786af5a0e66955521eadec783866f73b9b1aa4664c952ed601a4"
-    },
-    {
-      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
-      "url": "https://github.com/PancakeTAS/lsfg-vk/releases/download/v0.9.0/org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
-      "sha256hash": "70ea6d9d2a8adad63b8e5c2c3d94a636764ad4d0266ce9f37cb9dc7943d8fc3a"
-    },
-    {
-      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
-      "url": "https://github.com/PancakeTAS/lsfg-vk/releases/download/v1.0.0/org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
-      "sha256hash": "0651bda96751ef0f1314a5179585926a0cd354476790ca2616662c39fe6fae54"
-    },
-    {
-      "name": "liblsfg-vk-arm64.so",
-      "url": "https://github.com/Janleyx/decky-lsfg-vk-for-Ayn-Odin-2/releases/download/arm64-layer-3e89e54/liblsfg-vk-arm64.so",
-      "sha256hash": "2e84f8d1a1dd0344474846f6252d6f948f72caaaeab3cd316c04254be05a9949"
+      "name": "lsfg-vk-layer-aarch64.tar.xz",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.1/lsfg-vk-layer-aarch64.tar.xz",
+      "sha256hash": "b1703042f50ff9470aa0b90953077949a9f144dcbd926f80fbb7e386e8393367"
     }
   ],
   "pnpm": {
