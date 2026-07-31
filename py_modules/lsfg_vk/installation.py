@@ -32,6 +32,7 @@ class InstallationService(BaseService):
         self.json_file = self.local_share_dir / JSON_FILENAME
         self.legacy_lib_file = self.local_lib_dir / LEGACY_LIB_FILENAME
         self.legacy_json_file = self.local_share_dir / LEGACY_JSON_FILENAME
+        self._config_recovery_backup: Path | None = None
 
     def install(self) -> InstallationResponse:
         try:
@@ -49,8 +50,11 @@ class InstallationService(BaseService):
             self._create_lsfg_launch_script(profile_data)
             self._remove_legacy_layer_files()
 
+            message = "lsfg-vk v2 installed successfully"
+            if self._config_recovery_backup is not None:
+                message += f"; unsupported config backed up to {self._config_recovery_backup.name}"
             self.log.info("lsfg-vk v2 installed successfully from %s", archive_name)
-            return self._success_response(InstallationResponse, "lsfg-vk v2 installed successfully")
+            return self._success_response(InstallationResponse, message)
         except (OSError, tarfile.TarError, shutil.Error) as error:
             self.log.error("Error installing lsfg-vk: %s", error)
             return self._error_response(InstallationResponse, str(error), message="")
@@ -136,13 +140,19 @@ class InstallationService(BaseService):
         dll_service = DllDetectionService(self.log)
         profile_data: ProfileData
         was_legacy = False
+        self._config_recovery_backup = None
         if self.config_file_path.exists():
             content = self.config_file_path.read_text(encoding="utf-8")
             was_legacy = ConfigurationManager.is_legacy_v1(content)
             try:
                 profile_data = ConfigurationManager.parse_toml_content_multi_profile(content)
             except (ValueError, KeyError, TypeError) as error:
-                self.log.warning("Could not parse existing config, using defaults: %s", error)
+                self._config_recovery_backup = self._backup_config(content, "unrecognized")
+                self.log.warning(
+                    "Could not parse existing config; saved it to %s and using defaults: %s",
+                    self._config_recovery_backup,
+                    error,
+                )
                 default = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
                 profile_data = ProfileData(
                     current_profile="decky-lsfg-vk",
@@ -172,12 +182,15 @@ class InstallationService(BaseService):
         )
         return profile_data
 
+    def _backup_config(self, content: str, label: str) -> Path:
+        backup_path = self.config_file_path.with_name(f"{self.config_file_path.name}.{label}.bak")
+        if not backup_path.exists():
+            self._write_file(backup_path, content, 0o644)
+            self.log.info("Backed up %s configuration to %s", label, backup_path)
+        return backup_path
+
     def _backup_legacy_config(self, content: str) -> None:
-        backup_path = self.config_file_path.with_name(f"{self.config_file_path.name}.v1.bak")
-        if backup_path.exists():
-            return
-        self._write_file(backup_path, content, 0o644)
-        self.log.info("Backed up v1 configuration to %s", backup_path)
+        self._backup_config(content, "v1")
 
     def _read_script_values(self) -> Dict[str, Any]:
         if not self.lsfg_launch_script_path.exists():

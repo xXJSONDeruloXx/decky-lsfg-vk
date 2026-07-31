@@ -51,6 +51,7 @@ The plugin provides several configuration options to optimize frame generation f
 - **Performance Mode**: Uses a lighter processing model
 - **Allow FP16**: Enable half-precision acceleration; disable it for older NVIDIA GPUs
 - **Active In**: Optionally match a profile to executable names, Wine executables, or process names
+- **Automatic Profile Matching**: Explicitly let lsfg-vk choose an `Active In` profile; otherwise the Decky-selected profile is always forced
 - **GPU**: Optionally select the GPU by name, vendor/device ID, or PCI bus ID
 - **Disable Frame Generation**: Disable the layer for the next launch without creating an invalid 1x profile
 
@@ -64,7 +65,7 @@ For per-game feedback and community support, please join the [decky-lsfg-vk Disc
 - Ensure you've added `~/lsfg %command%` to your game's launch options
 - Check that the Lossless Scaling DLL was detected correctly in the plugin
 - Try enabling Performance Mode if you're experiencing crashes
-- Ensure the selected profile has no `Active In` value when you want the launcher to force that profile
+- Disable **Automatic Profile Matching** to force the profile selected in Decky, even when it has an `Active In` value
 - Make sure your game is running in fullscreen mode for best results
 
 **Performance issues?**
@@ -84,7 +85,7 @@ The plugin:
   - **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
   - **Flow Scale**: Adjust motion estimation quality vs performance
   - **Performance Mode**: Use lighter processing for better performance
-  - **FP16, Active In, and GPU**: Use v2 profile parameters and native matching
+  - **FP16, Active In, GPU, and explicit automatic matching**: Use v2 profile parameters without ambiguous profile selection
   - **Launch workarounds**: Preserve existing DXVK, Gamescope, Zink, MangoHud, and vkBasalt launch options
 - **Hot-reloading**: Multiplier, flow scale, and performance-mode changes are reloaded while games run; other changes may require a swapchain recreation or restart
 - Easy uninstallation that removes all installed files when no longer needed

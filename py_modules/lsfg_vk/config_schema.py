@@ -259,9 +259,13 @@ class ConfigurationManager:
         if normalized in profile_data["profiles"]:
             raise ValueError(f"Profile '{normalized}' already exists")
         source = source_profile if source_profile in profile_data["profiles"] else profile_data["current_profile"]
+        new_profile = dict(profile_data["profiles"][source])
+        # A cloned profile may inherit Active In values that collide with its source.
+        # Force the newly selected profile until the user explicitly enables native matching.
+        new_profile["use_native_matching"] = False
         return ProfileData(
             current_profile=profile_data["current_profile"],
-            profiles={**profile_data["profiles"], normalized: dict(profile_data["profiles"][source])},
+            profiles={**profile_data["profiles"], normalized: new_profile},
             global_config=dict(profile_data["global_config"]),
         )
 

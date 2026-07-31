@@ -73,13 +73,37 @@ class ConfigurationMigrationTests(unittest.TestCase):
         self.assertIn("LSFGVK_PROFILE=decky-lsfg-vk", script)
         self.assertNotIn("LSFG_PROCESS", script)
 
-    def test_active_in_uses_native_v2_tracking_instead_of_forcing_a_profile(self):
+    def test_active_in_does_not_implicitly_override_the_selected_profile(self):
         config = ConfigurationManager.get_defaults()
         config["active_in"] = "Game.exe, GameThread"
         self.assertEqual(
             ConfigurationService._profile_selection_lines("decky-lsfg-vk", config),
-            ["# active_in is configured; lsfg-vk will select a matching profile automatically."],
+            ["export LSFGVK_PROFILE=decky-lsfg-vk"],
         )
+
+        config["use_native_matching"] = True
+        self.assertEqual(
+            ConfigurationService._profile_selection_lines("decky-lsfg-vk", config),
+            ["# lsfg-vk will select a matching profile from Active In."],
+        )
+        self.assertEqual(
+            ConfigurationManager.parse_script_content("export DECKY_LSFGVK_AUTO_PROFILE=1\n"),
+            {"use_native_matching": True},
+        )
+
+    def test_cloned_profile_disables_native_matching_until_explicitly_enabled(self):
+        config = ConfigurationManager.get_defaults()
+        config["active_in"] = "Game.exe"
+        config["use_native_matching"] = True
+        profile_data = {
+            "current_profile": "decky-lsfg-vk",
+            "profiles": {"decky-lsfg-vk": config},
+            "global_config": {"dll": "", "allow_fp16": True},
+        }
+
+        cloned = ConfigurationManager.create_profile(profile_data, "Other")
+        self.assertEqual(cloned["profiles"]["Other"]["active_in"], "Game.exe")
+        self.assertFalse(cloned["profiles"]["Other"]["use_native_matching"])
 
 
 class InstallerInfrastructureTests(unittest.TestCase):
@@ -137,6 +161,36 @@ class InstallerInfrastructureTests(unittest.TestCase):
                 service._create_config_file()
             self.assertEqual(len(list(config_dir.glob("conf.toml.v1.bak*"))), 1)
 
+    def test_unrecognized_configuration_is_backed_up_before_reset(self):
+        from lsfg_vk.installation import InstallationService
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            config_dir = home / ".config" / "lsfg-vk"
+            config_dir.mkdir(parents=True)
+            config_path = config_dir / "conf.toml"
+            unsupported_config = "version = 3\n"
+            config_path.write_text(unsupported_config, encoding="utf-8")
+
+            service = InstallationService.__new__(InstallationService)
+            service.log = mock.Mock()
+            service.user_home = home
+            service.config_dir = config_dir
+            service.config_file_path = config_path
+            service.lsfg_script_path = home / "lsfg"
+            service.lsfg_launch_script_path = home / "lsfg"
+
+            with mock.patch("lsfg_vk.dll_detection.DllDetectionService") as detection_service:
+                detection_service.return_value.check_lossless_scaling_dll.return_value = {"detected": False}
+                service._create_config_file()
+
+            self.assertEqual(
+                (config_dir / "conf.toml.unrecognized.bak").read_text(encoding="utf-8"),
+                unsupported_config,
+            )
+            self.assertIn("version = 2", config_path.read_text(encoding="utf-8"))
+            self.assertEqual(service._config_recovery_backup, config_dir / "conf.toml.unrecognized.bak")
+
     def test_writes_replace_the_config_atomically(self):
         service = BaseService.__new__(BaseService)
         service.log = mock.Mock()
@@ -150,6 +204,71 @@ class InstallerInfrastructureTests(unittest.TestCase):
 
             self.assertEqual(target.read_text(encoding="utf-8"), "version = 2\n")
             replace.assert_called_once()
+
+
+class FlatpakMigrationTests(unittest.TestCase):
+    def test_v2_override_setup_and_removal_clean_legacy_overrides(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            config_dir = home / ".config" / "lsfg-vk"
+            config_dir.mkdir(parents=True)
+            config_path = config_dir / "conf.toml"
+            config_path.write_text(
+                ConfigurationManager.generate_toml_content(ConfigurationManager.get_defaults()),
+                encoding="utf-8",
+            )
+
+            service = FlatpakService.__new__(FlatpakService)
+            service.log = mock.Mock()
+            service.user_home = home
+            service.config_dir = config_dir
+            service.config_file_path = config_path
+            service.lsfg_launch_script_path = home / "lsfg"
+            service.check_flatpak_available = mock.Mock(return_value=True)
+            service._run_flatpak_command = mock.Mock(
+                return_value=types.SimpleNamespace(returncode=0, stdout="", stderr="")
+            )
+
+            app_id = "org.example.Game"
+            result = service.set_app_override(app_id)
+            self.assertTrue(result["success"])
+            setup_calls = [call.args[0] for call in service._run_flatpak_command.call_args_list]
+            self.assertIn(
+                ["override", "--user", f"--env=LSFGVK_CONFIG={config_path}", app_id],
+                setup_calls,
+            )
+            self.assertIn(
+                ["override", "--user", "--unset-env=LSFG_CONFIG", app_id],
+                setup_calls,
+            )
+            self.assertIn(
+                [
+                    "override",
+                    "--user",
+                    f"--nofilesystem={home / '.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll'}",
+                    app_id,
+                ],
+                setup_calls,
+            )
+            self.assertIn(
+                ["override", "--user", f"--nofilesystem={home / 'lsfg'}", app_id],
+                setup_calls,
+            )
+
+            service._run_flatpak_command.reset_mock()
+            result = service.remove_app_override(app_id)
+            self.assertTrue(result["success"])
+            removal_calls = [call.args[0] for call in service._run_flatpak_command.call_args_list]
+            self.assertIn(
+                ["override", "--user", "--unset-env=LSFG_CONFIG", app_id],
+                removal_calls,
+            )
+            self.assertIn(
+                ["override", "--user", f"--nofilesystem={home / 'lsfg'}", app_id],
+                removal_calls,
+            )
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
 export const PACING = "pacing" as const;
 export const ACTIVE_IN = "active_in" as const;
+export const USE_NATIVE_MATCHING = "use_native_matching" as const;
 export const GPU = "gpu" as const;
 export const DISABLE_LSFGVK = "disable_lsfgvk" as const;
 export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
@@ -77,6 +78,12 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.STRING,
     default: "",
     description: "optional executable or process names, separated by commas"
+  },
+  use_native_matching: {
+    name: "use_native_matching",
+    fieldType: ConfigFieldType.BOOLEAN,
+    default: false,
+    description: "let lsfg-vk choose a profile from Active In instead of forcing the selected profile"
   },
   gpu: {
     name: "gpu",
@@ -149,6 +156,7 @@ export interface ConfigurationData {
   performance_mode: boolean;
   pacing: string;
   active_in: string;
+  use_native_matching: boolean;
   gpu: string;
   disable_lsfgvk: boolean;
   dxvk_frame_rate: number;
@@ -175,6 +183,7 @@ export function getDefaults(): ConfigurationData {
     performance_mode: false,
     pacing: "none",
     active_in: "",
+    use_native_matching: false,
     gpu: "",
     disable_lsfgvk: false,
     dxvk_frame_rate: 0,
@@ -197,6 +206,7 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     performance_mode: ConfigFieldType.BOOLEAN,
     pacing: ConfigFieldType.STRING,
     active_in: ConfigFieldType.STRING,
+    use_native_matching: ConfigFieldType.BOOLEAN,
     gpu: ConfigFieldType.STRING,
     disable_lsfgvk: ConfigFieldType.BOOLEAN,
     dxvk_frame_rate: ConfigFieldType.INTEGER,

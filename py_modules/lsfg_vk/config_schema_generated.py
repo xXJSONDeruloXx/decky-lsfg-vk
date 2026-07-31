@@ -20,6 +20,7 @@ FLOW_SCALE = "flow_scale"
 PERFORMANCE_MODE = "performance_mode"
 PACING = "pacing"
 ACTIVE_IN = "active_in"
+USE_NATIVE_MATCHING = "use_native_matching"
 GPU = "gpu"
 DISABLE_LSFGVK = "disable_lsfgvk"
 DXVK_FRAME_RATE = "dxvk_frame_rate"
@@ -41,6 +42,7 @@ class ConfigurationData(TypedDict):
     performance_mode: bool
     pacing: str
     active_in: str
+    use_native_matching: bool
     gpu: str
     disable_lsfgvk: bool
     dxvk_frame_rate: int
@@ -68,6 +70,8 @@ def get_script_parsing_logic():
                 value = value.strip()
 
                 # Auto-generated parsing logic:
+                if key == "DECKY_LSFGVK_AUTO_PROFILE":
+                        script_values["use_native_matching"] = value == "1"
                 if key == "DISABLE_LSFGVK":
                         script_values["disable_lsfgvk"] = value == "1"
                 if key == "DXVK_FRAME_RATE":
@@ -102,6 +106,8 @@ def get_script_generation_logic():
     """Return the script generation logic as a callable"""
     def generate_script_lines(config):
         lines = []
+        if config.get("use_native_matching", False):
+            lines.append("export DECKY_LSFGVK_AUTO_PROFILE=1")
         if config.get("disable_lsfgvk", False):
             lines.append("export DISABLE_LSFGVK=1")
         dxvk_frame_rate = config.get("dxvk_frame_rate", 0)
@@ -127,4 +133,4 @@ def get_script_generation_logic():
     return generate_script_lines
 
 
-ALL_FIELDS = ['dll', 'allow_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing', 'active_in', 'gpu', 'disable_lsfgvk', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+ALL_FIELDS = ['dll', 'allow_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing', 'active_in', 'use_native_matching', 'gpu', 'disable_lsfgvk', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']

@@ -18,10 +18,9 @@ class ConfigurationService(BaseService):
 
     @staticmethod
     def _profile_selection_lines(profile_name: str, config: ConfigurationData) -> list[str]:
-        """Use native matching when a selected profile declares active_in."""
-        active_in = str(config.get("active_in", "")).strip()
-        if active_in:
-            return ["# active_in is configured; lsfg-vk will select a matching profile automatically."]
+        """Force the selected profile unless the user explicitly opts into native matching."""
+        if config.get("use_native_matching", False):
+            return ["# lsfg-vk will select a matching profile from Active In."]
         return [f"export LSFGVK_PROFILE={shlex.quote(profile_name)}"]
     
     def get_config(self) -> ConfigurationResponse:

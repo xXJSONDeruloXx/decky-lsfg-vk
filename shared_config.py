@@ -61,6 +61,13 @@ CONFIG_SCHEMA_DEF = {
         "description": "optional executable or process names, separated by commas",
         "location": "profile",
     },
+    "use_native_matching": {
+        "name": "use_native_matching",
+        "fieldType": ConfigFieldType.BOOLEAN,
+        "default": False,
+        "description": "let lsfg-vk choose a profile from Active In instead of forcing the selected profile",
+        "location": "script",
+    },
     "gpu": {
         "name": "gpu",
         "fieldType": ConfigFieldType.STRING,

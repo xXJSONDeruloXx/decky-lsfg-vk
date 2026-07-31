@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from .base_service import BaseService
+from .config_schema import ConfigurationManager
 from .types import BaseResponse
 
 
@@ -65,6 +66,21 @@ class FlatpakService(BaseService):
         except (OSError, ValueError, KeyError, TypeError) as error:
             self.log.debug("Could not read configured DLL path for Flatpak override: %s", error)
         return config_path, dll_directory
+
+    def _remove_legacy_app_overrides(self, app_id: str) -> list[str]:
+        """Remove only the v1 overrides previously created by this plugin."""
+        legacy_dll_path = self.user_home / ".local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+        legacy_overrides = [
+            ["override", "--user", "--unset-env=LSFG_CONFIG", app_id],
+            ["override", "--user", f"--nofilesystem={legacy_dll_path}", app_id],
+            ["override", "--user", f"--nofilesystem={self.lsfg_launch_script_path}", app_id],
+        ]
+        errors = []
+        for args in legacy_overrides:
+            result = self._run_flatpak_command(args, capture_output=True, text=True)
+            if result.returncode != 0:
+                errors.append(f"{' '.join(args[2:-1])}: {result.stderr}")
+        return errors
 
     def _get_clean_env(self):
         """Get a clean environment without PyInstaller's bundled libraries"""
@@ -382,6 +398,14 @@ class FlatpakService(BaseService):
                 return self._error_response(FlatpakOverrideResponse, error_msg,
                                           app_id=app_id, operation="set")
 
+            legacy_errors = self._remove_legacy_app_overrides(app_id)
+            if legacy_errors:
+                self.log.warning(
+                    "Applied v2 overrides for %s but could not fully remove v1 overrides: %s",
+                    app_id,
+                    "; ".join(legacy_errors),
+                )
+
             self.log.info(f"Successfully set lsfg-vk overrides for {app_id}")
             return self._success_response(FlatpakOverrideResponse,
                                         f"lsfg-vk overrides set for {app_id}",
@@ -426,6 +450,8 @@ class FlatpakService(BaseService):
 
             if result.returncode != 0:
                 removal_errors.append(f"unset-env: {result.stderr}")
+
+            removal_errors.extend(self._remove_legacy_app_overrides(app_id))
 
             if removal_errors:
                 self.log.warning(f"Some override removals had issues for {app_id}: {'; '.join(removal_errors)}")

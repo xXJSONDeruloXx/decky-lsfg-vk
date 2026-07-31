@@ -4,7 +4,7 @@ import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
   ACTIVE_IN, ALLOW_FP16, DISABLE_LSFGVK, DLL, FLOW_SCALE, GPU,
-  PERFORMANCE_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
+  PERFORMANCE_MODE, USE_NATIVE_MATCHING, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
 
@@ -164,9 +164,18 @@ export function ConfigurationSection({
           <PanelSectionRow>
             <TextField
               label="Active In"
-              description="Executable/process names separated by commas. When set, lsfg-vk matches profiles automatically."
+              description="Executable/process names separated by commas."
               value={config.active_in}
               onChange={(event) => onConfigChange(ACTIVE_IN, event.currentTarget.value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="Use Automatic Profile Matching"
+              description="Let lsfg-vk choose a matching Active In profile instead of forcing the profile selected in Decky."
+              checked={config.use_native_matching}
+              onChange={(value) => onConfigChange(USE_NATIVE_MATCHING, value)}
             />
           </PanelSectionRow>
 
