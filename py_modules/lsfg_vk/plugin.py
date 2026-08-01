@@ -354,7 +354,7 @@ class Plugin:
         """Check status of lsfg-vk Flatpak runtime extensions
         
         Returns:
-            FlatpakExtensionStatus dict with installation status for both runtime versions
+            FlatpakExtensionStatus dict with installation status for all supported runtime versions
         """
         return self.flatpak_service.get_extension_status()
 
@@ -362,7 +362,7 @@ class Plugin:
         """Install lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to install ("23.08" or "24.08")
+            version: Runtime version to install ("23.08", "24.08", or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
@@ -373,7 +373,7 @@ class Plugin:
         """Uninstall lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to uninstall ("23.08" or "24.08")
+            version: Runtime version to uninstall ("23.08", "24.08", or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error

@@ -207,6 +207,30 @@ class InstallerInfrastructureTests(unittest.TestCase):
 
 
 class FlatpakMigrationTests(unittest.TestCase):
+    def test_install_uses_the_bundled_flatpak_asset(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        with tempfile.TemporaryDirectory() as directory:
+            bundle_path = Path(directory) / "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak"
+            bundle_path.write_bytes(b"flatpak bundle")
+
+            service = FlatpakService.__new__(FlatpakService)
+            service.log = mock.Mock()
+            service.check_flatpak_available = mock.Mock(return_value=True)
+            service._get_bundled_extension_path = mock.Mock(return_value=bundle_path)
+            service._run_flatpak_command = mock.Mock(
+                return_value=types.SimpleNamespace(returncode=0, stdout="", stderr="")
+            )
+
+            result = service.install_extension("23.08")
+
+            self.assertTrue(result["success"])
+            service._run_flatpak_command.assert_called_once_with(
+                ["install", "--user", "--noninteractive", str(bundle_path)],
+                capture_output=True,
+                text=True,
+            )
+
     def test_v2_override_setup_and_removal_clean_legacy_overrides(self):
         from lsfg_vk.flatpak_service import FlatpakService
 

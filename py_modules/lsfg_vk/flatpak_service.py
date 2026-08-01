@@ -9,6 +9,12 @@ from typing import Dict, Any, List, Optional
 
 from .base_service import BaseService
 from .config_schema import ConfigurationManager
+from .constants import (
+    BIN_DIR,
+    FLATPAK_23_08_FILENAME,
+    FLATPAK_24_08_FILENAME,
+    FLATPAK_25_08_FILENAME,
+)
 from .types import BaseResponse
 
 
@@ -66,6 +72,21 @@ class FlatpakService(BaseService):
         except (OSError, ValueError, KeyError, TypeError) as error:
             self.log.debug("Could not read configured DLL path for Flatpak override: %s", error)
         return config_path, dll_directory
+
+    def _get_bundled_extension_path(self, version: str) -> Path:
+        """Return the checksum-pinned Flatpak bundle shipped with this plugin."""
+        filenames = {
+            "23.08": FLATPAK_23_08_FILENAME,
+            "24.08": FLATPAK_24_08_FILENAME,
+            "25.08": FLATPAK_25_08_FILENAME,
+        }
+        try:
+            filename = filenames[version]
+        except KeyError as error:
+            raise ValueError(f"Unsupported Flatpak runtime version: {version}") from error
+
+        plugin_dir = Path(__file__).resolve().parent.parent.parent
+        return plugin_dir / BIN_DIR / filename
 
     def _remove_legacy_app_overrides(self, app_id: str) -> list[str]:
         """Remove only the v1 overrides previously created by this plugin."""
@@ -207,14 +228,14 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 return self._error_response(BaseResponse, "Flatpak is not available on this system")
 
-            if version == "23.08":
-                return self._error_response(
-                    BaseResponse,
-                    "Flathub supplies the lsfg-vk v2 extension for runtimes 24.08 and 25.08; install 23.08 manually.",
-                )
+            bundle_path = self._get_bundled_extension_path(version)
+            if not bundle_path.is_file():
+                error_msg = f"Bundled Flatpak extension not found at {bundle_path}; reinstall the plugin"
+                self.log.error(error_msg)
+                return self._error_response(BaseResponse, error_msg)
 
             result = self._run_flatpak_command(
-                ["install", "--user", "--noninteractive", "flathub", f"org.freedesktop.Platform.VulkanLayer.lsfgvk//{version}"],
+                ["install", "--user", "--noninteractive", str(bundle_path)],
                 capture_output=True, text=True
             )
 
@@ -223,8 +244,11 @@ class FlatpakService(BaseService):
                 self.log.error(error_msg)
                 return self._error_response(BaseResponse, error_msg)
 
-            self.log.info(f"Successfully installed lsfg-vk Flatpak extension {version}")
-            return self._success_response(BaseResponse, f"lsfg-vk {version} runtime extension installed successfully")
+            self.log.info("Successfully installed bundled lsfg-vk Flatpak extension %s", version)
+            return self._success_response(
+                BaseResponse,
+                f"lsfg-vk {version} runtime extension installed successfully from the bundled asset",
+            )
 
         except Exception as e:
             error_msg = f"Error installing Flatpak extension {version}: {str(e)}"

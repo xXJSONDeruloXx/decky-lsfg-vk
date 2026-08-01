@@ -46,13 +46,28 @@
   "remote_binary": [
     {
       "name": "lsfg-vk-layer-x86_64.tar.xz",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.1/lsfg-vk-layer-x86_64.tar.xz",
-      "sha256hash": "b96c60d838cd778797406bafc31e17a3698e8145248113c2bc41151b2823a6a0"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/lsfg-vk-layer-x86_64.tar.xz",
+      "sha256hash": "3bf5baaf391c6240de9978161a68aa8c9a54eff4246b79f9ea5b2ad1ec1a53a4"
     },
     {
       "name": "lsfg-vk-layer-aarch64.tar.xz",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.1/lsfg-vk-layer-aarch64.tar.xz",
-      "sha256hash": "b1703042f50ff9470aa0b90953077949a9f144dcbd926f80fbb7e386e8393367"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/lsfg-vk-layer-aarch64.tar.xz",
+      "sha256hash": "ce08a04dc78ed1b1ca4bd03b9cf6c97ee233b0f5b2c2cc514509fae7e2eec412"
+    },
+    {
+      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
+      "sha256hash": "7eff81f96b278fde6fe395c88461c55e611547bf5991d179b9145ec6f5a778b1"
+    },
+    {
+      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
+      "sha256hash": "cbd663b9021c355dddec61ec51fd4388c12705f16637cadd4b45aead0e5dc427"
+    },
+    {
+      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
+      "sha256hash": "615e87c03b18368ed1cca97e036f1bf54fff95fc6126aac697bb368f33281cbf"
     }
   ],
   "pnpm": {
