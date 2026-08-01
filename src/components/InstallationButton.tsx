@@ -16,15 +16,24 @@ export function InstallationButton({
   onInstall,
   onUninstall
 }: InstallationButtonProps) {
-  const renderButtonContent = () => {
+  const renderInstallButtonContent = () => {
     if (isInstalling) {
       return (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div>Installing...</div>
+          <div>{isInstalled ? "Updating..." : "Installing..."}</div>
         </div>
       );
     }
 
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <FaDownload />
+        <div>{isInstalled ? "Update LSFG-VK" : "Install / Update LSFG-VK"}</div>
+      </div>
+    );
+  };
+
+  const renderUninstallButtonContent = () => {
     if (isUninstalling) {
       return (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -33,32 +42,37 @@ export function InstallationButton({
       );
     }
 
-    if (isInstalled) {
-      return (
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <FaTrash />
-          <div>Uninstall LSFG-VK</div>
-        </div>
-      );
-    }
-
     return (
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <FaDownload />
-        <div>Install / Update LSFG-VK</div>
+        <FaTrash />
+        <div>Uninstall LSFG-VK</div>
       </div>
     );
   };
 
   return (
-    <PanelSectionRow>
-      <ButtonItem
-        layout="below"
-        onClick={isInstalled ? onUninstall : onInstall}
-        disabled={isInstalling || isUninstalling}
-      >
-        {renderButtonContent()}
-      </ButtonItem>
-    </PanelSectionRow>
+    <>
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={onInstall}
+          disabled={isInstalling || isUninstalling}
+        >
+          {renderInstallButtonContent()}
+        </ButtonItem>
+      </PanelSectionRow>
+
+      {isInstalled && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={onUninstall}
+            disabled={isInstalling || isUninstalling}
+          >
+            {renderUninstallButtonContent()}
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+    </>
   );
 }

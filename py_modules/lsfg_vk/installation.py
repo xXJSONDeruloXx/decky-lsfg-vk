@@ -45,10 +45,16 @@ class InstallationService(BaseService):
                 return self._error_response(InstallationResponse, error_msg, message="")
 
             self._ensure_directories()
-            self._extract_and_install_files(archive_path)
-            profile_data = self._create_config_file()
-            self._create_lsfg_launch_script(profile_data)
-            self._remove_legacy_layer_files()
+            with tempfile.TemporaryDirectory(prefix="lsfg-vk-install-") as transaction_dir:
+                snapshots = self._snapshot_installation_files(Path(transaction_dir))
+                try:
+                    self._extract_and_install_files(archive_path)
+                    profile_data = self._create_config_file()
+                    self._create_lsfg_launch_script(profile_data)
+                    self._remove_legacy_layer_files()
+                except Exception:
+                    self._restore_installation_files(snapshots)
+                    raise
 
             message = "lsfg-vk v2 installed successfully"
             if self._config_recovery_backup is not None:
@@ -126,12 +132,54 @@ class InstallationService(BaseService):
         """Point the manifest at ~/.local/lib after Decky installs it."""
         try:
             data = json.loads(source.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or not isinstance(data.get("layer"), dict):
+                raise ValueError("manifest is missing its layer object")
             data["layer"]["library_path"] = "../../../lib/liblsfg-vk-layer.so"
-            destination.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-            destination.chmod(0o644)
-        except (json.JSONDecodeError, KeyError, OSError) as error:
+            self._write_file(destination, json.dumps(data, indent=2) + "\n", 0o644)
+        except (json.JSONDecodeError, OSError, TypeError, UnicodeError, ValueError) as error:
             self.log.error("Error fixing JSON file %s: %s", source, error)
-            self._copy_plugin_file(source, destination)
+            raise OSError(f"Invalid Vulkan layer manifest {source}: {error}") from error
+
+    def _installation_paths(self) -> tuple[Path, ...]:
+        """Return every file that can be changed by a native installation."""
+        return (
+            self.lib_file,
+            self.json_file,
+            self.config_file_path,
+            self.lsfg_launch_script_path,
+            self.legacy_lib_file,
+            self.legacy_json_file,
+            self.config_file_path.with_name(f"{self.config_file_path.name}.v1.bak"),
+            self.config_file_path.with_name(f"{self.config_file_path.name}.unrecognized.bak"),
+        )
+
+    def _snapshot_installation_files(self, transaction_dir: Path) -> Dict[Path, Path | None]:
+        """Snapshot installation files so a failed update can be rolled back."""
+        snapshots: Dict[Path, Path | None] = {}
+        for index, path in enumerate(self._installation_paths()):
+            if not path.exists() and not path.is_symlink():
+                snapshots[path] = None
+                continue
+            if not path.is_file():
+                raise OSError(f"Installation target is not a regular file: {path}")
+            backup = transaction_dir / str(index)
+            shutil.copy2(path, backup)
+            snapshots[path] = backup
+        return snapshots
+
+    def _restore_installation_files(self, snapshots: Dict[Path, Path | None]) -> None:
+        """Restore a previous installation after a failed update."""
+        try:
+            for path, backup in snapshots.items():
+                if path.exists() or path.is_symlink():
+                    path.unlink()
+                if backup is not None:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(backup, path)
+            self.log.warning("Rolled back incomplete lsfg-vk installation")
+        except OSError as error:
+            self.log.error("Could not fully roll back lsfg-vk installation: %s", error)
+            raise
 
     def _create_config_file(self) -> ProfileData:
         """Migrate v1 once, normalize v2, and retain Decky launch workarounds."""
@@ -222,7 +270,17 @@ class InstallationService(BaseService):
     def _merge_config_with_defaults(self, existing: ProfileData, dll_service) -> ProfileData:
         defaults = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
         global_config = dict(existing.get("global_config", {}))
-        global_config.setdefault("dll", defaults["dll"])
+        configured_dll = str(global_config.get("dll", "") or "").strip()
+        detected_dll = str(defaults.get("dll", "") or "").strip()
+        if configured_dll and Path(configured_dll).is_file():
+            global_config["dll"] = configured_dll
+        elif detected_dll and Path(detected_dll).is_file():
+            self.log.warning("Replacing stale configured Lossless.dll path %s with %s", configured_dll, detected_dll)
+            global_config["dll"] = detected_dll
+        else:
+            if configured_dll:
+                self.log.warning("Clearing stale configured Lossless.dll path %s", configured_dll)
+            global_config["dll"] = ""
         global_config.setdefault("allow_fp16", defaults["allow_fp16"])
 
         profiles: Dict[str, Any] = {}

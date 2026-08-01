@@ -91,6 +91,52 @@ class FlatpakService(BaseService):
         plugin_dir = Path(__file__).resolve().parent.parent.parent
         return plugin_dir / BIN_DIR / filename
 
+    def _get_extension_id(self, version: str) -> str:
+        """Return the full user-installation ref for a supported runtime branch."""
+        extension_ids = {
+            "23.08": self.extension_id_23_08,
+            "24.08": self.extension_id_24_08,
+            "25.08": self.extension_id_25_08,
+        }
+        try:
+            return extension_ids[version]
+        except KeyError as error:
+            raise ValueError(f"Unsupported Flatpak runtime version: {version}") from error
+
+    def _get_installed_extension_commit(self, version: str) -> str:
+        """Record the deployed commit so a failed multi-runtime migration can roll back."""
+        result = self._run_flatpak_command(
+            ["info", "--user", "--show-commit", self._get_extension_id(version)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        commit = str(result.stdout or "").strip()
+        if not commit:
+            raise OSError(f"Flatpak did not report a deployed commit for {version}")
+        return commit
+
+    def _rollback_extension(self, version: str, commit: str) -> Optional[str]:
+        """Restore one runtime to its previous deployed commit; return an error if it fails."""
+        try:
+            result = self._run_flatpak_command(
+                [
+                    "update",
+                    "--user",
+                    "--assumeyes",
+                    "--noninteractive",
+                    f"--commit={commit}",
+                    self._get_extension_id(version),
+                ],
+                capture_output=True,
+                text=True,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            return str(error)
+        if result.returncode != 0:
+            return result.stderr or f"Flatpak rollback failed for {version}"
+        return None
+
     def _get_installed_extension_versions(self) -> list[str]:
         """Return installed lsfg-vk runtime branches from the user Flatpak installation."""
         result = self._run_flatpak_command(
@@ -271,7 +317,7 @@ class FlatpakService(BaseService):
     def _get_flatpak_app_ids(self) -> list[str]:
         """Return application IDs in the user Flatpak installation."""
         result = self._run_flatpak_command(
-            ["list", "--app"],
+            ["list", "--user", "--app"],
             capture_output=True,
             text=True,
             check=True,
@@ -348,6 +394,8 @@ class FlatpakService(BaseService):
         empty_result = {
             "updated_versions": [],
             "failed_versions": [],
+            "rolled_back_versions": [],
+            "rollback_failed_versions": [],
             "migrated_apps": [],
             "failed_apps": [],
         }
@@ -369,6 +417,37 @@ class FlatpakService(BaseService):
                     **empty_result,
                 )
 
+            missing_bundles = [
+                {"version": version, "error": f"Bundled Flatpak extension not found for {version}"}
+                for version in installed_versions
+                if not self._get_bundled_extension_path(version).is_file()
+            ]
+            if missing_bundles:
+                return self._error_response(
+                    BaseResponse,
+                    "Flatpak runtime migration was not started because a bundled asset is missing",
+                    skipped=False,
+                    failed_versions=missing_bundles,
+                    **{key: value for key, value in empty_result.items() if key != "failed_versions"},
+                )
+
+            previous_commits = {}
+            commit_failures = []
+            for version in installed_versions:
+                try:
+                    previous_commits[version] = self._get_installed_extension_commit(version)
+                except (subprocess.CalledProcessError, OSError) as error:
+                    stderr = getattr(error, "stderr", None)
+                    commit_failures.append({"version": version, "error": stderr or str(error)})
+            if commit_failures:
+                return self._error_response(
+                    BaseResponse,
+                    "Flatpak runtime migration was not started because existing commits could not be recorded",
+                    skipped=False,
+                    failed_versions=commit_failures,
+                    **{key: value for key, value in empty_result.items() if key != "failed_versions"},
+                )
+
             updated_versions = []
             failed_versions = []
             for version in installed_versions:
@@ -379,12 +458,29 @@ class FlatpakService(BaseService):
                     failed_versions.append({"version": version, "error": result.get("error", "unknown error")})
 
             if failed_versions:
+                rolled_back_versions = []
+                rollback_failed_versions = []
+                for version in reversed(updated_versions):
+                    rollback_error = self._rollback_extension(version, previous_commits[version])
+                    if rollback_error is None:
+                        rolled_back_versions.append(version)
+                    else:
+                        rollback_failed_versions.append({"version": version, "error": rollback_error})
+
+                rollback_message = (
+                    f"rolled back {len(rolled_back_versions)} runtime(s)"
+                    if not rollback_failed_versions
+                    else f"could not roll back {len(rollback_failed_versions)} runtime(s)"
+                )
                 return self._error_response(
                     BaseResponse,
-                    "Flatpak runtime migration failed; legacy app overrides were left unchanged",
+                    f"Flatpak runtime migration failed; {rollback_message}; "
+                    "legacy app overrides were left unchanged",
                     skipped=False,
                     updated_versions=updated_versions,
                     failed_versions=failed_versions,
+                    rolled_back_versions=rolled_back_versions,
+                    rollback_failed_versions=rollback_failed_versions,
                     migrated_apps=[],
                     failed_apps=[],
                 )
@@ -393,6 +489,8 @@ class FlatpakService(BaseService):
             response = {
                 "updated_versions": updated_versions,
                 "failed_versions": [],
+                "rolled_back_versions": [],
+                "rollback_failed_versions": [],
                 "migrated_apps": override_result.get("migrated_apps", []),
                 "failed_apps": override_result.get("failed_apps", []),
             }
@@ -428,12 +526,7 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 return self._error_response(BaseResponse, "Flatpak is not available on this system")
 
-            if version == "23.08":
-                extension_id = self.extension_id_23_08
-            elif version == "24.08":
-                extension_id = self.extension_id_24_08
-            else:
-                extension_id = self.extension_id_25_08
+            extension_id = self._get_extension_id(version)
 
             result = self._run_flatpak_command(
                 ["uninstall", "--user", "--noninteractive", extension_id],

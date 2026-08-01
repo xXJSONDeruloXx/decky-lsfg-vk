@@ -192,6 +192,95 @@ class InstallerInfrastructureTests(unittest.TestCase):
             self.assertIn("version = 2", config_path.read_text(encoding="utf-8"))
             self.assertEqual(service._config_recovery_backup, config_dir / "conf.toml.unrecognized.bak")
 
+    def test_stale_dll_path_is_replaced_when_detection_finds_a_valid_file(self):
+        from lsfg_vk.installation import InstallationService
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            config_dir = home / ".config" / "lsfg-vk"
+            config_dir.mkdir(parents=True)
+            config_path = config_dir / "conf.toml"
+            detected_dll = home / "Lossless.dll"
+            detected_dll.write_bytes(b"dll")
+            profile_data = {
+                "current_profile": "decky-lsfg-vk",
+                "profiles": {"decky-lsfg-vk": ConfigurationManager.get_defaults()},
+                "global_config": {"dll": str(home / "missing" / "Lossless.dll"), "allow_fp16": True},
+            }
+            config_path.write_text(
+                ConfigurationManager.generate_toml_content_multi_profile(profile_data),
+                encoding="utf-8",
+            )
+
+            service = InstallationService.__new__(InstallationService)
+            service.log = mock.Mock()
+            service.user_home = home
+            service.config_dir = config_dir
+            service.config_file_path = config_path
+            service.lsfg_script_path = home / "lsfg"
+            service.lsfg_launch_script_path = home / "lsfg"
+
+            with mock.patch("lsfg_vk.dll_detection.DllDetectionService") as detection_service:
+                detection_service.return_value.check_lossless_scaling_dll.return_value = {
+                    "detected": True,
+                    "path": str(detected_dll),
+                }
+                migrated = service._create_config_file()
+
+            self.assertEqual(migrated["global_config"]["dll"], str(detected_dll))
+            self.assertIn(str(detected_dll), config_path.read_text(encoding="utf-8"))
+
+    def test_invalid_layer_manifest_fails_without_copying_unmodified_json(self):
+        from lsfg_vk.installation import InstallationService
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "manifest.json"
+            destination = Path(directory) / "installed.json"
+            source.write_text('{"not_layer": true}', encoding="utf-8")
+
+            service = InstallationService.__new__(InstallationService)
+            service.log = mock.Mock()
+
+            with self.assertRaises(OSError):
+                service._copy_and_fix_json_file(source, destination)
+            self.assertFalse(destination.exists())
+
+    def test_installation_snapshot_restores_previous_files(self):
+        from lsfg_vk.installation import InstallationService
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            service = InstallationService.__new__(InstallationService)
+            service.log = mock.Mock()
+            service.local_lib_dir = home / "lib"
+            service.local_share_dir = home / "share"
+            service.config_file_path = home / "config" / "conf.toml"
+            service.lsfg_launch_script_path = home / "lsfg"
+            service.legacy_lib_file = service.local_lib_dir / "liblsfg-vk.so"
+            service.legacy_json_file = service.local_share_dir / "legacy.json"
+            service.lib_file = service.local_lib_dir / "liblsfg-vk-layer.so"
+            service.json_file = service.local_share_dir / "manifest.json"
+            service.config_file_path.parent.mkdir(parents=True)
+            service.local_lib_dir.mkdir(parents=True)
+            service.local_share_dir.mkdir(parents=True)
+            service.lib_file.write_bytes(b"old layer")
+            service.json_file.write_text("old manifest", encoding="utf-8")
+            service.config_file_path.write_text("old config", encoding="utf-8")
+            service.lsfg_launch_script_path.write_text("old script", encoding="utf-8")
+
+            with tempfile.TemporaryDirectory() as transaction_dir:
+                snapshots = service._snapshot_installation_files(Path(transaction_dir))
+                service.lib_file.write_bytes(b"new layer")
+                service.json_file.write_text("new manifest", encoding="utf-8")
+                service.config_file_path.unlink()
+                service.lsfg_launch_script_path.write_text("new script", encoding="utf-8")
+                service._restore_installation_files(snapshots)
+
+            self.assertEqual(service.lib_file.read_bytes(), b"old layer")
+            self.assertEqual(service.json_file.read_text(encoding="utf-8"), "old manifest")
+            self.assertEqual(service.config_file_path.read_text(encoding="utf-8"), "old config")
+            self.assertEqual(service.lsfg_launch_script_path.read_text(encoding="utf-8"), "old script")
+
     def test_writes_replace_the_config_atomically(self):
         service = BaseService.__new__(BaseService)
         service.log = mock.Mock()
@@ -246,6 +335,10 @@ class FlatpakMigrationTests(unittest.TestCase):
         service.log = mock.Mock()
         service.check_flatpak_available = mock.Mock(return_value=True)
         service._get_installed_extension_versions = mock.Mock(return_value=["23.08", "25.08"])
+        bundle = mock.Mock()
+        bundle.is_file.return_value = True
+        service._get_bundled_extension_path = mock.Mock(return_value=bundle)
+        service._get_installed_extension_commit = mock.Mock(side_effect=lambda version: f"old-{version}")
         service.install_extension = mock.Mock(
             side_effect=[{"success": True}, {"success": True}]
         )
@@ -298,6 +391,10 @@ class FlatpakMigrationTests(unittest.TestCase):
         service.log = mock.Mock()
         service.check_flatpak_available = mock.Mock(return_value=True)
         service._get_installed_extension_versions = mock.Mock(return_value=["24.08"])
+        bundle = mock.Mock()
+        bundle.is_file.return_value = True
+        service._get_bundled_extension_path = mock.Mock(return_value=bundle)
+        service._get_installed_extension_commit = mock.Mock(return_value="old-24.08")
         service.install_extension = mock.Mock(
             return_value={"success": False, "error": "bundle unavailable"}
         )
@@ -308,6 +405,55 @@ class FlatpakMigrationTests(unittest.TestCase):
         self.assertFalse(result["success"])
         self.assertEqual(result["failed_versions"][0]["version"], "24.08")
         service._migrate_legacy_app_overrides.assert_not_called()
+
+    def test_failed_runtime_update_rolls_back_previously_updated_runtimes(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        service = FlatpakService.__new__(FlatpakService)
+        service.log = mock.Mock()
+        service.check_flatpak_available = mock.Mock(return_value=True)
+        service._get_installed_extension_versions = mock.Mock(return_value=["23.08", "24.08"])
+        bundle = mock.Mock()
+        bundle.is_file.return_value = True
+        service._get_bundled_extension_path = mock.Mock(return_value=bundle)
+        service._get_installed_extension_commit = mock.Mock(
+            side_effect=lambda version: f"old-{version}"
+        )
+        service.install_extension = mock.Mock(
+            side_effect=[
+                {"success": True},
+                {"success": False, "error": "transaction failed"},
+            ]
+        )
+        service._rollback_extension = mock.Mock(return_value=None)
+        service._migrate_legacy_app_overrides = mock.Mock()
+
+        result = service.update_installed_extensions()
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["rolled_back_versions"], ["23.08"])
+        service._rollback_extension.assert_called_once_with("23.08", "old-23.08")
+        service._migrate_legacy_app_overrides.assert_not_called()
+
+    def test_flatpak_app_scan_is_scoped_to_user_installation(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        service = FlatpakService.__new__(FlatpakService)
+        service._run_flatpak_command = mock.Mock(
+            return_value=types.SimpleNamespace(
+                returncode=0,
+                stdout="Game\torg.example.Game\t1.0\tx86_64\n",
+                stderr="",
+            )
+        )
+
+        self.assertEqual(service._get_flatpak_app_ids(), ["org.example.Game"])
+        service._run_flatpak_command.assert_called_once_with(
+            ["list", "--user", "--app"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
     def test_native_install_runs_flatpak_migration_after_success(self):
         from lsfg_vk.plugin import Plugin
