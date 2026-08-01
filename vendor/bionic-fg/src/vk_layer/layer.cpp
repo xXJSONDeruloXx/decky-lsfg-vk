@@ -42,8 +42,9 @@
 #define BFG_LAYER(...) __android_log_print(ANDROID_LOG_INFO, BFG_LAYER_NAME, __VA_ARGS__)
 #define BFG_LAYER_E(...) __android_log_print(ANDROID_LOG_ERROR, BFG_LAYER_NAME, __VA_ARGS__)
 #else
-#define BFG_LAYER(...)
-#define BFG_LAYER_E(...)
+#include <cstdio>
+#define BFG_LAYER(...) do { std::fprintf(stderr, "[BionicFG] " __VA_ARGS__); std::fputc('\n', stderr); } while (0)
+#define BFG_LAYER_E(...) do { std::fprintf(stderr, "[BionicFG] ERROR: " __VA_ARGS__); std::fputc('\n', stderr); } while (0)
 #endif
 
 #if defined(__GNUC__)
@@ -376,7 +377,7 @@ struct SwapState {
     std::vector<VkImage> images;
     LayerConf  conf;
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
     // Provisioned generated-frame slots the context is (re)built with, so a
     // 2x..4x multiplier hot-reload never needs an app-side swapchain rebuild.
     uint32_t provisionedOutputs = 0;
@@ -521,11 +522,13 @@ static bionic_fg::Config makeFramegenConfig(const SwapState& st, const LayerConf
     return cfg;
 }
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
 static std::unique_ptr<bionic_fg::FramegenContext> createFramegenContext(
         const SwapState& st,
         const LayerConf& conf) {
+#ifdef __ANDROID__
     DisableLayerEnvGuard disableLayerForInternalVulkan;
+#endif
     // Wrap the application's own device (not owned) so interpolation runs on the
     // same device as the swapchain — single-device mode with context-owned
     // device-local frame images (no AHB round-trip).
@@ -687,6 +690,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_EnumeratePhysicalDevices(
 
 // ─── CreateDevice ─────────────────────────────────────────────────────────────
 
+#ifdef __ANDROID__
 static const char* kAhbExts[] = {
     "VK_ANDROID_external_memory_android_hardware_buffer",
     "VK_KHR_external_memory",
@@ -696,6 +700,7 @@ static const char* kAhbExts[] = {
     "VK_KHR_bind_memory2",
     "VK_KHR_maintenance1",
 };
+#endif
 
 VKAPI_ATTR VkResult VKAPI_CALL BionicFG_CreateDevice(
         VkPhysicalDevice physicalDevice,
@@ -714,7 +719,9 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_CreateDevice(
     const_cast<VkLayerDeviceCreateInfo*>(linkInfo)->u.pLayerInfo =
         linkInfo->u.pLayerInfo->pNext;
 
-    // Inject AHB extensions if not present (needed for cross-device sharing)
+    VkDeviceCreateInfo dci = *pCreateInfo;
+#ifdef __ANDROID__
+    // Inject AHB extensions if not present (needed for cross-device sharing).
     std::vector<const char*> exts(
         pCreateInfo->ppEnabledExtensionNames,
         pCreateInfo->ppEnabledExtensionNames + pCreateInfo->enabledExtensionCount);
@@ -723,9 +730,9 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_CreateDevice(
         for (const char* x : exts) if (std::strcmp(x, e) == 0) { found = true; break; }
         if (!found) exts.push_back(e);
     }
-    VkDeviceCreateInfo dci = *pCreateInfo;
     dci.enabledExtensionCount   = static_cast<uint32_t>(exts.size());
     dci.ppEnabledExtensionNames = exts.data();
+#endif
 
     // Look up the real instance that produced this physical device.
     VkInstance instance = VK_NULL_HANDLE;
@@ -1079,7 +1086,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_CreateSwapchainKHR(
         return VK_SUCCESS;
     }
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
     auto stHolder = std::make_unique<SwapState>();
     SwapState& st = *stHolder;
     st.device = device;
@@ -1580,7 +1587,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_QueuePresentKHR(
                 return VK_ERROR_OUT_OF_DATE_KHR;
             }
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
             const bool oldActive = oldConf.multiplier >= 2;
             const bool newActive = newConf.multiplier >= 2;
 
@@ -1647,7 +1654,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_QueuePresentKHR(
     if (!st.inPresent && effFpsLimit > 0) {
         const int64_t targetNs = 1000000000LL / effFpsLimit;
         const int64_t now = nowNs();
-#ifdef __ANDROID__
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
         paceDeferred = st.conf.enabled && !st.framegenForceDisabled && st.fgCtx &&
                        st.conf.multiplier >= 2 && st.frameCount > 0;
 #endif
@@ -1733,7 +1740,7 @@ VKAPI_ATTR VkResult VKAPI_CALL BionicFG_QueuePresentKHR(
         return callNextPresent(queue, pPresentInfo);
     }
 
-#ifndef __ANDROID__
+#if !defined(__ANDROID__) && !defined(BFG_GLIBC)
     return callNextPresent(queue, pPresentInfo);
 #else
     st.inPresent = true;

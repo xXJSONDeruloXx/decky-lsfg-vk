@@ -160,6 +160,7 @@ static Pass makeModel1Pass(const vk::Device& dev,
 
 // ─── FramegenContext::create ─────────────────────────────────────────────────
 
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
 #ifdef __ANDROID__
 std::unique_ptr<FramegenContext> FramegenContext::create(
         const vk::Device& device,
@@ -179,11 +180,23 @@ std::unique_ptr<FramegenContext> FramegenContext::create(
         BFG_LOGE("FramegenContext::create: mismatched input AHBs or empty outputs");
         return nullptr;
     }
+#else
+std::unique_ptr<FramegenContext> FramegenContext::create(
+        const vk::Device& device,
+        uint32_t provisionedOutputs,
+        VkExtent2D extent, VkFormat format, const Config& cfg) {
+    if (provisionedOutputs == 0) {
+        BFG_LOGE("FramegenContext::create: no output images provisioned");
+        return nullptr;
+    }
+#endif
     auto ctx = std::make_unique<FramegenContext>();
     ctx->cfg_ = cfg; ctx->cfg_.sanitize();
     ctx->extent_ = extent; ctx->format_ = format;
+#ifdef __ANDROID__
     ctx->prevAhbPtr_ = prevAhb;
     ctx->currAhbPtr_ = currAhb;
+#endif
     const uint32_t W = extent.width, H = extent.height;
     const uint32_t outputs = ctx->cfg_.multiplier - 1;
 
@@ -211,6 +224,7 @@ std::unique_ptr<FramegenContext> FramegenContext::create(
         ahbInfo.usage  = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
                        | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
                        | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+#ifdef __ANDROID__
         ctx->prevFrame_ = prevAhb ? vk::Image(ctx->device_, ahbInfo, prevAhb)
                                   : vk::Image(ctx->device_, ahbInfo);
         ctx->currFrame_ = currAhb ? vk::Image(ctx->device_, ahbInfo, currAhb)
@@ -220,6 +234,13 @@ std::unique_ptr<FramegenContext> FramegenContext::create(
             ctx->outputImages_.emplace_back(
                 ahb ? vk::Image(ctx->device_, ahbInfo, ahb)
                     : vk::Image(ctx->device_, ahbInfo));
+#else
+        ctx->prevFrame_ = vk::Image(ctx->device_, ahbInfo);
+        ctx->currFrame_ = vk::Image(ctx->device_, ahbInfo);
+        ctx->outputImages_.reserve(provisionedOutputs);
+        for (uint32_t i = 0; i < provisionedOutputs; ++i)
+            ctx->outputImages_.emplace_back(ctx->device_, ahbInfo);
+#endif
 
         if (!useModel1)
             ctx->dbgFlowBuf_ = vk::Buffer(ctx->device_, kDbgProbeTexels * 8u * kDbgProbeFields,
@@ -265,7 +286,7 @@ std::unique_ptr<FramegenContext> FramegenContext::create(
                         std::max(1u, (e.height + 15u) / 16u)};
             };
             auto dLabel = [](int dispatch, int binding) -> std::string {
-                char buf[16];
+                char buf[32];
                 std::snprintf(buf, sizeof(buf), "d%03d.b%d", dispatch, binding);
                 return std::string(buf);
             };
@@ -577,10 +598,13 @@ void FramegenContext::rebindFrameInputs() {
 
 void FramegenContext::swapFrameInputs() {
     std::swap(prevFrame_, currFrame_);
+#ifdef __ANDROID__
     std::swap(prevAhbPtr_, currAhbPtr_);
+#endif
     rebindFrameInputs();
 }
 
+#ifdef __ANDROID__
 void FramegenContext::present(AHardwareBuffer* newPrev, AHardwareBuffer* newCurr) {
     if (newPrev && newCurr && (newPrev != prevAhbPtr_ || newCurr != currAhbPtr_)) {
         if (newPrev == currAhbPtr_ && newCurr == prevAhbPtr_) {
@@ -589,6 +613,9 @@ void FramegenContext::present(AHardwareBuffer* newPrev, AHardwareBuffer* newCurr
             BFG_LOGW("FramegenContext::present: unexpected AHB input order; using existing descriptors");
         }
     }
+#else
+void FramegenContext::present() {
+#endif
 
     const uint32_t W  = extent_.width,  H  = extent_.height;
     const uint32_t fi = frameIdx_ & 1u;
@@ -750,7 +777,7 @@ void FramegenContext::present(AHardwareBuffer* newPrev, AHardwareBuffer* newCurr
     frameIdx_++;
 }
 
-#endif // __ANDROID__
+#endif // __ANDROID__ || BFG_GLIBC
 
 void FramegenContext::updateConfig(const Config& cfg) {
     Config next = cfg; next.sanitize();

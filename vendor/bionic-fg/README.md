@@ -63,6 +63,36 @@ cmake -S . -B build/android-arm64 \
 cmake --build build/android-arm64 -j
 ```
 
+### Linux / glibc x86_64
+
+The glibc target omits the Android JNI and AHardwareBuffer entry points and
+uses the layer's single-device path with device-local Vulkan images. It still
+uses the same embedded shader graph and implicit-layer interception points.
+
+On an x86_64 Linux system with a C++17 compiler, Vulkan headers/loader, CMake,
+and pthreads installed:
+
+```sh
+./build-linux-x86_64.sh
+```
+
+The output is staged at `dist/linux-x86_64/`:
+
+```text
+libbionic_fg.so
+VkLayer_BIONIC_framegen.json
+```
+
+The manifest is intended for:
+
+```text
+~/.local/lib/libbionic_fg.so
+~/.local/share/vulkan/implicit_layer.d/VkLayer_BIONIC_framegen.json
+```
+
+Enable the layer for a test process with `BIONIC_FG_ENABLE=1` and point
+`BIONIC_FG_CONFIG` at a compatible `conf.toml` as described above.
+
 ## Shaders
 
 The compute shaders are a clean-room reimplementation of the shader *code*:

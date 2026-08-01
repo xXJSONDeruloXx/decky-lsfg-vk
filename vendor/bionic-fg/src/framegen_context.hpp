@@ -62,6 +62,7 @@ class FramegenContext {
 public:
     FramegenContext() = default;
 
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
 #ifdef __ANDROID__
     // `device` is the application's own VkDevice (wrapped, not owned). Running
     // the interpolation on the SAME device the swapchain/AHBs live on avoids the
@@ -77,6 +78,7 @@ public:
         VkExtent2D extent,
         VkFormat   format,
         const Config& cfg);
+#endif
 
     // Single-device layer mode: the context owns device-local input/output
     // images (no AHB round-trip, no external queue-family transfers); the
@@ -88,8 +90,13 @@ public:
         VkFormat   format,
         const Config& cfg);
 
+#ifdef __ANDROID__
     void present(AHardwareBuffer* newPrevAhb, AHardwareBuffer* newCurrAhb);
     void run() { present(nullptr, nullptr); }
+#else
+    void present();
+    void run() { present(); }
+#endif
 
     // Rotate frame inputs after a presented frame: the previous "current"
     // becomes "previous" and its image is reused as the next blit target.
@@ -161,6 +168,8 @@ private:
 #ifdef __ANDROID__
     AHardwareBuffer* prevAhbPtr_ = nullptr;
     AHardwareBuffer* currAhbPtr_ = nullptr;
+#endif
+#if defined(__ANDROID__) || defined(BFG_GLIBC)
     void rebindFrameInputs();
 #endif
 };
