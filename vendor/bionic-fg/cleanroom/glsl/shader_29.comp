@@ -1,0 +1,89 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 32) uniform sampler2D src;
+layout(set = 0, binding = 33) uniform sampler2D residual;
+layout(set = 0, binding = 48, rgba16f) uniform writeonly image2D outMerged;
+
+// matrices are column-major: column j = input channel j, row i = output channel i
+const f16mat4 W_mm = f16mat4(
+    f16vec4( 0.2978515625hf,     0.27880859375hf,   -0.744140625hf,     -0.70068359375hf),
+    f16vec4( 0.1429443359375hf,  0.12115478515625hf, 0.11199951171875hf, 0.135009765625hf),
+    f16vec4( 0.20263671875hf,    0.2030029296875hf,  0.38818359375hf,    0.3916015625hf),
+    f16vec4(-0.6982421875hf,    -0.69775390625hf,    0.326416015625hf,   0.32373046875hf));
+
+const f16mat4 W_mz = f16mat4(
+    f16vec4( 0.6103515625hf,     0.59814453125hf,   -0.07452392578125hf, -0.0933837890625hf),
+    f16vec4( 0.47900390625hf,    0.47021484375hf,    0.3330078125hf,      0.36669921875hf),
+    f16vec4( 0.399658203125hf,   0.395263671875hf,   0.439453125hf,       0.43896484375hf),
+    f16vec4(-0.66015625hf,      -0.6337890625hf,     0.1593017578125hf,   0.1490478515625hf));
+
+const f16mat4 W_mp = f16mat4(
+    f16vec4( 0.317626953125hf,   0.295166015625hf,  -0.8017578125hf,     -0.76171875hf),
+    f16vec4( 0.099365234375hf,   0.07647705078125hf, 0.212890625hf,       0.2216796875hf),
+    f16vec4( 0.275146484375hf,   0.26708984375hf,    0.279052734375hf,    0.306396484375hf),
+    f16vec4(-0.69970703125hf,   -0.6669921875hf,     0.314453125hf,       0.320068359375hf));
+
+const f16mat4 W_zm = f16mat4(
+    f16vec4( 0.56640625hf,       0.576171875hf,      0.0634765625hf,      0.0697021484375hf),
+    f16vec4( 0.47265625hf,       0.468017578125hf,   0.405029296875hf,    0.41650390625hf),
+    f16vec4( 0.37353515625hf,    0.36474609375hf,    0.541015625hf,       0.556640625hf),
+    f16vec4(-0.625hf,           -0.6630859375hf,     0.2158203125hf,      0.20947265625hf));
+
+const f16mat4 W_zz = f16mat4(
+    f16vec4( 0.85791015625hf,    0.8330078125hf,     0.6259765625hf,      0.591796875hf),
+    f16vec4( 0.826171875hf,      0.7802734375hf,     0.6591796875hf,      0.66015625hf),
+    f16vec4( 0.5673828125hf,     0.5419921875hf,     0.61669921875hf,     0.6171875hf),
+    f16vec4(-0.55224609375hf,   -0.5537109375hf,     0.0438232421875hf,   0.0533447265625hf));
+
+const f16mat4 W_zp = f16mat4(
+    f16vec4( 0.59033203125hf,    0.5673828125hf,    -0.1058349609375hf,  -0.12890625hf),
+    f16vec4( 0.439208984375hf,   0.419677734375hf,   0.5283203125hf,      0.53759765625hf),
+    f16vec4( 0.46337890625hf,    0.44873046875hf,    0.47509765625hf,     0.48193359375hf),
+    f16vec4(-0.67529296875hf,   -0.6640625hf,        0.2344970703125hf,   0.2325439453125hf));
+
+const f16mat4 W_pm = f16mat4(
+    f16vec4( 0.32373046875hf,    0.308349609375hf,  -0.59814453125hf,    -0.54345703125hf),
+    f16vec4( 0.1268310546875hf,  0.11712646484375hf, 0.1986083984375hf,   0.2012939453125hf),
+    f16vec4( 0.25390625hf,       0.2548828125hf,     0.40625hf,           0.403076171875hf),
+    f16vec4(-0.66845703125hf,   -0.6845703125hf,     0.290771484375hf,    0.289794921875hf));
+
+const f16mat4 W_pz = f16mat4(
+    f16vec4( 0.5859375hf,        0.595703125hf,     -0.0224151611328125hf, -0.0367431640625hf),
+    f16vec4( 0.438232421875hf,   0.453369140625hf,   0.45068359375hf,       0.455810546875hf),
+    f16vec4( 0.444091796875hf,   0.447021484375hf,   0.475341796875hf,      0.47216796875hf),
+    f16vec4(-0.64892578125hf,   -0.6533203125hf,     0.1353759765625hf,     0.1385498046875hf));
+
+const f16mat4 W_pp = f16mat4(
+    f16vec4( 0.316650390625hf,   0.325927734375hf,  -0.81396484375hf,    -0.798828125hf),
+    f16vec4( 0.06280517578125hf, 0.07110595703125hf, 0.341552734375hf,    0.3369140625hf),
+    f16vec4( 0.30712890625hf,    0.3095703125hf,     0.338134765625hf,    0.3212890625hf),
+    f16vec4(-0.71337890625hf,   -0.6943359375hf,     0.291259765625hf,    0.30078125hf));
+
+const f16vec4 bias = f16vec4(0.7431640625hf, 0.830078125hf, 0.434814453125hf, 0.371337890625hf);
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, imageSize(outMerged)))) {
+        return;
+    }
+
+    vec2 S = vec2(textureSize(src, 0));
+    vec2 uv = (vec2(gl_GlobalInvocationID.xy) + vec2(0.5, 0.5)) / S;
+
+    f16vec4 acc = W_mm * f16vec4(textureLodOffset(src, uv, 0.0, ivec2(-1, -1)));
+    acc += W_mz * f16vec4(textureLodOffset(src, uv, 0.0, ivec2(-1,  0)));
+    acc += W_mp * f16vec4(textureLodOffset(src, uv, 0.0, ivec2(-1,  1)));
+    acc += W_zm * f16vec4(textureLodOffset(src, uv, 0.0, ivec2( 0, -1)));
+    acc += W_zz * f16vec4(textureLod(src, uv, 0.0));
+    acc += W_zp * f16vec4(textureLodOffset(src, uv, 0.0, ivec2( 0,  1)));
+    acc += W_pm * f16vec4(textureLodOffset(src, uv, 0.0, ivec2( 1, -1)));
+    acc += W_pz * f16vec4(textureLodOffset(src, uv, 0.0, ivec2( 1,  0)));
+    acc += W_pp * f16vec4(textureLodOffset(src, uv, 0.0, ivec2( 1,  1)));
+    acc += bias;
+    acc += f16vec4(textureLod(residual, uv, 0.0));
+
+    imageStore(outMerged, p, vec4(acc));
+}

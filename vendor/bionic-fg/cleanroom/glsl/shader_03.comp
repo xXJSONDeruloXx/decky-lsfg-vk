@@ -1,0 +1,82 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std140) uniform Params {
+    float srcCoordScale;
+    float unused0;
+    float unused1;
+} params;
+
+layout(set = 0, binding = 32) uniform sampler2D srcTex;
+
+layout(set = 0, binding = 48, r8) uniform writeonly image2D pyr0;
+layout(set = 0, binding = 49, r8) uniform writeonly image2D pyr1;
+layout(set = 0, binding = 50, r8) uniform writeonly image2D pyr2;
+layout(set = 0, binding = 51, r8) uniform writeonly image2D pyr3;
+layout(set = 0, binding = 52, r8) uniform writeonly image2D pyr4;
+layout(set = 0, binding = 53, r8) uniform writeonly image2D pyr5;
+layout(set = 0, binding = 54, r8) uniform writeonly image2D pyr6;
+
+shared float16_t tile[32][32];
+
+const f16vec3 LUMA_W = f16vec3(0.298828125hf, 0.5869140625hf, 0.11395263671875hf);
+
+float16_t sampleLuma(uvec2 texel, vec2 srcSize) {
+    vec2 uv = (vec2(texel) + 0.5) * params.srcCoordScale / srcSize;
+    return dot(f16vec3(textureLod(srcTex, uv, 0.0).rgb), LUMA_W);
+}
+
+#define REDUCE_ROUND(N, dstImg)                                                     \
+    barrier();                                                                      \
+    if (lid.x < N && lid.y < N) {                                                   \
+        float16_t a = tile[2u * lid.x][2u * lid.y];                                 \
+        float16_t b = tile[2u * lid.x + 1u][2u * lid.y];                            \
+        float16_t c = tile[2u * lid.x][2u * lid.y + 1u];                            \
+        float16_t d = tile[2u * lid.x + 1u][2u * lid.y + 1u];                       \
+        float16_t m = 0.25hf * (((a + b) + c) + d);                                 \
+        ivec2 oc = ivec2(wg * N + lid);                                             \
+        if (all(lessThan(oc, imageSize(dstImg))))                                   \
+            imageStore(dstImg, oc, vec4(float(m)));                                 \
+        tile[lid.x][lid.y] = m;                                                     \
+    }
+
+void main() {
+    uvec2 wg  = gl_WorkGroupID.xy;
+    uvec2 lid = gl_LocalInvocationID.xy;
+    vec2 srcSize = vec2(textureSize(srcTex, 0));
+
+    for (uint j = 0u; j < 2u; ++j) {
+        for (uint i = 0u; i < 2u; ++i) {
+            uvec2 p = wg * 32u + lid * 2u + uvec2(i, j);
+            uvec2 q = p * 2u;
+
+            float16_t l00 = sampleLuma(q + uvec2(0u, 0u), srcSize);
+            float16_t l10 = sampleLuma(q + uvec2(1u, 0u), srcSize);
+            float16_t l11 = sampleLuma(q + uvec2(1u, 1u), srcSize);
+            float16_t l01 = sampleLuma(q + uvec2(0u, 1u), srcSize);
+
+            if (all(lessThan(ivec2(q + uvec2(0u, 0u)), imageSize(pyr0))))
+                imageStore(pyr0, ivec2(q + uvec2(0u, 0u)), vec4(float(l00)));
+            if (all(lessThan(ivec2(q + uvec2(1u, 0u)), imageSize(pyr0))))
+                imageStore(pyr0, ivec2(q + uvec2(1u, 0u)), vec4(float(l10)));
+            if (all(lessThan(ivec2(q + uvec2(1u, 1u)), imageSize(pyr0))))
+                imageStore(pyr0, ivec2(q + uvec2(1u, 1u)), vec4(float(l11)));
+            if (all(lessThan(ivec2(q + uvec2(0u, 1u)), imageSize(pyr0))))
+                imageStore(pyr0, ivec2(q + uvec2(0u, 1u)), vec4(float(l01)));
+
+            float16_t m = 0.25hf * (((l00 + l10) + l11) + l01);
+            if (all(lessThan(ivec2(p), imageSize(pyr1))))
+                imageStore(pyr1, ivec2(p), vec4(float(m)));
+
+            tile[lid.x * 2u + i][lid.y * 2u + j] = m;
+        }
+    }
+
+    REDUCE_ROUND(16u, pyr2)
+    REDUCE_ROUND(8u,  pyr3)
+    REDUCE_ROUND(4u,  pyr4)
+    REDUCE_ROUND(2u,  pyr5)
+    REDUCE_ROUND(1u,  pyr6)
+}

@@ -1,0 +1,102 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// shader_38: 3x3 fp16 conv (2x RGBA in -> 1ch) + sigmoid + threshold gate, then a
+// 6-level box pyramid of the mask built in shared memory within one dispatch.
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform ParamBlock {
+    float reserved0;
+    float reserved1;
+    float maskThreshold;
+} ub;
+
+layout(set = 0, binding = 32) uniform sampler2D srcFlow;
+layout(set = 0, binding = 33) uniform sampler2D srcFeat;
+
+layout(set = 0, binding = 48, r8) uniform writeonly image2D dstMask0;
+layout(set = 0, binding = 49, r8) uniform writeonly image2D dstMask1;
+layout(set = 0, binding = 50, r8) uniform writeonly image2D dstMask2;
+layout(set = 0, binding = 51, r8) uniform writeonly image2D dstMask3;
+layout(set = 0, binding = 52, r8) uniform writeonly image2D dstMask4;
+layout(set = 0, binding = 53, r8) uniform writeonly image2D dstMask5;
+
+shared float16_t sTile[32][32];
+
+const ivec2 kTaps[9] = ivec2[9](
+    ivec2(-1, -1), ivec2(-1, 0), ivec2(-1, 1),
+    ivec2( 0, -1), ivec2( 0, 0), ivec2( 0, 1),
+    ivec2( 1, -1), ivec2( 1, 0), ivec2( 1, 1));
+
+const f16vec4 kWFlow[9] = f16vec4[9](
+    f16vec4(0.12200927734375hf, 0.580078125hf, 0.90673828125hf, 0.51318359375hf),
+    f16vec4(0.4296875hf, 0.35693359375hf, 0.55615234375hf, 0.5283203125hf),
+    f16vec4(0.459716796875hf, 0.490478515625hf, 0.666015625hf, 0.75244140625hf),
+    f16vec4(0.129150390625hf, 0.498046875hf, 0.57568359375hf, 0.1358642578125hf),
+    f16vec4(0.4189453125hf, 0.19287109375hf, 0.1644287109375hf, 0.2252197265625hf),
+    f16vec4(0.4697265625hf, 0.4453125hf, 0.46484375hf, 0.5224609375hf),
+    f16vec4(0.251220703125hf, 0.55810546875hf, 0.7001953125hf, 0.35107421875hf),
+    f16vec4(0.58740234375hf, 0.457275390625hf, 0.483154296875hf, 0.65673828125hf),
+    f16vec4(0.4658203125hf, 0.498779296875hf, 0.5634765625hf, 0.6953125hf));
+
+const f16vec4 kWFeat[9] = f16vec4[9](
+    f16vec4(0.54931640625hf, 0.66162109375hf, -0.892578125hf, -1.1923828125hf),
+    f16vec4(0.472900390625hf, 0.457275390625hf, -0.89013671875hf, -1.123046875hf),
+    f16vec4(0.47314453125hf, 0.54150390625hf, -1.1689453125hf, -1.22265625hf),
+    f16vec4(0.43505859375hf, 0.435302734375hf, -0.84375hf, -1.0126953125hf),
+    f16vec4(0.251953125hf, 0.1683349609375hf, -0.8759765625hf, -0.94677734375hf),
+    f16vec4(0.377685546875hf, 0.406494140625hf, -1.095703125hf, -1.126953125hf),
+    f16vec4(0.365234375hf, 0.447265625hf, -1.2197265625hf, -1.1259765625hf),
+    f16vec4(0.343994140625hf, 0.4189453125hf, -1.1650390625hf, -1.134765625hf),
+    f16vec4(0.356201171875hf, 0.456787109375hf, -1.3017578125hf, -1.3056640625hf));
+
+const float16_t kBias = -1.3642578125hf;
+
+#define REDUCE_LEVEL(dst, n) \
+    barrier(); \
+    if (lid.x < n && lid.y < n) { \
+        float16_t r = 0.25hf * (((sTile[2u * lid.x][2u * lid.y] \
+                                + sTile[2u * lid.x + 1u][2u * lid.y]) \
+                                + sTile[2u * lid.x][2u * lid.y + 1u]) \
+                                + sTile[2u * lid.x + 1u][2u * lid.y + 1u]); \
+        ivec2 c = ivec2(wg * n + lid); \
+        if (c.x < imageSize(dst).x && c.y < imageSize(dst).y) { \
+            imageStore(dst, c, vec4(float(r))); \
+        } \
+        sTile[lid.x][lid.y] = r; \
+    }
+
+void main() {
+    uvec2 wg = gl_WorkGroupID.xy;
+    uvec2 lid = gl_LocalInvocationID.xy;
+    ivec2 hi = ivec2(vec2(textureSize(srcFlow, 0))) - ivec2(1);
+    ivec2 lim0 = imageSize(dstMask0);
+    float16_t thr = float16_t(ub.maskThreshold);
+
+    for (uint dy = 0u; dy < 2u; ++dy) {
+        for (uint dx = 0u; dx < 2u; ++dx) {
+            ivec2 p = ivec2(wg * 32u + lid * 2u + uvec2(dx, dy));
+            float16_t s = 0.0hf;
+            for (int t = 0; t < 9; ++t) {
+                s += dot(f16vec4(texelFetch(srcFlow, clamp(p + kTaps[t], ivec2(0), hi), 0)), kWFlow[t]);
+            }
+            for (int t = 0; t < 9; ++t) {
+                s += dot(f16vec4(texelFetch(srcFeat, clamp(p + kTaps[t], ivec2(0), hi), 0)), kWFeat[t]);
+            }
+            s += kBias;
+            float16_t m = 1.0hf / (1.0hf + exp(-s));
+            float16_t v = step(thr, m) * m;
+            if (p.x < lim0.x && p.y < lim0.y) {
+                imageStore(dstMask0, p, vec4(float(v)));
+            }
+            sTile[lid.x * 2u + dx][lid.y * 2u + dy] = v;
+        }
+    }
+
+    REDUCE_LEVEL(dstMask1, 16u)
+    REDUCE_LEVEL(dstMask2, 8u)
+    REDUCE_LEVEL(dstMask3, 4u)
+    REDUCE_LEVEL(dstMask4, 2u)
+    REDUCE_LEVEL(dstMask5, 1u)
+}

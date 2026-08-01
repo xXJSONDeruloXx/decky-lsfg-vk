@@ -1,0 +1,88 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 32) uniform sampler2D srcTex;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D dstA;
+layout(set = 0, binding = 49, rgba8) uniform writeonly image2D dstB;
+
+const float16_t IN_MEAN = 0.322265625hf;
+const float16_t IN_SCALE = 0.7373046875hf;
+const float16_t IN_BIAS = 0.52490234375hf;
+
+const f16vec4 WA1 = f16vec4(-0.065368652344hf, 0.36206054688hf, 0.066772460938hf, 0.050598144531hf);
+const f16vec4 WA2 = f16vec4(-0.019653320312hf, 0.31518554688hf, 0.010818481445hf, -0.071228027344hf);
+const f16vec4 WA3 = f16vec4(-0.061187744141hf, 0.12493896484hf, 0.068176269531hf, -0.13073730469hf);
+const f16vec4 WA4 = f16vec4(0.0045356750488hf, 0.13244628906hf, -0.0047492980957hf, 0.018783569336hf);
+const f16vec4 WA5 = f16vec4(0.10791015625hf, 0.24694824219hf, -0.18420410156hf, -0.098266601562hf);
+const f16vec4 WA6 = f16vec4(0.019195556641hf, -0.091735839844hf, -0.057739257812hf, -0.216796875hf);
+const f16vec4 WA7 = f16vec4(0.079284667969hf, -0.16540527344hf, -0.15991210938hf, 0.10046386719hf);
+const f16vec4 WA8 = f16vec4(0.2138671875hf, -0.064392089844hf, -0.31640625hf, 0.03125hf);
+const f16vec4 WA9 = f16vec4(0.084716796875hf, -0.36279296875hf, -0.11651611328hf, -0.089111328125hf);
+
+const f16vec4 B1A = f16vec4(0.19067382812hf, 0.2578125hf, -0.36328125hf, -0.21069335938hf);
+const f16vec4 GA  = f16vec4(3.42578125hf, 1.4599609375hf, 5.015625hf, 5.2734375hf);
+const f16vec4 B2A = f16vec4(0.098510742188hf, 0.30712890625hf, -0.28100585938hf, -0.23095703125hf);
+
+const f16vec4 WB1 = f16vec4(0.047882080078hf, -0.022064208984hf, -0.26904296875hf, -0.066223144531hf);
+const f16vec4 WB2 = f16vec4(-0.013168334961hf, 0.11944580078hf, -0.220703125hf, 0.0083160400391hf);
+const f16vec4 WB3 = f16vec4(-0.0947265625hf, 0.17797851562hf, -0.10607910156hf, 0.0048522949219hf);
+const f16vec4 WB4 = f16vec4(0.15002441406hf, -0.097717285156hf, -0.0018367767334hf, -0.12976074219hf);
+const f16vec4 WB5 = f16vec4(0.020935058594hf, 0.023071289062hf, 0.33105468750hf, -0.0361328125hf);
+const f16vec4 WB6 = f16vec4(-0.085021972656hf, 0.1318359375hf, 0.4169921875hf, 0.029052734375hf);
+const f16vec4 WB7 = f16vec4(0.11926269531hf, -0.10968017578hf, -0.11987304688hf, -0.097412109375hf);
+const f16vec4 WB8 = f16vec4(0.018600463867hf, -0.077941894531hf, 0.051208496094hf, -0.0042533874512hf);
+const f16vec4 WB9 = f16vec4(-0.029266357422hf, 0.016357421875hf, 0.28491210938hf, 0.045989990234hf);
+
+const f16vec4 B1B = f16vec4(0.069824218750hf, 0.083435058594hf, 0.19372558594hf, -0.12707519531hf);
+const f16vec4 GB  = f16vec4(3.697265625hf, 3.19921875hf, 1.1376953125hf, 8.796875hf);
+const f16vec4 B2B = f16vec4(0.28417968750hf, 0.18713378906hf, 0.16345214844hf, -0.42236328125hf);
+
+#define TAP(ox, oy) \
+    ((float16_t(textureLodOffset(srcTex, uv, 0.0, ivec2(ox, oy)).r) - IN_MEAN) * IN_SCALE + IN_BIAS)
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(gid, imageSize(dstA))))
+        return;
+
+    vec2 srcSize = vec2(textureSize(srcTex, 0));
+    vec2 uv = (vec2(gid * 2) + 0.5) / srcSize;
+
+    float16_t t1 = TAP(-1, -1);
+    float16_t t2 = TAP(-1, 0);
+    float16_t t3 = TAP(-1, 1);
+    float16_t t4 = TAP(0, -1);
+    float16_t t5 = TAP(0, 0);
+    float16_t t6 = TAP(0, 1);
+    float16_t t7 = TAP(1, -1);
+    float16_t t8 = TAP(1, 0);
+    float16_t t9 = TAP(1, 1);
+
+    f16vec4 accA = WA1 * t1;
+    accA += WA2 * t2;
+    accA += WA3 * t3;
+    accA += WA4 * t4;
+    accA += WA5 * t5;
+    accA += WA6 * t6;
+    accA += WA7 * t7;
+    accA += WA8 * t8;
+    accA += WA9 * t9;
+
+    f16vec4 resA = (accA - B1A) * GA + B2A;
+    imageStore(dstA, gid, vec4(resA));
+
+    f16vec4 accB = WB1 * t1;
+    accB += WB2 * t2;
+    accB += WB3 * t3;
+    accB += WB4 * t4;
+    accB += WB5 * t5;
+    accB += WB6 * t6;
+    accB += WB7 * t7;
+    accB += WB8 * t8;
+    accB += WB9 * t9;
+
+    f16vec4 resB = (accB - B1B) * GB + B2B;
+    imageStore(dstB, gid, vec4(resB));
+}

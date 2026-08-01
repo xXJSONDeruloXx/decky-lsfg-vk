@@ -1,0 +1,232 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// 3x3 correlation cost volume between warped and local 8-channel features at
+// four warp hypotheses (two flow pairs, scaled by 1-t / t), reduced by a
+// small linear head and stored to rgba8.
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform Params {
+    float member0;   // unused
+    float blendT;
+    float member2;   // unused
+} ubo;
+
+layout(set = 0, binding = 32) uniform sampler2D featA0;
+layout(set = 0, binding = 33) uniform sampler2D featA1;
+layout(set = 0, binding = 34) uniform sampler2D featB0;
+layout(set = 0, binding = 35) uniform sampler2D featB1;
+layout(set = 0, binding = 36) uniform sampler2D flowP;
+layout(set = 0, binding = 37) uniform sampler2D flowQ;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D outTex;
+
+const f16mat4 M1 = f16mat4(
+    f16vec4(0.4501953125hf, 0.49365234375hf, 0.1787109375hf, 0.4853515625hf),
+    f16vec4(-0.06634521484375hf, 0.62060546875hf, -0.09783935546875hf, 0.493896484375hf),
+    f16vec4(0.34130859375hf, 0.447509765625hf, 0.293212890625hf, 0.414794921875hf),
+    f16vec4(-0.0943603515625hf, 0.580078125hf, -0.1612548828125hf, 0.322998046875hf));
+const f16mat4 M2 = f16mat4(
+    f16vec4(-0.356689453125hf, 0.5048828125hf, -0.0845947265625hf, 0.42529296875hf),
+    f16vec4(-0.11151123046875hf, 0.7509765625hf, -0.0767822265625hf, 0.23046875hf),
+    f16vec4(0.254638671875hf, 0.1102294921875hf, 0.0364990234375hf, 0.356201171875hf),
+    f16vec4(0.0008721351623535156hf, 0.6552734375hf, -0.09271240234375hf, 0.350341796875hf));
+const f16mat4 M3 = f16mat4(
+    f16vec4(-0.5322265625hf, -0.1083984375hf, -0.64697265625hf, -0.2734375hf),
+    f16vec4(-0.38232421875hf, 0.07257080078125hf, -0.5546875hf, -0.07635498046875hf),
+    f16vec4(-0.69287109375hf, -0.08441162109375hf, -0.548828125hf, -0.332763671875hf),
+    f16vec4(-0.51513671875hf, 0.10284423828125hf, -0.477294921875hf, -0.08941650390625hf));
+const f16mat4 M4 = f16mat4(
+    f16vec4(-1.0478515625hf, -0.060821533203125hf, -0.408203125hf, 0.1461181640625hf),
+    f16vec4(-0.5244140625hf, 0.1883544921875hf, -0.472412109375hf, -0.190673828125hf),
+    f16vec4(0.021148681640625hf, -0.1319580078125hf, -0.59521484375hf, -0.333251953125hf),
+    f16vec4(-0.238525390625hf, 0.196533203125hf, -0.50537109375hf, -0.154541015625hf));
+const f16mat4 M5 = f16mat4(
+    f16vec4(0.1055908203125hf, -0.04534912109375hf, 0.10455322265625hf, -0.05029296875hf),
+    f16vec4(0.266357421875hf, -0.207275390625hf, 0.326904296875hf, -0.200927734375hf),
+    f16vec4(-0.049713134765625hf, -0.045654296875hf, 0.174560546875hf, 0.1339111328125hf),
+    f16vec4(0.30419921875hf, -0.18115234375hf, 0.285888671875hf, -0.252685546875hf));
+const f16mat4 M6 = f16mat4(
+    f16vec4(-0.61279296875hf, -0.459716796875hf, 0.49169921875hf, -0.84375hf),
+    f16vec4(0.1854248046875hf, -0.0595703125hf, 0.282958984375hf, -0.25341796875hf),
+    f16vec4(0.16845703125hf, -0.2236328125hf, 0.16259765625hf, -0.007289886474609375hf),
+    f16vec4(0.01971435546875hf, 0.01392364501953125hf, 0.27978515625hf, -0.216796875hf));
+const f16mat4 M7 = f16mat4(
+    f16vec4(0.095947265625hf, -0.0023250579833984375hf, 0.182861328125hf, 0.00882720947265625hf),
+    f16vec4(0.2379150390625hf, -0.1378173828125hf, 0.271728515625hf, -0.183837890625hf),
+    f16vec4(0.0667724609375hf, 0.039459228515625hf, 0.1470947265625hf, 0.0296783447265625hf),
+    f16vec4(0.341796875hf, -0.1363525390625hf, 0.2744140625hf, -0.139404296875hf));
+const f16mat4 M8 = f16mat4(
+    f16vec4(-0.69189453125hf, -0.341064453125hf, 0.491455078125hf, -0.7236328125hf),
+    f16vec4(0.201904296875hf, -0.017181396484375hf, 0.336669921875hf, -0.08819580078125hf),
+    f16vec4(0.36962890625hf, -0.1961669921875hf, 0.1878662109375hf, 0.035675048828125hf),
+    f16vec4(0.0215301513671875hf, 0.0272674560546875hf, 0.286376953125hf, -0.10150146484375hf));
+const f16vec4 VA = f16vec4(0.352783203125hf, 0.0994873046875hf, 0.0078125hf, 0.34130859375hf);
+const f16vec4 VB = f16vec4(-0.02752685546875hf, -0.174560546875hf, -0.59228515625hf, -0.35400390625hf);
+const f16vec4 VC = f16vec4(0.2744140625hf, -0.1727294921875hf, 0.06805419921875hf, 0.061279296875hf);
+const f16vec4 VD = f16vec4(0.33251953125hf, -0.01299285888671875hf, 0.1673583984375hf, 0.09429931640625hf);
+const f16vec4 N1A = f16vec4(2.609375hf, 2.685546875hf, 2.607421875hf, 2.71484375hf);
+const f16vec4 N1B = f16vec4(1.3974609375hf, 1.1240234375hf, 1.337890625hf, 1.1181640625hf);
+const f16vec4 N1C = f16vec4(-0.442138671875hf, 0.082763671875hf, -0.56787109375hf, 0.096923828125hf);
+const f16vec4 N2A = f16vec4(2.896484375hf, 2.71484375hf, 2.609375hf, 2.689453125hf);
+const f16vec4 N2B = f16vec4(0.99267578125hf, 0.8349609375hf, 0.9697265625hf, 0.783203125hf);
+const f16vec4 N2C = f16vec4(0.3408203125hf, 0.24169921875hf, -0.0697021484375hf, 0.195556640625hf);
+const float16_t NSA = 2.611328125hf;
+const float16_t NSB = 1.0478515625hf;
+const float16_t NSC = -0.04693603515625hf;
+const f16vec4 FSUB = f16vec4(-0.8017578125hf, 0.34912109375hf, 0.2242431640625hf, -0.51513671875hf);
+const f16vec4 FMUL = f16vec4(1.0830078125hf, 1.916015625hf, 1.244140625hf, 1.4609375hf);
+const f16vec4 FADD = f16vec4(-0.1959228515625hf, 0.8134765625hf, 0.354736328125hf, 0.9853515625hf);
+
+f16vec4 n1(f16vec4 x) {
+    return clamp((x - N1A) * N1B + N1C, f16vec4(0.0hf), f16vec4(1.0hf));
+}
+
+f16vec4 n2(f16vec4 x) {
+    return clamp((x - N2A) * N2B + N2C, f16vec4(0.0hf), f16vec4(1.0hf));
+}
+
+float16_t ns(float16_t s) {
+    return clamp((s - NSA) * NSB + NSC, 0.0hf, 1.0hf);
+}
+
+float16_t corr8(f16vec4 g, f16vec4 h, f16vec4 f0, f16vec4 f1) {
+    return dot(g, f0) + dot(h, f1);
+}
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 outSize = imageSize(outTex);
+    if (gid.x >= outSize.x || gid.y >= outSize.y) {
+        return;
+    }
+
+    ivec2 S = textureSize(featA0, 0);
+    vec2 dims = vec2(S);
+    vec2 pc = vec2(gid) + 0.5;
+    vec2 uv = pc / dims;
+    ivec2 cmax = S - ivec2(1);
+
+    float t = ubo.blendT;
+    float16_t wA = float16_t(1.0 - t);
+    float16_t wB = float16_t(t);
+
+    // two-step warp chase per flow texture; offsets are pixel displacements,
+    // second step applied unscaled
+    f16vec4 fP = f16vec4(textureLod(flowP, uv, 0.0));
+    f16vec2 dA = fP.xy * wA;
+    f16vec2 rA = f16vec2(textureLod(flowP, (pc + vec2(dA)) / dims, 0.0).xy);
+    vec2 uvA = (pc + vec2(rA)) / dims;
+    f16vec2 dB = fP.zw * wB;
+    f16vec2 rB = f16vec2(textureLod(flowP, (pc + vec2(dB)) / dims, 0.0).zw);
+    vec2 uvB = (pc + vec2(rB)) / dims;
+
+    f16vec4 fQ = f16vec4(textureLod(flowQ, uv, 0.0));
+    f16vec2 dC = fQ.xy * wA;
+    f16vec2 rC = f16vec2(textureLod(flowQ, (pc + vec2(dC)) / dims, 0.0).xy);
+    vec2 uvC = (pc + vec2(rC)) / dims;
+    f16vec2 dD = fQ.zw * wB;
+    f16vec2 rD = f16vec2(textureLod(flowQ, (pc + vec2(dD)) / dims, 0.0).zw);
+    vec2 uvD = (pc + vec2(rD)) / dims;
+
+    // warped 8-channel feature vectors: A/C warp source-A, B/D warp source-B
+    f16vec4 gA = f16vec4(textureLod(featA0, uvA, 0.0));
+    f16vec4 hA = f16vec4(textureLod(featA1, uvA, 0.0));
+    f16vec4 gC = f16vec4(textureLod(featA0, uvC, 0.0));
+    f16vec4 hC = f16vec4(textureLod(featA1, uvC, 0.0));
+    f16vec4 gB = f16vec4(textureLod(featB0, uvB, 0.0));
+    f16vec4 hB = f16vec4(textureLod(featB1, uvB, 0.0));
+    f16vec4 gD = f16vec4(textureLod(featB0, uvD, 0.0));
+    f16vec4 hD = f16vec4(textureLod(featB1, uvD, 0.0));
+
+    // local neighborhood, replicate border; center is bilinear at uv
+    ivec2 q0 = clamp(gid + ivec2(-1, -1), ivec2(0), cmax);
+    ivec2 q1 = clamp(gid + ivec2(0, -1), ivec2(0), cmax);
+    ivec2 q2 = clamp(gid + ivec2(1, -1), ivec2(0), cmax);
+    ivec2 q3 = clamp(gid + ivec2(-1, 0), ivec2(0), cmax);
+    ivec2 q4 = clamp(gid + ivec2(1, 0), ivec2(0), cmax);
+    ivec2 q5 = clamp(gid + ivec2(-1, 1), ivec2(0), cmax);
+    ivec2 q6 = clamp(gid + ivec2(0, 1), ivec2(0), cmax);
+    ivec2 q7 = clamp(gid + ivec2(1, 1), ivec2(0), cmax);
+
+    f16vec4 b0n0 = f16vec4(texelFetch(featB0, q0, 0));
+    f16vec4 b0n1 = f16vec4(texelFetch(featB0, q1, 0));
+    f16vec4 b0n2 = f16vec4(texelFetch(featB0, q2, 0));
+    f16vec4 b0n3 = f16vec4(texelFetch(featB0, q3, 0));
+    f16vec4 b0n4 = f16vec4(texelFetch(featB0, q4, 0));
+    f16vec4 b0n5 = f16vec4(texelFetch(featB0, q5, 0));
+    f16vec4 b0n6 = f16vec4(texelFetch(featB0, q6, 0));
+    f16vec4 b0n7 = f16vec4(texelFetch(featB0, q7, 0));
+    f16vec4 b0c = f16vec4(textureLod(featB0, uv, 0.0));
+
+    f16vec4 b1n0 = f16vec4(texelFetch(featB1, q0, 0));
+    f16vec4 b1n1 = f16vec4(texelFetch(featB1, q1, 0));
+    f16vec4 b1n2 = f16vec4(texelFetch(featB1, q2, 0));
+    f16vec4 b1n3 = f16vec4(texelFetch(featB1, q3, 0));
+    f16vec4 b1n4 = f16vec4(texelFetch(featB1, q4, 0));
+    f16vec4 b1n5 = f16vec4(texelFetch(featB1, q5, 0));
+    f16vec4 b1n6 = f16vec4(texelFetch(featB1, q6, 0));
+    f16vec4 b1n7 = f16vec4(texelFetch(featB1, q7, 0));
+    f16vec4 b1c = f16vec4(textureLod(featB1, uv, 0.0));
+
+    f16vec4 a0n0 = f16vec4(texelFetch(featA0, q0, 0));
+    f16vec4 a0n1 = f16vec4(texelFetch(featA0, q1, 0));
+    f16vec4 a0n2 = f16vec4(texelFetch(featA0, q2, 0));
+    f16vec4 a0n3 = f16vec4(texelFetch(featA0, q3, 0));
+    f16vec4 a0n4 = f16vec4(texelFetch(featA0, q4, 0));
+    f16vec4 a0n5 = f16vec4(texelFetch(featA0, q5, 0));
+    f16vec4 a0n6 = f16vec4(texelFetch(featA0, q6, 0));
+    f16vec4 a0n7 = f16vec4(texelFetch(featA0, q7, 0));
+    f16vec4 a0c = f16vec4(textureLod(featA0, uv, 0.0));
+
+    f16vec4 a1n0 = f16vec4(texelFetch(featA1, q0, 0));
+    f16vec4 a1n1 = f16vec4(texelFetch(featA1, q1, 0));
+    f16vec4 a1n2 = f16vec4(texelFetch(featA1, q2, 0));
+    f16vec4 a1n3 = f16vec4(texelFetch(featA1, q3, 0));
+    f16vec4 a1n4 = f16vec4(texelFetch(featA1, q4, 0));
+    f16vec4 a1n5 = f16vec4(texelFetch(featA1, q5, 0));
+    f16vec4 a1n6 = f16vec4(texelFetch(featA1, q6, 0));
+    f16vec4 a1n7 = f16vec4(texelFetch(featA1, q7, 0));
+    f16vec4 a1c = f16vec4(textureLod(featA1, uv, 0.0));
+
+    // A/C hypotheses correlate against the B neighborhood, B/D against A
+    f16vec4 uA = f16vec4(corr8(gA, hA, b0n0, b1n0), corr8(gA, hA, b0n1, b1n1),
+                         corr8(gA, hA, b0n2, b1n2), corr8(gA, hA, b0n3, b1n3));
+    f16vec4 vA = f16vec4(corr8(gA, hA, b0c, b1c), corr8(gA, hA, b0n4, b1n4),
+                         corr8(gA, hA, b0n5, b1n5), corr8(gA, hA, b0n6, b1n6));
+    float16_t sA = corr8(gA, hA, b0n7, b1n7);
+
+    f16vec4 uB = f16vec4(corr8(gB, hB, a0n0, a1n0), corr8(gB, hB, a0n1, a1n1),
+                         corr8(gB, hB, a0n2, a1n2), corr8(gB, hB, a0n3, a1n3));
+    f16vec4 vB = f16vec4(corr8(gB, hB, a0c, a1c), corr8(gB, hB, a0n4, a1n4),
+                         corr8(gB, hB, a0n5, a1n5), corr8(gB, hB, a0n6, a1n6));
+    float16_t sB = corr8(gB, hB, a0n7, a1n7);
+
+    f16vec4 uC = f16vec4(corr8(gC, hC, b0n0, b1n0), corr8(gC, hC, b0n1, b1n1),
+                         corr8(gC, hC, b0n2, b1n2), corr8(gC, hC, b0n3, b1n3));
+    f16vec4 vC = f16vec4(corr8(gC, hC, b0c, b1c), corr8(gC, hC, b0n4, b1n4),
+                         corr8(gC, hC, b0n5, b1n5), corr8(gC, hC, b0n6, b1n6));
+    float16_t sC = corr8(gC, hC, b0n7, b1n7);
+
+    f16vec4 uD = f16vec4(corr8(gD, hD, a0n0, a1n0), corr8(gD, hD, a0n1, a1n1),
+                         corr8(gD, hD, a0n2, a1n2), corr8(gD, hD, a0n3, a1n3));
+    f16vec4 vD = f16vec4(corr8(gD, hD, a0c, a1c), corr8(gD, hD, a0n4, a1n4),
+                         corr8(gD, hD, a0n5, a1n5), corr8(gD, hD, a0n6, a1n6));
+    float16_t sD = corr8(gD, hD, a0n7, a1n7);
+
+    f16vec4 acc = M1 * n1(uA);
+    acc += M2 * n2(vA);
+    acc += VA * ns(sA);
+    acc += M3 * n1(uB);
+    acc += M4 * n2(vB);
+    acc += VB * ns(sB);
+    acc += M5 * n1(uC);
+    acc += M6 * n2(vC);
+    acc += VC * ns(sC);
+    acc += M7 * n1(uD);
+    acc += M8 * n2(vD);
+    acc += VD * ns(sD);
+
+    f16vec4 res = (acc - FSUB) * FMUL + FADD;
+    imageStore(outTex, gid, vec4(res));
+}

@@ -1,0 +1,200 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform Params {
+    float reserved0;
+    float phase;
+    float reserved1;
+} ub;
+
+layout(set = 0, binding = 32) uniform sampler2D featA0;
+layout(set = 0, binding = 33) uniform sampler2D featA1;
+layout(set = 0, binding = 34) uniform sampler2D featA2;
+layout(set = 0, binding = 35) uniform sampler2D featA3;
+layout(set = 0, binding = 36) uniform sampler2D featB0;
+layout(set = 0, binding = 37) uniform sampler2D featB1;
+layout(set = 0, binding = 38) uniform sampler2D featB2;
+layout(set = 0, binding = 39) uniform sampler2D featB3;
+layout(set = 0, binding = 40) uniform sampler2D flowP;
+layout(set = 0, binding = 41) uniform sampler2D flowQ;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D encOut0;
+layout(set = 0, binding = 49, rgba8) uniform writeonly image2D encOut1;
+
+const ivec2 TAPS[9] = ivec2[9](
+    ivec2(-1, -1), ivec2(0, -1), ivec2(1, -1), ivec2(-1, 0), ivec2(0, 0),
+    ivec2(1, 0), ivec2(-1, 1), ivec2(0, 1), ivec2(1, 1));
+
+const f16vec4 NORM1_M = f16vec4(4.66015625hf, 4.79296875hf, 4.64453125hf, 4.90625hf);
+const f16vec4 NORM1_S = f16vec4(0.61474609375hf, 0.41455078125hf, 0.3701171875hf, 0.501953125hf);
+const f16vec4 NORM1_B = f16vec4(-0.34375hf, 0.11907958984375hf, -0.1085205078125hf, -0.01666259765625hf);
+const f16vec4 NORM2_M = f16vec4(5.34765625hf, 4.90625hf, 4.64453125hf, 4.796875hf);
+const f16vec4 NORM2_S = f16vec4(0.236328125hf, 0.42919921875hf, 0.289794921875hf, 0.44091796875hf);
+const f16vec4 NORM2_B = f16vec4(0.453125hf, 0.2607421875hf, 0.08062744140625hf, 0.0902099609375hf);
+
+// Step along one flow direction, then re-read the flow at the stepped position.
+void chase(sampler2D flowTex, vec2 pc, vec2 uv, vec2 sz,
+           float16_t wFwd, float16_t wBwd, out vec2 uvFwd, out vec2 uvBwd) {
+    f16vec4 v = f16vec4(textureLod(flowTex, uv, 0.0));
+    vec2 probeF = (pc + vec2(v.xy * wFwd)) / sz;
+    f16vec2 stepF = f16vec2(textureLod(flowTex, probeF, 0.0).xy);
+    uvFwd = (pc + vec2(stepF)) / sz;
+    vec2 probeB = (pc + vec2(v.zw * wBwd)) / sz;
+    f16vec2 stepB = f16vec2(textureLod(flowTex, probeB, 0.0).zw);
+    uvBwd = (pc + vec2(stepB)) / sz;
+}
+
+// 3x3 neighborhood: clamped integer fetches, except the sampled center.
+void gatherTaps(sampler2D tex, ivec2 p, ivec2 lim, vec2 uv, out f16vec4 taps[9]) {
+    for (int k = 0; k < 9; ++k) {
+        taps[k] = (k == 4)
+            ? f16vec4(textureLod(tex, uv, 0.0))
+            : f16vec4(texelFetch(tex, clamp(p + TAPS[k], ivec2(0), lim), 0));
+    }
+}
+
+void corrBundle(f16vec4 m0, f16vec4 m1, f16vec4 m2, f16vec4 m3,
+                f16vec4 t0[9], f16vec4 t1[9], f16vec4 t2[9], f16vec4 t3[9],
+                out f16vec4 q1, out f16vec4 q2, out float16_t s) {
+    float16_t c[9];
+    for (int k = 0; k < 9; ++k) {
+        c[k] = ((dot(m0, t0[k]) + dot(m1, t1[k])) + dot(m2, t2[k])) + dot(m3, t3[k]);
+    }
+    q1 = clamp((f16vec4(c[0], c[1], c[2], c[3]) - NORM1_M) * NORM1_S + NORM1_B,
+               f16vec4(0.0hf), f16vec4(1.0hf));
+    q2 = clamp((f16vec4(c[4], c[5], c[6], c[7]) - NORM2_M) * NORM2_S + NORM2_B,
+               f16vec4(0.0hf), f16vec4(1.0hf));
+    s = clamp((c[8] - 4.6640625hf) * 0.54345703125hf + (-0.2110595703125hf),
+              0.0hf, 1.0hf);
+}
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, imageSize(encOut0)))) return;
+
+    ivec2 szI = textureSize(featA0, 0);
+    vec2 sz = vec2(szI);
+    ivec2 lim = szI - ivec2(1);
+    vec2 pc = vec2(p) + 0.5;
+    vec2 uv = pc / sz;
+    float16_t wFwd = float16_t(1.0 - ub.phase);
+    float16_t wBwd = float16_t(ub.phase);
+
+    vec2 uvPF, uvPB, uvQF, uvQB;
+    chase(flowP, pc, uv, sz, wFwd, wBwd, uvPF, uvPB);
+    chase(flowQ, pc, uv, sz, wFwd, wBwd, uvQF, uvQB);
+
+    f16vec4 tA0[9], tA1[9], tA2[9], tA3[9];
+    f16vec4 tB0[9], tB1[9], tB2[9], tB3[9];
+    gatherTaps(featA0, p, lim, uv, tA0);
+    gatherTaps(featA1, p, lim, uv, tA1);
+    gatherTaps(featA2, p, lim, uv, tA2);
+    gatherTaps(featA3, p, lim, uv, tA3);
+    gatherTaps(featB0, p, lim, uv, tB0);
+    gatherTaps(featB1, p, lim, uv, tB1);
+    gatherTaps(featB2, p, lim, uv, tB2);
+    gatherTaps(featB3, p, lim, uv, tB3);
+
+    f16vec4 q1K0, q2K0, q1K1, q2K1, q1K2, q2K2, q1K3, q2K3;
+    float16_t sK0, sK1, sK2, sK3;
+    corrBundle(f16vec4(textureLod(featA0, uvPF, 0.0)),
+               f16vec4(textureLod(featA1, uvPF, 0.0)),
+               f16vec4(textureLod(featA2, uvPF, 0.0)),
+               f16vec4(textureLod(featA3, uvPF, 0.0)),
+               tB0, tB1, tB2, tB3, q1K0, q2K0, sK0);
+    corrBundle(f16vec4(textureLod(featA0, uvQF, 0.0)),
+               f16vec4(textureLod(featA1, uvQF, 0.0)),
+               f16vec4(textureLod(featA2, uvQF, 0.0)),
+               f16vec4(textureLod(featA3, uvQF, 0.0)),
+               tB0, tB1, tB2, tB3, q1K1, q2K1, sK1);
+    corrBundle(f16vec4(textureLod(featB0, uvPB, 0.0)),
+               f16vec4(textureLod(featB1, uvPB, 0.0)),
+               f16vec4(textureLod(featB2, uvPB, 0.0)),
+               f16vec4(textureLod(featB3, uvPB, 0.0)),
+               tA0, tA1, tA2, tA3, q1K2, q2K2, sK2);
+    corrBundle(f16vec4(textureLod(featB0, uvQB, 0.0)),
+               f16vec4(textureLod(featB1, uvQB, 0.0)),
+               f16vec4(textureLod(featB2, uvQB, 0.0)),
+               f16vec4(textureLod(featB3, uvQB, 0.0)),
+               tA0, tA1, tA2, tA3, q1K3, q2K3, sK3);
+
+    f16vec4 acc0;
+    acc0 = f16vec4(dot(f16vec4(0.084228515625hf, -0.037353515625hf, -0.041534423828125hf, 0.08636474609375hf), q1K0),
+                   dot(f16vec4(0.1263427734375hf, -0.07769775390625hf, 0.02191162109375hf, -0.0233001708984375hf), q1K0),
+                   dot(f16vec4(0.06903076171875hf, 0.1834716796875hf, 0.096435546875hf, 0.04931640625hf), q1K0),
+                   dot(f16vec4(-0.33740234375hf, -0.33349609375hf, 0.0035152435302734375hf, -0.335693359375hf), q1K0));
+    acc0 += f16vec4(dot(f16vec4(0.125hf, -0.1964111328125hf, 0.0194244384765625hf, 0.08056640625hf), q2K0),
+                    dot(f16vec4(0.152587890625hf, -0.126220703125hf, 0.141845703125hf, 0.0266265869140625hf), q2K0),
+                    dot(f16vec4(0.251953125hf, 0.2174072265625hf, -0.015869140625hf, 0.08819580078125hf), q2K0),
+                    dot(f16vec4(-0.1832275390625hf, -0.2156982421875hf, -0.27392578125hf, -0.475341796875hf), q2K0));
+    acc0 += f16vec4(0.050933837890625hf, 0.03753662109375hf, 0.0916748046875hf, -0.31201171875hf) * sK0;
+    acc0 += f16vec4(dot(f16vec4(-0.054168701171875hf, 0.038665771484375hf, -0.026031494140625hf, -0.10418701171875hf), q1K2),
+                    dot(f16vec4(-0.2283935546875hf, -0.1536865234375hf, -0.04046630859375hf, -0.310791015625hf), q1K2),
+                    dot(f16vec4(0.0189056396484375hf, 0.01367950439453125hf, -0.09637451171875hf, 0.049835205078125hf), q1K2),
+                    dot(f16vec4(0.00545501708984375hf, -0.146728515625hf, 0.0860595703125hf, -0.022674560546875hf), q1K2));
+    acc0 += f16vec4(dot(f16vec4(0.11053466796875hf, 0.0804443359375hf, -0.1878662109375hf, -0.1099853515625hf), q2K2),
+                    dot(f16vec4(-0.08685302734375hf, -0.09515380859375hf, -0.09637451171875hf, -0.32421875hf), q2K2),
+                    dot(f16vec4(-0.055450439453125hf, -0.09613037109375hf, 0.07147216796875hf, 0.06884765625hf), q2K2),
+                    dot(f16vec4(0.256103515625hf, -0.1787109375hf, -0.06427001953125hf, -0.080078125hf), q2K2));
+    acc0 += f16vec4(-0.031280517578125hf, -0.2337646484375hf, -0.0787353515625hf, 0.051483154296875hf) * sK2;
+    acc0 += f16vec4(dot(f16vec4(0.1856689453125hf, -0.103271484375hf, -0.10601806640625hf, 0.27392578125hf), q1K1),
+                    dot(f16vec4(0.1527099609375hf, 0.279541015625hf, 0.1771240234375hf, 0.049102783203125hf), q1K1),
+                    dot(f16vec4(0.08477783203125hf, -0.03338623046875hf, -0.056243896484375hf, -0.040435791015625hf), q1K1),
+                    dot(f16vec4(0.04296875hf, 0.02252197265625hf, -0.04718017578125hf, 0.2376708984375hf), q1K1));
+    acc0 += f16vec4(dot(f16vec4(-0.12152099609375hf, -0.201416015625hf, 0.261474609375hf, 0.19580078125hf), q2K1),
+                    dot(f16vec4(0.10760498046875hf, 0.14111328125hf, -0.0283966064453125hf, 0.08740234375hf), q2K1),
+                    dot(f16vec4(-0.04412841796875hf, -0.004535675048828125hf, -0.0010519027709960938hf, -0.0859375hf), q2K1),
+                    dot(f16vec4(0.13525390625hf, 0.04058837890625hf, -0.0110931396484375hf, 0.1695556640625hf), q2K1));
+    acc0 += f16vec4(-0.1436767578125hf, 0.24609375hf, -0.035247802734375hf, -0.08746337890625hf) * sK1;
+    acc0 += f16vec4(dot(f16vec4(-0.186767578125hf, 0.044586181640625hf, 0.1192626953125hf, -0.197021484375hf), q1K3),
+                    dot(f16vec4(0.1082763671875hf, -0.04852294921875hf, -0.1304931640625hf, 0.1298828125hf), q1K3),
+                    dot(f16vec4(-0.10791015625hf, -0.10052490234375hf, -0.011016845703125hf, -0.1949462890625hf), q1K3),
+                    dot(f16vec4(0.051788330078125hf, 0.320556640625hf, 0.2498779296875hf, 0.1866455078125hf), q1K3));
+    acc0 += f16vec4(dot(f16vec4(-0.20654296875hf, 0.2454833984375hf, -0.136962890625hf, -0.345458984375hf), q2K3),
+                    dot(f16vec4(0.0113677978515625hf, 0.037750244140625hf, 0.1578369140625hf, 0.1524658203125hf), q2K3),
+                    dot(f16vec4(-0.209228515625hf, -0.06378173828125hf, -0.01239776611328125hf, -0.0931396484375hf), q2K3),
+                    dot(f16vec4(0.40185546875hf, 0.1748046875hf, -0.1484375hf, 0.144775390625hf), q2K3));
+    acc0 += f16vec4(0.163818359375hf, 0.05706787109375hf, 0.0005230903625488281hf, 0.17626953125hf) * sK3;
+
+    f16vec4 acc1;
+    acc1 = f16vec4(dot(f16vec4(0.17138671875hf, 0.177734375hf, 0.138916015625hf, 0.15283203125hf), q1K0),
+                   dot(f16vec4(0.0787353515625hf, -0.07293701171875hf, 0.082763671875hf, -0.08148193359375hf), q1K0),
+                   dot(f16vec4(0.0225982666015625hf, 0.0325927734375hf, 0.037322998046875hf, -0.06927490234375hf), q1K0),
+                   dot(f16vec4(0.12139892578125hf, 0.2139892578125hf, 0.07806396484375hf, 0.2459716796875hf), q1K0));
+    acc1 += f16vec4(dot(f16vec4(-0.039031982421875hf, 0.0999755859375hf, 0.118896484375hf, 0.15966796875hf), q2K0),
+                    dot(f16vec4(-0.1368408203125hf, -0.036529541015625hf, 0.0816650390625hf, -0.090087890625hf), q2K0),
+                    dot(f16vec4(0.10089111328125hf, 0.0223846435546875hf, -0.04541015625hf, -0.11126708984375hf), q2K0),
+                    dot(f16vec4(0.54296875hf, 0.0943603515625hf, 0.092529296875hf, 0.1903076171875hf), q2K0));
+    acc1 += f16vec4(0.1949462890625hf, 0.09661865234375hf, 0.0122528076171875hf, 0.2120361328125hf) * sK0;
+    acc1 += f16vec4(dot(f16vec4(-0.07342529296875hf, -0.0176239013671875hf, 0.03924560546875hf, 0.01009368896484375hf), q1K2),
+                    dot(f16vec4(-0.26513671875hf, -0.30126953125hf, -0.2047119140625hf, -0.3359375hf), q1K2),
+                    dot(f16vec4(-0.036102294921875hf, -0.0684814453125hf, -0.10369873046875hf, 0.10858154296875hf), q1K2),
+                    dot(f16vec4(-0.062744140625hf, 0.019256591796875hf, -0.0614013671875hf, -0.05120849609375hf), q1K2));
+    acc1 += f16vec4(dot(f16vec4(-0.1982421875hf, -0.0188751220703125hf, 0.0272216796875hf, -0.0080413818359375hf), q2K2),
+                    dot(f16vec4(-0.482666015625hf, -0.200439453125hf, -0.06982421875hf, -0.251708984375hf), q2K2),
+                    dot(f16vec4(0.2379150390625hf, -0.11962890625hf, -0.10894775390625hf, 0.09930419921875hf), q2K2),
+                    dot(f16vec4(0.044342041015625hf, 0.05950927734375hf, -0.12493896484375hf, 0.023834228515625hf), q2K2));
+    acc1 += f16vec4(-0.04339599609375hf, -0.22314453125hf, -0.0885009765625hf, -0.077392578125hf) * sK2;
+    acc1 += f16vec4(dot(f16vec4(-0.0018291473388671875hf, -0.00991058349609375hf, -0.07147216796875hf, 0.059173583984375hf), q1K1),
+                    dot(f16vec4(0.0164031982421875hf, 0.055450439453125hf, -0.042205810546875hf, 0.05706787109375hf), q1K1),
+                    dot(f16vec4(-0.2025146484375hf, 0.1937255859375hf, 0.169921875hf, -0.324462890625hf), q1K1),
+                    dot(f16vec4(-0.1600341796875hf, -0.211669921875hf, -0.191650390625hf, -0.2325439453125hf), q1K1));
+    acc1 += f16vec4(dot(f16vec4(0.8330078125hf, -0.1278076171875hf, -0.1534423828125hf, -0.039093017578125hf), q2K1),
+                    dot(f16vec4(-0.0219573974609375hf, 0.004306793212890625hf, -0.07159423828125hf, -0.022308349609375hf), q2K1),
+                    dot(f16vec4(-0.255126953125hf, 0.25390625hf, -0.226318359375hf, -0.46142578125hf), q2K1),
+                    dot(f16vec4(0.145263671875hf, -0.2763671875hf, -0.345703125hf, -0.280029296875hf), q2K1));
+    acc1 += f16vec4(-0.039093017578125hf, -0.0806884765625hf, 0.1533203125hf, -0.13134765625hf) * sK1;
+    acc1 += f16vec4(dot(f16vec4(-0.1458740234375hf, -0.2412109375hf, -0.0206756591796875hf, -0.1263427734375hf), q1K3),
+                    dot(f16vec4(-0.024749755859375hf, 0.16162109375hf, 0.071044921875hf, 0.10711669921875hf), q1K3),
+                    dot(f16vec4(0.2379150390625hf, -0.341552734375hf, -0.09423828125hf, 0.382080078125hf), q1K3),
+                    dot(f16vec4(-0.12396240234375hf, -0.04632568359375hf, 0.0146484375hf, -0.041351318359375hf), q1K3));
+    acc1 += f16vec4(dot(f16vec4(0.51025390625hf, -0.15234375hf, -0.10357666015625hf, -0.1815185546875hf), q2K3),
+                    dot(f16vec4(0.02880859375hf, 0.2138671875hf, 0.1695556640625hf, 0.229248046875hf), q2K3),
+                    dot(f16vec4(-0.10406494140625hf, -0.2978515625hf, 0.217041015625hf, 0.2861328125hf), q2K3),
+                    dot(f16vec4(0.06494140625hf, 0.0728759765625hf, 0.065673828125hf, 0.09600830078125hf), q2K3));
+    acc1 += f16vec4(-0.055450439453125hf, 0.1341552734375hf, -0.1595458984375hf, 0.10400390625hf) * sK3;
+
+    imageStore(encOut0, p, vec4((acc0 - f16vec4(-0.09844970703125hf, 0.11541748046875hf, -0.034637451171875hf, 0.1334228515625hf)) * f16vec4(5.953125hf, 4.66015625hf, 4.6328125hf, 2.9296875hf) + f16vec4(-0.0016355514526367188hf, 0.22119140625hf, 0.1632080078125hf, 0.1156005859375hf)));
+    imageStore(encOut1, p, vec4((acc1 - f16vec4(0.390869140625hf, -0.35009765625hf, -0.1348876953125hf, 0.2462158203125hf)) * f16vec4(2.1328125hf, 4.02734375hf, 5.4765625hf, 5.1796875hf) + f16vec4(0.1199951171875hf, 0.17041015625hf, 0.1051025390625hf, 0.69140625hf)));
+}

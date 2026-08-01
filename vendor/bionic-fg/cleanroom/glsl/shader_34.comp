@@ -1,0 +1,143 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// shader_34: 3x3 local correlation of two 16ch center features against a 16ch
+// neighborhood, quant-style normalize, two 18->4 linear heads -> two RGBA8 images.
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 32) uniform sampler2D srcRefA0;
+layout(set = 0, binding = 33) uniform sampler2D srcRefA1;
+layout(set = 0, binding = 34) uniform sampler2D srcRefA2;
+layout(set = 0, binding = 35) uniform sampler2D srcRefA3;
+layout(set = 0, binding = 36) uniform sampler2D srcRefB0;
+layout(set = 0, binding = 37) uniform sampler2D srcRefB1;
+layout(set = 0, binding = 38) uniform sampler2D srcRefB2;
+layout(set = 0, binding = 39) uniform sampler2D srcRefB3;
+layout(set = 0, binding = 40) uniform sampler2D srcNbr0;
+layout(set = 0, binding = 41) uniform sampler2D srcNbr1;
+layout(set = 0, binding = 42) uniform sampler2D srcNbr2;
+layout(set = 0, binding = 43) uniform sampler2D srcNbr3;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D dstHead0;
+layout(set = 0, binding = 49, rgba8) uniform writeonly image2D dstHead1;
+
+const f16vec4 kZero1 = f16vec4(4.31640625hf, 4.34375hf, 4.30859375hf, 4.35546875hf);
+const f16vec4 kScale1 = f16vec4(0.1795654296875hf, 0.348388671875hf, 0.626953125hf, 0.36328125hf);
+const f16vec4 kOfs1 = f16vec4(0.2196044921875hf, 0.027496337890625hf, -0.63037109375hf, -0.004611968994140625hf);
+const f16vec4 kZero2 = f16vec4(4.421875hf, 4.33984375hf, 4.328125hf, 4.34375hf);
+const f16vec4 kScale2 = f16vec4(0.2403564453125hf, 0.564453125hf, 0.521484375hf, 0.33349609375hf);
+const f16vec4 kOfs2 = f16vec4(0.1405029296875hf, -0.216552734375hf, -0.415283203125hf, 0.04852294921875hf);
+const float16_t kZero3 = 4.3046875hf;
+const float16_t kScale3 = 0.380126953125hf;
+const float16_t kOfs3 = 0.0450439453125hf;
+
+const f16mat4 kP1 = f16mat4(
+    f16vec4(0.2120361328125hf, 0.10186767578125hf, -0.00580596923828125hf, -0.1025390625hf),
+    f16vec4(0.1046142578125hf, 0.2313232421875hf, -0.2171630859375hf, -0.2486572265625hf),
+    f16vec4(0.031768798828125hf, 0.0247802734375hf, 0.1446533203125hf, -0.057586669921875hf),
+    f16vec4(0.17578125hf, 0.10382080078125hf, 0.33642578125hf, -0.339111328125hf));
+const f16mat4 kP2 = f16mat4(
+    f16vec4(0.275634765625hf, 0.326171875hf, -0.10076904296875hf, -0.63623046875hf),
+    f16vec4(0.154541015625hf, 0.0806884765625hf, -0.1961669921875hf, -0.0672607421875hf),
+    f16vec4(0.091552734375hf, 0.269287109375hf, 0.11114501953125hf, -0.1405029296875hf),
+    f16vec4(0.248046875hf, -0.223388671875hf, 0.1978759765625hf, -0.294921875hf));
+const f16vec4 kQ1 = f16vec4(0.013763427734375hf, -0.5341796875hf, 0.0024166107177734375hf, -0.2110595703125hf);
+const f16mat4 kP3 = f16mat4(
+    f16vec4(0.076416015625hf, -0.21044921875hf, -0.2861328125hf, 0.2242431640625hf),
+    f16vec4(-0.2344970703125hf, 0.51611328125hf, -0.31103515625hf, 0.302734375hf),
+    f16vec4(-0.50341796875hf, 0.276611328125hf, 0.26708984375hf, 0.2529296875hf),
+    f16vec4(-0.174560546875hf, 0.10589599609375hf, 0.66748046875hf, 0.4013671875hf));
+const f16mat4 kP4 = f16mat4(
+    f16vec4(-1.0595703125hf, 0.40087890625hf, -0.2958984375hf, -0.1337890625hf),
+    f16vec4(-0.07440185546875hf, 0.26611328125hf, -0.1875hf, 0.201416015625hf),
+    f16vec4(-0.291015625hf, 0.289794921875hf, 0.0615234375hf, 0.06060791015625hf),
+    f16vec4(-0.08892822265625hf, -0.716796875hf, 0.6728515625hf, 0.37451171875hf));
+const f16vec4 kQ2 = f16vec4(-0.0297698974609375hf, -0.609375hf, -0.267822265625hf, 0.210205078125hf);
+const f16vec4 kDeq0A = f16vec4(-0.0872802734375hf, -0.0192108154296875hf, -0.018218994140625hf, -0.07098388671875hf);
+const f16vec4 kDeq1A = f16vec4(4.140625hf, 2.90625hf, 1.388671875hf, 6.20703125hf);
+const f16vec4 kDeq2A = f16vec4(0.24609375hf, -0.2822265625hf, 0.427734375hf, 0.354248046875hf);
+
+const f16mat4 kR1 = f16mat4(
+    f16vec4(-0.11334228515625hf, -0.5966796875hf, -0.220703125hf, -0.1552734375hf),
+    f16vec4(0.027679443359375hf, -0.15869140625hf, -0.1466064453125hf, -0.219970703125hf),
+    f16vec4(-0.1318359375hf, 0.170166015625hf, -0.1160888671875hf, 0.08544921875hf),
+    f16vec4(-0.08880615234375hf, -0.17041015625hf, -0.0277099609375hf, -0.365478515625hf));
+const f16mat4 kR2 = f16mat4(
+    f16vec4(0.56396484375hf, 0.204833984375hf, 0.6162109375hf, -0.414794921875hf),
+    f16vec4(-0.0650634765625hf, 0.4287109375hf, -0.0005249977111816406hf, -0.089599609375hf),
+    f16vec4(-0.02532958984375hf, -0.0310516357421875hf, -0.303466796875hf, 0.2349853515625hf),
+    f16vec4(0.1968994140625hf, 0.2177734375hf, -0.12322998046875hf, -0.192626953125hf));
+const f16vec4 kQ3 = f16vec4(0.1524658203125hf, 0.1317138671875hf, -0.2255859375hf, -0.155029296875hf);
+const f16mat4 kR3 = f16mat4(
+    f16vec4(-0.1258544921875hf, -0.53271484375hf, 0.0654296875hf, -0.0849609375hf),
+    f16vec4(-0.12255859375hf, -0.1435546875hf, -0.281005859375hf, -0.13232421875hf),
+    f16vec4(-0.035888671875hf, -0.07440185546875hf, -0.07196044921875hf, 0.0215606689453125hf),
+    f16vec4(-0.08941650390625hf, -0.497802734375hf, -0.059234619140625hf, -0.2252197265625hf));
+const f16mat4 kR4 = f16mat4(
+    f16vec4(1.1591796875hf, -0.328857421875hf, 1.236328125hf, -0.40087890625hf),
+    f16vec4(-0.1263427734375hf, 0.494873046875hf, -0.171630859375hf, -0.0341796875hf),
+    f16vec4(-0.1104736328125hf, -0.0399169921875hf, -0.152099609375hf, 0.15087890625hf),
+    f16vec4(0.1806640625hf, 0.1837158203125hf, 0.025299072265625hf, -0.0479736328125hf));
+const f16vec4 kQ4 = f16vec4(0.140380859375hf, 0.032562255859375hf, -0.11468505859375hf, 0.041717529296875hf);
+const f16vec4 kDeq0B = f16vec4(0.29736328125hf, -0.2337646484375hf, 0.121826171875hf, -0.376953125hf);
+const f16vec4 kDeq1B = f16vec4(1.20703125hf, 1.8583984375hf, 1.6904296875hf, 2.734375hf);
+const f16vec4 kDeq2B = f16vec4(-0.44287109375hf, 0.0650634765625hf, 0.2000732421875hf, -0.0643310546875hf);
+
+#define CORR_TAP(ox, oy, sa, sb) { \
+        f16vec4 c0 = f16vec4(textureLodOffset(srcNbr0, uv, 0.0, ivec2(ox, oy))); \
+        f16vec4 c1 = f16vec4(textureLodOffset(srcNbr1, uv, 0.0, ivec2(ox, oy))); \
+        f16vec4 c2 = f16vec4(textureLodOffset(srcNbr2, uv, 0.0, ivec2(ox, oy))); \
+        f16vec4 c3 = f16vec4(textureLodOffset(srcNbr3, uv, 0.0, ivec2(ox, oy))); \
+        sa = dot(a0, c0) + dot(a1, c1) + dot(a2, c2) + dot(a3, c3); \
+        sb = dot(b0, c0) + dot(b1, c1) + dot(b2, c2) + dot(b3, c3); \
+    }
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 lim = imageSize(dstHead0);
+    if (p.x >= lim.x || p.y >= lim.y) {
+        return;
+    }
+    vec2 uv = (vec2(p) + 0.5) / vec2(textureSize(srcRefA0, 0));
+
+    f16vec4 a0 = f16vec4(textureLod(srcRefA0, uv, 0.0));
+    f16vec4 a1 = f16vec4(textureLod(srcRefA1, uv, 0.0));
+    f16vec4 a2 = f16vec4(textureLod(srcRefA2, uv, 0.0));
+    f16vec4 a3 = f16vec4(textureLod(srcRefA3, uv, 0.0));
+    f16vec4 b0 = f16vec4(textureLod(srcRefB0, uv, 0.0));
+    f16vec4 b1 = f16vec4(textureLod(srcRefB1, uv, 0.0));
+    f16vec4 b2 = f16vec4(textureLod(srcRefB2, uv, 0.0));
+    f16vec4 b3 = f16vec4(textureLod(srcRefB3, uv, 0.0));
+
+    float16_t sa0, sa1, sa2, sa3, sa4, sa5, sa6, sa7, sa8;
+    float16_t sb0, sb1, sb2, sb3, sb4, sb5, sb6, sb7, sb8;
+    CORR_TAP(-1, -1, sa0, sb0)
+    CORR_TAP( 0, -1, sa1, sb1)
+    CORR_TAP( 1, -1, sa2, sb2)
+    CORR_TAP(-1,  0, sa3, sb3)
+    {
+        f16vec4 c0 = f16vec4(textureLod(srcNbr0, uv, 0.0));
+        f16vec4 c1 = f16vec4(textureLod(srcNbr1, uv, 0.0));
+        f16vec4 c2 = f16vec4(textureLod(srcNbr2, uv, 0.0));
+        f16vec4 c3 = f16vec4(textureLod(srcNbr3, uv, 0.0));
+        sa4 = dot(a0, c0) + dot(a1, c1) + dot(a2, c2) + dot(a3, c3);
+        sb4 = dot(b0, c0) + dot(b1, c1) + dot(b2, c2) + dot(b3, c3);
+    }
+    CORR_TAP( 1,  0, sa5, sb5)
+    CORR_TAP(-1,  1, sa6, sb6)
+    CORR_TAP( 0,  1, sa7, sb7)
+    CORR_TAP( 1,  1, sa8, sb8)
+
+    f16vec4 nA1 = clamp((f16vec4(sa0, sa1, sa2, sa3) - kZero1) * kScale1 + kOfs1, 0.0hf, 1.0hf);
+    f16vec4 nA2 = clamp((f16vec4(sa4, sa5, sa6, sa7) - kZero2) * kScale2 + kOfs2, 0.0hf, 1.0hf);
+    float16_t nA3 = clamp((sa8 - kZero3) * kScale3 + kOfs3, 0.0hf, 1.0hf);
+    f16vec4 nB1 = clamp((f16vec4(sb0, sb1, sb2, sb3) - kZero1) * kScale1 + kOfs1, 0.0hf, 1.0hf);
+    f16vec4 nB2 = clamp((f16vec4(sb4, sb5, sb6, sb7) - kZero2) * kScale2 + kOfs2, 0.0hf, 1.0hf);
+    float16_t nB3 = clamp((sb8 - kZero3) * kScale3 + kOfs3, 0.0hf, 1.0hf);
+
+    f16vec4 h1 = ((((kP1 * nA1 + kP2 * nA2) + kQ1 * nA3) + kP3 * nB1) + kP4 * nB2) + kQ2 * nB3;
+    imageStore(dstHead0, p, vec4((h1 - kDeq0A) * kDeq1A + kDeq2A));
+
+    f16vec4 h2 = ((((kR1 * nA1 + kR2 * nA2) + kQ3 * nA3) + kR3 * nB1) + kR4 * nB2) + kQ4 * nB3;
+    imageStore(dstHead1, p, vec4((h2 - kDeq0B) * kDeq1B + kDeq2B));
+}
