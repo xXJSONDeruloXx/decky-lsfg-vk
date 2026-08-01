@@ -1,0 +1,89 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// 3x3 conv over a 4-channel feature image, zero padding, fp16 math,
+// then per-channel affine remap into rgba8.
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 32) uniform sampler2D featureTex;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D outTex;
+
+const f16mat4 W0 = f16mat4(
+    f16vec4(-0.2705078125hf, -0.1513671875hf, -0.11273193359375hf, 0.31396484375hf),
+    f16vec4(0.5205078125hf, -0.011627197265625hf, 0.12548828125hf, -0.283935546875hf),
+    f16vec4(0.490234375hf, 0.12176513671875hf, -0.1326904296875hf, -0.398681640625hf),
+    f16vec4(0.8330078125hf, 0.2880859375hf, -0.5126953125hf, -0.364990234375hf));
+const f16mat4 W1 = f16mat4(
+    f16vec4(-0.4130859375hf, -0.3779296875hf, -0.046295166015625hf, 0.2890625hf),
+    f16vec4(0.41259765625hf, -0.0699462890625hf, 0.09942626953125hf, -0.411865234375hf),
+    f16vec4(0.1461181640625hf, -0.00345611572265625hf, -0.1689453125hf, -0.456298828125hf),
+    f16vec4(0.102294921875hf, 0.086669921875hf, -0.58349609375hf, -0.4111328125hf));
+const f16mat4 W2 = f16mat4(
+    f16vec4(-0.1746826171875hf, -0.98583984375hf, 0.58154296875hf, 0.66455078125hf),
+    f16vec4(-0.0192413330078125hf, 0.28125hf, -0.80419921875hf, -0.81884765625hf),
+    f16vec4(-0.33203125hf, 0.005214691162109375hf, -0.49755859375hf, -0.5546875hf),
+    f16vec4(-0.29833984375hf, 0.460693359375hf, -0.912109375hf, -0.7998046875hf));
+const f16mat4 W3 = f16mat4(
+    f16vec4(0.16259765625hf, 0.0904541015625hf, 0.1798095703125hf, -0.1636962890625hf),
+    f16vec4(0.35888671875hf, 0.0556640625hf, -0.0531005859375hf, -0.375732421875hf),
+    f16vec4(0.2208251953125hf, 0.421630859375hf, -0.149658203125hf, -0.1024169921875hf),
+    f16vec4(0.059417724609375hf, 0.11846923828125hf, -0.892578125hf, -0.302978515625hf));
+const f16mat4 W4 = f16mat4(
+    f16vec4(0.00940704345703125hf, 0.1917724609375hf, -0.284423828125hf, -0.051727294921875hf),
+    f16vec4(0.203369140625hf, 0.18017578125hf, -0.01380157470703125hf, -0.42578125hf),
+    f16vec4(-0.00963592529296875hf, 0.34130859375hf, -0.282958984375hf, -0.105224609375hf),
+    f16vec4(-0.038726806640625hf, -0.016143798828125hf, -0.34521484375hf, -0.4287109375hf));
+const f16mat4 W5 = f16mat4(
+    f16vec4(0.252685546875hf, -0.64453125hf, 0.4052734375hf, -0.22998046875hf),
+    f16vec4(-0.335693359375hf, 0.1312255859375hf, -0.2364501953125hf, -0.30810546875hf),
+    f16vec4(-0.311279296875hf, 0.003387451171875hf, -0.229248046875hf, -0.127197265625hf),
+    f16vec4(-0.489501953125hf, 0.114013671875hf, -0.7001953125hf, 0.0153961181640625hf));
+const f16mat4 W6 = f16mat4(
+    f16vec4(0.31494140625hf, 0.78759765625hf, -1.1064453125hf, -0.2078857421875hf),
+    f16vec4(0.10784912109375hf, 0.2391357421875hf, -0.159423828125hf, -0.370849609375hf),
+    f16vec4(-0.020599365234375hf, 0.71240234375hf, -0.1383056640625hf, -0.133544921875hf),
+    f16vec4(0.07147216796875hf, 0.552734375hf, -0.53564453125hf, -0.5458984375hf));
+const f16mat4 W7 = f16mat4(
+    f16vec4(-0.18505859375hf, 0.0262451171875hf, -0.38525390625hf, -0.00494384765625hf),
+    f16vec4(0.05694580078125hf, 0.1123046875hf, 0.236328125hf, -0.449462890625hf),
+    f16vec4(-0.023040771484375hf, 0.58740234375hf, 0.1661376953125hf, -0.177490234375hf),
+    f16vec4(-0.042633056640625hf, 0.1339111328125hf, -0.11126708984375hf, -0.318359375hf));
+const f16mat4 W8 = f16mat4(
+    f16vec4(-0.84423828125hf, -0.48828125hf, -0.50732421875hf, 0.529296875hf),
+    f16vec4(-0.42578125hf, 0.59033203125hf, -0.49658203125hf, -0.057769775390625hf),
+    f16vec4(-0.412353515625hf, 0.1883544921875hf, 0.041412353515625hf, -0.029327392578125hf),
+    f16vec4(-0.75244140625hf, 0.568359375hf, -0.454345703125hf, -0.039337158203125hf));
+const f16vec4 AFF_A = f16vec4(-0.5322265625hf, 1.8603515625hf, -2.958984375hf, -2.8125hf);
+const f16vec4 AFF_B = f16vec4(0.460693359375hf, 0.437744140625hf, 0.56005859375hf, 0.130615234375hf);
+const f16vec4 AFF_C = f16vec4(0.443603515625hf, -0.14404296875hf, -0.2998046875hf, 0.6767578125hf);
+
+f16vec4 edgeTap(ivec2 p) {
+    ivec2 sz = textureSize(featureTex, 0);
+    if (all(greaterThanEqual(p, ivec2(0))) && all(lessThan(p, sz))) {
+        return f16vec4(texelFetch(featureTex, p, 0));
+    }
+    return f16vec4(0.0hf);
+}
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 outSize = imageSize(outTex);
+    if (gid.x >= outSize.x || gid.y >= outSize.y) {
+        return;
+    }
+
+    f16vec4 acc = W0 * edgeTap(gid + ivec2(-1, -1));
+    acc += W1 * edgeTap(gid + ivec2(-1, 0));
+    acc += W2 * edgeTap(gid + ivec2(-1, 1));
+    acc += W3 * edgeTap(gid + ivec2(0, -1));
+    // center tap is not bounds-checked (dispatch guarantees outSize <= inSize)
+    acc += W4 * f16vec4(texelFetch(featureTex, gid, 0));
+    acc += W5 * edgeTap(gid + ivec2(0, 1));
+    acc += W6 * edgeTap(gid + ivec2(1, -1));
+    acc += W7 * edgeTap(gid + ivec2(1, 0));
+    acc += W8 * edgeTap(gid + ivec2(1, 1));
+
+    f16vec4 res = (acc - AFF_A) * AFF_B + AFF_C;
+    imageStore(outTex, gid, vec4(res));
+}

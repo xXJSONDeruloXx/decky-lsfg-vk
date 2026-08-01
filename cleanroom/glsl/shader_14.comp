@@ -1,0 +1,76 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0, std140) uniform Params {
+    float member0;   // never read
+    float alpha;
+    float member2;   // never read
+} u;
+
+layout(set = 0, binding = 32) uniform sampler2D featPrev;
+layout(set = 0, binding = 33) uniform sampler2D featCurr;
+layout(set = 0, binding = 34) uniform sampler2D refPrev;
+layout(set = 0, binding = 35) uniform sampler2D refCurr;
+layout(set = 0, binding = 36) uniform sampler2D flowTex;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D outCost03;
+layout(set = 0, binding = 49, rgba8) uniform writeonly image2D outCost47;
+layout(set = 0, binding = 50, rgba8) uniform writeonly image2D outCost8;
+
+const f16vec4 C1 = f16vec4(2.646484375hf, 2.720703125hf, 2.650390625hf, 2.740234375hf);
+const f16vec4 S1 = f16vec4(0.810546875hf, 0.947265625hf, 0.80419921875hf, 0.89697265625hf);
+const f16vec4 B1 = f16vec4(0.19873046875hf, 0.341064453125hf, 0.1671142578125hf, 0.30908203125hf);
+
+const f16vec4 C2 = f16vec4(2.91796875hf, 2.751953125hf, 2.642578125hf, 2.71484375hf);
+const f16vec4 S2 = f16vec4(0.8369140625hf, 0.86474609375hf, 0.93603515625hf, 0.89501953125hf);
+const f16vec4 B2 = f16vec4(0.313720703125hf, 0.31103515625hf, 0.1827392578125hf, 0.30517578125hf);
+
+const float16_t C3 = 2.650390625hf;
+const float16_t S3 = 0.89794921875hf;
+const float16_t B3 = 0.2105712890625hf;
+
+#define CORR_OFF(off) \
+    (dot(F0, f16vec4(textureLodOffset(refPrev, uvB, 0.0, off))) + \
+     dot(F1, f16vec4(textureLodOffset(refCurr, uvB, 0.0, off))))
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, imageSize(outCost03)))) {
+        return;
+    }
+
+    vec2 S = vec2(textureSize(featPrev, 0));
+    vec2 pc = vec2(gl_GlobalInvocationID.xy) + vec2(0.5, 0.5);
+    vec2 uv = pc / S;
+
+    f16vec4 f = f16vec4(textureLod(flowTex, uv, 0.0));
+    float16_t tH = float16_t(u.alpha);
+    float16_t uH = float16_t(1.0 - u.alpha);
+    f16vec2 dA = f.xy * tH;
+    f16vec2 dB = f.zw * uH;
+    vec2 uvA = (pc + vec2(dA)) / S;
+    vec2 uvB = (pc + vec2(dB)) / S;
+
+    f16vec4 F0 = f16vec4(textureLod(featPrev, uvA, 0.0));
+    f16vec4 F1 = f16vec4(textureLod(featCurr, uvA, 0.0));
+
+    f16vec4 v1 = f16vec4(CORR_OFF(ivec2(-1, -1)),
+                         CORR_OFF(ivec2( 0, -1)),
+                         CORR_OFF(ivec2( 1, -1)),
+                         CORR_OFF(ivec2(-1,  0)));
+    imageStore(outCost03, p, vec4((v1 - C1) * S1 + B1));
+
+    // center tap: no offset
+    float16_t cc = dot(F0, f16vec4(textureLod(refPrev, uvB, 0.0)))
+                 + dot(F1, f16vec4(textureLod(refCurr, uvB, 0.0)));
+
+    f16vec4 v2 = f16vec4(cc,
+                         CORR_OFF(ivec2( 1,  0)),
+                         CORR_OFF(ivec2(-1,  1)),
+                         CORR_OFF(ivec2( 0,  1)));
+    imageStore(outCost47, p, vec4((v2 - C2) * S2 + B2));
+
+    float16_t s = CORR_OFF(ivec2(1, 1));
+    imageStore(outCost8, p, vec4(float((s - C3) * S3 + B3), 0.0, 0.0, 0.0));
+}

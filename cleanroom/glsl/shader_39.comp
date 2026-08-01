@@ -1,0 +1,67 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform Params {
+    float reserved0;
+    float phase;
+    float reserved1;
+} ub;
+
+layout(set = 0, binding = 32) uniform sampler2D featA0;
+layout(set = 0, binding = 33) uniform sampler2D featA1;
+layout(set = 0, binding = 34) uniform sampler2D featA2;
+layout(set = 0, binding = 35) uniform sampler2D featA3;
+layout(set = 0, binding = 36) uniform sampler2D featB0;
+layout(set = 0, binding = 37) uniform sampler2D featB1;
+layout(set = 0, binding = 38) uniform sampler2D featB2;
+layout(set = 0, binding = 39) uniform sampler2D featB3;
+layout(set = 0, binding = 40) uniform sampler2D flowPair;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D costOut0;
+layout(set = 0, binding = 49, rgba8) uniform writeonly image2D costOut1;
+layout(set = 0, binding = 50, rgba8) uniform writeonly image2D costOut2;
+
+// 16-channel correlation at one 3x3 offset of the warped B position.
+#define CORR(o) \
+    (((dot(fa0, f16vec4(textureLodOffset(featB0, uvB, 0.0, o))) + \
+       dot(fa1, f16vec4(textureLodOffset(featB1, uvB, 0.0, o)))) + \
+       dot(fa2, f16vec4(textureLodOffset(featB2, uvB, 0.0, o)))) + \
+       dot(fa3, f16vec4(textureLodOffset(featB3, uvB, 0.0, o))))
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, imageSize(costOut0)))) return;
+
+    vec2 sz = vec2(textureSize(featA0, 0));
+    vec2 pc = vec2(p) + 0.5;
+    vec2 uv = pc / sz;
+
+    f16vec4 flow = f16vec4(textureLod(flowPair, uv, 0.0));
+    f16vec2 dispA = flow.xy * float16_t(ub.phase);
+    f16vec2 dispB = flow.zw * float16_t(1.0 - ub.phase);
+
+    vec2 uvA = (pc + vec2(dispA)) / sz;
+    vec2 uvB = (pc + vec2(dispB)) / sz;
+
+    f16vec4 fa0 = f16vec4(textureLod(featA0, uvA, 0.0));
+    f16vec4 fa1 = f16vec4(textureLod(featA1, uvA, 0.0));
+    f16vec4 fa2 = f16vec4(textureLod(featA2, uvA, 0.0));
+    f16vec4 fa3 = f16vec4(textureLod(featA3, uvA, 0.0));
+
+    float16_t cCenter = ((dot(fa0, f16vec4(textureLod(featB0, uvB, 0.0))) +
+                          dot(fa1, f16vec4(textureLod(featB1, uvB, 0.0)))) +
+                          dot(fa2, f16vec4(textureLod(featB2, uvB, 0.0)))) +
+                          dot(fa3, f16vec4(textureLod(featB3, uvB, 0.0)));
+
+    f16vec4 grp1 = f16vec4(CORR(ivec2(-1, -1)), CORR(ivec2(0, -1)),
+                           CORR(ivec2(1, -1)), CORR(ivec2(-1, 0)));
+    f16vec4 grp2 = f16vec4(cCenter, CORR(ivec2(1, 0)),
+                           CORR(ivec2(-1, 1)), CORR(ivec2(0, 1)));
+    float16_t cLast = CORR(ivec2(1, 1));
+
+    imageStore(costOut0, p, vec4((grp1 - f16vec4(4.71875hf, 4.84375hf, 4.70703125hf, 4.9453125hf)) * f16vec4(0.31884765625hf, 0.345458984375hf, 0.351806640625hf, 0.349853515625hf) + f16vec4(0.1812744140625hf, 0.29150390625hf, 0.253173828125hf, 0.322509765625hf)));
+    imageStore(costOut1, p, vec4((grp2 - f16vec4(5.38671875hf, 4.9609375hf, 4.6953125hf, 4.83203125hf)) * f16vec4(0.2998046875hf, 0.333251953125hf, 0.334228515625hf, 0.352783203125hf) + f16vec4(0.355712890625hf, 0.298095703125hf, 0.18994140625hf, 0.32080078125hf)));
+    imageStore(costOut2, p,
+               vec4(float((cLast - 4.72265625hf) * 0.327392578125hf + 0.226318359375hf), 0.0, 0.0, 0.0));
+}

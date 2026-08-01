@@ -1,0 +1,100 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) uniform Params {
+    float reserved0;
+    float phase;
+    float reserved1;
+} ub;
+
+layout(set = 0, binding = 32) uniform sampler2D convIn0;
+layout(set = 0, binding = 33) uniform sampler2D convIn1;
+layout(set = 0, binding = 34) uniform sampler2D coarseFlow;
+layout(set = 0, binding = 35) uniform sampler2D maskTex;
+layout(set = 0, binding = 48, rgba16f) uniform writeonly image2D flowOut;
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(p, imageSize(flowOut)))) return;
+
+    vec2 sz = vec2(textureSize(convIn0, 0));
+    vec2 pc = vec2(p) + 0.5;
+    vec2 uv = pc / sz;
+
+    // 3x3 conv, 8 channels in -> 2-channel flow correction (rx, ry).
+    f16vec4 tap;
+    float16_t rx, ry;
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(-1, -1)));
+    rx = dot(f16vec4(-0.119873046875hf, 0.1549072265625hf, 0.000753879547119140625hf, 0.0966796875hf), tap);
+    ry = dot(f16vec4(-0.00024890899658203125hf, -0.00070095062255859375hf, 0.09918212890625hf, 0.00018298625946044921875hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(-1, 0)));
+    rx += dot(f16vec4(-0.10736083984375hf, 0.0271453857421875hf, 0.000216960906982421875hf, 0.10302734375hf), tap);
+    ry += dot(f16vec4(-0.00022900104522705078125hf, 0.000381946563720703125hf, 0.06329345703125hf, -0.0002219676971435546875hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(-1, 1)));
+    rx += dot(f16vec4(-0.131103515625hf, 0.214111328125hf, -0.000854969024658203125hf, 0.12164306640625hf), tap);
+    ry += dot(f16vec4(0.000403881072998046875hf, 0.013153076171875hf, 0.1629638671875hf, -0.0002739429473876953125hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(0, -1)));
+    rx += dot(f16vec4(-0.10784912109375hf, 0.14208984375hf, 0.00049304962158203125hf, 0.0848388671875hf), tap);
+    ry += dot(f16vec4(-0.000317096710205078125hf, -0.00836181640625hf, 0.09930419921875hf, 0.0000209808349609375hf), tap);
+    tap = f16vec4(textureLod(convIn0, uv, 0.0));
+    rx += dot(f16vec4(-0.08905029296875hf, 0.04705810546875hf, -0.001049041748046875hf, 0.10589599609375hf), tap);
+    ry += dot(f16vec4(0.00116062164306640625hf, -0.00940704345703125hf, 0.0931396484375hf, 0.00015795230865478515625hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(0, 1)));
+    rx += dot(f16vec4(-0.1334228515625hf, 0.212890625hf, -0.00020503997802734375hf, 0.1119384765625hf), tap);
+    ry += dot(f16vec4(-0.0007572174072265625hf, -0.0028476715087890625hf, 0.14208984375hf, 0.000442028045654296875hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(1, -1)));
+    rx += dot(f16vec4(-0.09326171875hf, 0.14013671875hf, -0.00051116943359375hf, 0.11907958984375hf), tap);
+    ry += dot(f16vec4(0.000341892242431640625hf, 0.018463134765625hf, 0.11627197265625hf, -0.000119984149932861328125hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(1, 0)));
+    rx += dot(f16vec4(-0.0810546875hf, 0.01678466796875hf, -0.000625133514404296875hf, 0.1385498046875hf), tap);
+    ry += dot(f16vec4(-0.000632762908935546875hf, -0.005756378173828125hf, 0.07049560546875hf, -0.00032806396484375hf), tap);
+    tap = f16vec4(textureLodOffset(convIn0, uv, 0.0, ivec2(1, 1)));
+    rx += dot(f16vec4(-0.131103515625hf, 0.1937255859375hf, 0.001918792724609375hf, 0.1146240234375hf), tap);
+    ry += dot(f16vec4(0.000319957733154296875hf, -0.003467559814453125hf, 0.1505126953125hf, -0.00002300739288330078125hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(-1, -1)));
+    rx += dot(f16vec4(0.026947021484375hf, -0.00015604496002197265625hf, -0.019927978515625hf, -0.10992431640625hf), tap);
+    ry += dot(f16vec4(-0.08966064453125hf, -0.1180419921875hf, 0.029449462890625hf, 0.00482940673828125hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(-1, 0)));
+    rx += dot(f16vec4(-0.0100555419921875hf, 0.0000820159912109375hf, 0.014373779296875hf, -0.225830078125hf), tap);
+    ry += dot(f16vec4(-0.165771484375hf, -0.116455078125hf, 0.034454345703125hf, -0.000648021697998046875hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(-1, 1)));
+    rx += dot(f16vec4(-0.0185089111328125hf, 0.00021898746490478515625hf, 0.0036220550537109375hf, -0.162353515625hf), tap);
+    ry += dot(f16vec4(-0.253173828125hf, -0.1480712890625hf, 0.1651611328125hf, -0.01401519775390625hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(0, -1)));
+    rx += dot(f16vec4(0.0031375885009765625hf, -0.0003910064697265625hf, 0.0007839202880859375hf, -0.11834716796875hf), tap);
+    ry += dot(f16vec4(-0.3291015625hf, -0.07733154296875hf, 0.214111328125hf, 0.01483154296875hf), tap);
+    tap = f16vec4(textureLod(convIn1, uv, 0.0));
+    rx += dot(f16vec4(-0.0025177001953125hf, 0.000133991241455078125hf, -0.000279903411865234375hf, -0.249755859375hf), tap);
+    ry += dot(f16vec4(-0.334716796875hf, -0.068115234375hf, 0.10919189453125hf, 0.01020050048828125hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(0, 1)));
+    rx += dot(f16vec4(-0.000569820404052734375hf, -0.00006997585296630859375hf, 0.00084590911865234375hf, -0.1588134765625hf), tap);
+    ry += dot(f16vec4(-0.392578125hf, -0.072509765625hf, 0.315673828125hf, 0.0059967041015625hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(1, -1)));
+    rx += dot(f16vec4(-0.01300048828125hf, 0.000522136688232421875hf, 0.00166416168212890625hf, -0.08367919921875hf), tap);
+    ry += dot(f16vec4(-0.176025390625hf, -0.152099609375hf, 0.073486328125hf, -0.0242767333984375hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(1, 0)));
+    rx += dot(f16vec4(-0.022613525390625hf, -0.00019896030426025390625hf, 0.018035888671875hf, -0.1861572265625hf), tap);
+    ry += dot(f16vec4(-0.13525390625hf, -0.11920166015625hf, 0.045654296875hf, -0.01392364501953125hf), tap);
+    tap = f16vec4(textureLodOffset(convIn1, uv, 0.0, ivec2(1, 1)));
+    rx += dot(f16vec4(0.04693603515625hf, -0.000119984149932861328125hf, -0.0188751220703125hf, -0.10638427734375hf), tap);
+    ry += dot(f16vec4(-0.14306640625hf, -0.1248779296875hf, 0.131103515625hf, 0.0150604248046875hf), tap);
+    rx += -0.000001013278961181640625hf;
+    ry += -0.0hf;
+
+    f16vec4 base = f16vec4(textureLod(coarseFlow, uv, 0.0)) * 2.0hf;
+    f16vec2 fwd = base.xy + f16vec2(rx, ry);
+    f16vec2 bwd = base.zw - f16vec2(rx, ry);
+
+    vec2 probeF = (pc + (vec2(fwd) * (2.0 * ub.phase)) * 0.25) / sz;
+    float16_t wF = 1.0hf - float16_t(textureLod(maskTex, probeF, 0.0).x);
+    f16vec2 fwdW = fwd * wF;
+
+    vec2 probeB = (pc + (vec2(bwd) * (2.0 * (1.0 - ub.phase))) * 0.25) / sz;
+    float16_t wB = 1.0hf - float16_t(textureLod(maskTex, probeB, 0.0).x);
+    f16vec2 bwdW = bwd * wB;
+
+    float16_t wC = 1.0hf - float16_t(textureLod(maskTex, uv, 0.0).x);
+    imageStore(flowOut, p, vec4(f16vec4(fwdW.x, fwdW.y, bwdW.x, bwdW.y) * wC));
+}

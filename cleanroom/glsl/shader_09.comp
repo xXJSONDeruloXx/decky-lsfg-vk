@@ -1,0 +1,159 @@
+#version 460
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+
+// Coarse flow head: 18 matching costs over a 3x3 search window (two query
+// descriptors vs one reference), normalized, then two 18->4 linear layers.
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(set = 0, binding = 32) uniform sampler2D qryA0;
+layout(set = 0, binding = 33) uniform sampler2D qryA1;
+layout(set = 0, binding = 34) uniform sampler2D qryB0;
+layout(set = 0, binding = 35) uniform sampler2D qryB1;
+layout(set = 0, binding = 36) uniform sampler2D refT0;
+layout(set = 0, binding = 37) uniform sampler2D refT1;
+layout(set = 0, binding = 48, rgba8) uniform writeonly image2D dstF;
+layout(set = 0, binding = 49, rgba8) uniform writeonly image2D dstB;
+
+const f16vec4 biasG1 = f16vec4(2.5, 2.521484375, 2.50390625, 2.51953125);
+
+const f16vec4 scaleG1 = f16vec4(1.0341796875, 0.72412109375, 0.6572265625, 1.0205078125);
+
+const f16vec4 postG1 = f16vec4(-0.4296875, -0.042877197265625, -0.4951171875, -0.11126708984375);
+
+const f16vec4 biasG2 = f16vec4(2.568359375, 2.53515625, 2.498046875, 2.521484375);
+
+const f16vec4 scaleG2 = f16vec4(0.53466796875, 0.427978515625, 0.6787109375, 0.8740234375);
+
+const f16vec4 postG2 = f16vec4(0.10174560546875, 0.266357421875, -0.0150909423828125, -0.380126953125);
+
+const float16_t bias9 = float16_t(2.509765625);
+
+const float16_t scale9 = float16_t(0.480712890625);
+
+const float16_t post9 = float16_t(0.278076171875);
+
+const f16mat4 wfA1 = f16mat4(
+    f16vec4(-0.6171875, -0.098876953125, -0.003223419189453125, 0.05706787109375),
+    f16vec4(-0.201171875, 0.275146484375, -0.053924560546875, -0.409912109375),
+    f16vec4(-0.076171875, -0.0161285400390625, 0.3349609375, -0.54541015625),
+    f16vec4(-0.1729736328125, 0.1617431640625, -0.0648193359375, 0.245361328125));
+
+const f16mat4 wfA2 = f16mat4(
+    f16vec4(0.302978515625, 0.5341796875, -0.433837890625, -0.21142578125),
+    f16vec4(0.375732421875, -0.01236724853515625, 0.239990234375, -0.291748046875),
+    f16vec4(-0.25830078125, 0.14013671875, -0.054351806640625, 0.078369140625),
+    f16vec4(0.05908203125, 0.185546875, 0.0665283203125, -0.66748046875));
+
+const f16mat4 wfB1 = f16mat4(
+    f16vec4(-0.51171875, -0.256103515625, 0.06341552734375, -0.06170654296875),
+    f16vec4(-0.1678466796875, -0.25439453125, 0.391845703125, -0.1029052734375),
+    f16vec4(-0.01464080810546875, -0.238525390625, 0.1650390625, -0.321044921875),
+    f16vec4(-0.361083984375, -0.2294921875, 0.183349609375, 0.51953125));
+
+const f16mat4 wfB2 = f16mat4(
+    f16vec4(0.8525390625, -1.013671875, -0.8603515625, 0.3408203125),
+    f16vec4(0.30224609375, -0.10955810546875, 0.39599609375, -0.2481689453125),
+    f16vec4(-0.439208984375, -0.046905517578125, 0.296142578125, 0.1353759765625),
+    f16vec4(-0.00047397613525390625, 0.1292724609375, 0.318359375, -0.395263671875));
+
+const f16vec4 wfA9 = f16vec4(-0.073486328125, 0.1968994140625, -0.061004638671875, -0.548828125);
+
+const f16vec4 wfB9 = f16vec4(-0.053466796875, 0.1724853515625, 0.1519775390625, -0.0129852294921875);
+
+const f16vec4 subF = f16vec4(0.12493896484375, -0.004108428955078125, 0.08489990234375, -0.276611328125);
+
+const f16vec4 mulF = f16vec4(1.67578125, 5.44140625, 4.0625, 2.37109375);
+
+const f16vec4 addF = f16vec4(0.14404296875, -0.186767578125, 0.034576416015625, -0.2451171875);
+
+const f16mat4 wbA1 = f16mat4(
+    f16vec4(-0.06646728515625, 0.132080078125, 0.10211181640625, -0.1077880859375),
+    f16vec4(0.01702880859375, -0.18701171875, -0.34912109375, -0.04522705078125),
+    f16vec4(0.1290283203125, -0.033416748046875, -0.2529296875, 0.034515380859375),
+    f16vec4(0.0321044921875, -0.1719970703125, -0.01235198974609375, -0.28125));
+
+const f16mat4 wbA2 = f16mat4(
+    f16vec4(1.0380859375, -0.225341796875, -0.26123046875, -0.4716796875),
+    f16vec4(0.0662841796875, -0.14501953125, -0.03436279296875, 0.277587890625),
+    f16vec4(-0.10638427734375, -0.00730133056640625, -0.10723876953125, 0.1124267578125),
+    f16vec4(-0.06939697265625, -0.1727294921875, -0.314453125, 0.04400634765625));
+
+const f16mat4 wbB1 = f16mat4(
+    f16vec4(0.02752685546875, 0.14208984375, 0.192626953125, -0.197509765625),
+    f16vec4(-0.1563720703125, -0.265380859375, -0.0111083984375, 0.1336669921875),
+    f16vec4(0.1590576171875, 0.01421356201171875, -0.178466796875, -0.1771240234375),
+    f16vec4(-0.279296875, -0.1534423828125, 0.07720947265625, -0.3857421875));
+
+const f16mat4 wbB2 = f16mat4(
+    f16vec4(0.8505859375, -0.60693359375, -0.297607421875, 0.1439208984375),
+    f16vec4(-0.1905517578125, -0.2235107421875, 0.019561767578125, 0.8798828125),
+    f16vec4(0.116943359375, 0.0157928466796875, 0.034027099609375, 0.2724609375),
+    f16vec4(-0.1539306640625, 0.0080108642578125, -0.11529541015625, 0.131103515625));
+
+const f16vec4 wbA9 = f16vec4(0.11322021484375, -0.1365966796875, -0.301513671875, 0.307861328125);
+
+const f16vec4 wbB9 = f16vec4(0.1278076171875, -0.1292724609375, -0.173828125, 0.48583984375);
+
+const f16vec4 subB = f16vec4(0.30712890625, -0.40625, -0.285888671875, 0.476806640625);
+
+const f16vec4 mulB = f16vec4(0.599609375, 2.76171875, 2.630859375, 3.283203125);
+
+const f16vec4 addB = f16vec4(0.141845703125, -0.390869140625, -0.041107177734375, 0.6826171875);
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 ext = imageSize(dstF);
+    if (p.x >= ext.x || p.y >= ext.y) return;
+
+    vec2 uv = (vec2(p) + 0.5) / vec2(textureSize(qryA0, 0));
+
+    f16vec4 a0 = f16vec4(textureLod(qryA0, uv, 0.0));
+    f16vec4 a1 = f16vec4(textureLod(qryA1, uv, 0.0));
+    f16vec4 b0 = f16vec4(textureLod(qryB0, uv, 0.0));
+    f16vec4 b1 = f16vec4(textureLod(qryB1, uv, 0.0));
+
+    float16_t cA[9];
+    float16_t cB[9];
+#define MATCH_COST(i, dx, dy) { \
+        f16vec4 r0 = f16vec4(textureLodOffset(refT0, uv, 0.0, ivec2(dx, dy))); \
+        f16vec4 r1 = f16vec4(textureLodOffset(refT1, uv, 0.0, ivec2(dx, dy))); \
+        cA[i] = dot(a0, r0) + dot(a1, r1); \
+        cB[i] = dot(b0, r0) + dot(b1, r1); \
+    }
+    MATCH_COST(0, -1, -1)
+    MATCH_COST(1,  0, -1)
+    MATCH_COST(2,  1, -1)
+    MATCH_COST(3, -1,  0)
+    MATCH_COST(4,  0,  0)
+    MATCH_COST(5,  1,  0)
+    MATCH_COST(6, -1,  1)
+    MATCH_COST(7,  0,  1)
+    MATCH_COST(8,  1,  1)
+#undef MATCH_COST
+
+    const float16_t lo = float16_t(0.0);
+    const float16_t hi = float16_t(1.0);
+    f16vec4 nA1 = clamp((f16vec4(cA[0], cA[1], cA[2], cA[3]) - biasG1) * scaleG1 + postG1, lo, hi);
+    f16vec4 nA2 = clamp((f16vec4(cA[4], cA[5], cA[6], cA[7]) - biasG2) * scaleG2 + postG2, lo, hi);
+    float16_t qA = clamp((cA[8] - bias9) * scale9 + post9, lo, hi);
+    f16vec4 nB1 = clamp((f16vec4(cB[0], cB[1], cB[2], cB[3]) - biasG1) * scaleG1 + postG1, lo, hi);
+    f16vec4 nB2 = clamp((f16vec4(cB[4], cB[5], cB[6], cB[7]) - biasG2) * scaleG2 + postG2, lo, hi);
+    float16_t qB = clamp((cB[8] - bias9) * scale9 + post9, lo, hi);
+
+    f16vec4 sF = wfA1 * nA1;
+    sF += wfA2 * nA2;
+    sF += wfA9 * qA;
+    sF += wfB1 * nB1;
+    sF += wfB2 * nB2;
+    sF += wfB9 * qB;
+    imageStore(dstF, p, vec4((sF - subF) * mulF + addF));
+
+    f16vec4 sB = wbA1 * nA1;
+    sB += wbA2 * nA2;
+    sB += wbA9 * qA;
+    sB += wbB1 * nB1;
+    sB += wbB2 * nB2;
+    sB += wbB9 * qB;
+    imageStore(dstB, p, vec4((sB - subB) * mulB + addB));
+}
