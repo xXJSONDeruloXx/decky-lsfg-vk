@@ -75,8 +75,8 @@ export function showErrorToastWithMessage(title: string, error: unknown): void {
 /**
  * Show installation success toast
  */
-export function showInstallSuccessToast(): void {
-  showSuccessToast(ToastMessages.INSTALL_SUCCESS.title, ToastMessages.INSTALL_SUCCESS.body);
+export function showInstallSuccessToast(body?: string): void {
+  showSuccessToast(ToastMessages.INSTALL_SUCCESS.title, body || ToastMessages.INSTALL_SUCCESS.body);
 }
 
 /**

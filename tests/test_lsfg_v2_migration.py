@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import sys
 import tempfile
@@ -226,10 +227,166 @@ class FlatpakMigrationTests(unittest.TestCase):
 
             self.assertTrue(result["success"])
             service._run_flatpak_command.assert_called_once_with(
-                ["install", "--user", "--noninteractive", str(bundle_path)],
+                [
+                    "install",
+                    "--user",
+                    "--or-update",
+                    "--assumeyes",
+                    "--noninteractive",
+                    str(bundle_path),
+                ],
                 capture_output=True,
                 text=True,
             )
+
+    def test_update_installed_extensions_only_updates_user_runtimes_and_migrates_apps(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        service = FlatpakService.__new__(FlatpakService)
+        service.log = mock.Mock()
+        service.check_flatpak_available = mock.Mock(return_value=True)
+        service._get_installed_extension_versions = mock.Mock(return_value=["23.08", "25.08"])
+        service.install_extension = mock.Mock(
+            side_effect=[{"success": True}, {"success": True}]
+        )
+        service._migrate_legacy_app_overrides = mock.Mock(
+            return_value={
+                "success": True,
+                "migrated_apps": ["org.example.Game"],
+                "failed_apps": [],
+            }
+        )
+
+        result = service.update_installed_extensions()
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["updated_versions"], ["23.08", "25.08"])
+        self.assertEqual(result["migrated_apps"], ["org.example.Game"])
+        self.assertEqual(
+            service.install_extension.call_args_list,
+            [mock.call("23.08"), mock.call("25.08")],
+        )
+        service._migrate_legacy_app_overrides.assert_called_once_with()
+
+    def test_installed_runtime_scan_is_scoped_to_user_installation(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        service = FlatpakService.__new__(FlatpakService)
+        service._run_flatpak_command = mock.Mock(
+            return_value=types.SimpleNamespace(
+                returncode=0,
+                stdout=(
+                    "lsfg-vk\torg.freedesktop.Platform.VulkanLayer.lsfgvk\t"
+                    "2.0\t23.08\tx86_64\n"
+                ),
+                stderr="",
+            )
+        )
+
+        self.assertEqual(service._get_installed_extension_versions(), ["23.08"])
+        service._run_flatpak_command.assert_called_once_with(
+            ["list", "--user", "--runtime"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+    def test_failed_runtime_update_leaves_legacy_overrides_untouched(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        service = FlatpakService.__new__(FlatpakService)
+        service.log = mock.Mock()
+        service.check_flatpak_available = mock.Mock(return_value=True)
+        service._get_installed_extension_versions = mock.Mock(return_value=["24.08"])
+        service.install_extension = mock.Mock(
+            return_value={"success": False, "error": "bundle unavailable"}
+        )
+        service._migrate_legacy_app_overrides = mock.Mock()
+
+        result = service.update_installed_extensions()
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failed_versions"][0]["version"], "24.08")
+        service._migrate_legacy_app_overrides.assert_not_called()
+
+    def test_native_install_runs_flatpak_migration_after_success(self):
+        from lsfg_vk.plugin import Plugin
+
+        plugin = Plugin.__new__(Plugin)
+        plugin.installation_service = mock.Mock()
+        plugin.flatpak_service = mock.Mock()
+        plugin.installation_service.install.return_value = {
+            "success": True,
+            "message": "lsfg-vk v2 installed successfully",
+            "error": None,
+        }
+        plugin.flatpak_service.update_installed_extensions.return_value = {
+            "success": True,
+            "message": "Updated one Flatpak runtime",
+            "skipped": False,
+            "updated_versions": ["23.08"],
+            "failed_versions": [],
+            "migrated_apps": [],
+            "failed_apps": [],
+        }
+
+        result = asyncio.run(plugin.install_lsfg_vk())
+
+        self.assertTrue(result["success"])
+        self.assertIn("flatpak_update", result)
+        plugin.flatpak_service.update_installed_extensions.assert_called_once_with()
+
+    def test_legacy_override_detection_does_not_match_v2_environment(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            service = FlatpakService.__new__(FlatpakService)
+            service.user_home = home
+            service.config_dir = home / ".config/lsfg-vk"
+            service.config_file_path = service.config_dir / "conf.toml"
+            service.lsfg_launch_script_path = home / "lsfg"
+            service.log = mock.Mock()
+
+            self.assertTrue(
+                service._has_legacy_app_override(
+                    f"LSFG_CONFIG={service.config_file_path}\n"
+                )
+            )
+            self.assertFalse(
+                service._has_legacy_app_override(
+                    f"LSFGVK_CONFIG={service.config_file_path}\n"
+                )
+            )
+
+    def test_legacy_override_migration_only_touches_plugin_owned_apps(self):
+        from lsfg_vk.flatpak_service import FlatpakService
+
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            service = FlatpakService.__new__(FlatpakService)
+            service.user_home = home
+            service.config_dir = home / ".config/lsfg-vk"
+            service.config_file_path = service.config_dir / "conf.toml"
+            service.lsfg_launch_script_path = home / "lsfg"
+            service.log = mock.Mock()
+            service._get_flatpak_app_ids = mock.Mock(
+                return_value=["org.example.Legacy", "org.example.V2", "org.example.Other"]
+            )
+            service._get_app_override_output = mock.Mock(
+                side_effect=[
+                    f"LSFG_CONFIG={service.config_file_path}\n",
+                    f"LSFGVK_CONFIG={service.config_file_path}\n",
+                    "",
+                ]
+            )
+            service.set_app_override = mock.Mock(return_value={"success": True})
+
+            result = service._migrate_legacy_app_overrides()
+
+            self.assertTrue(result["success"])
+            self.assertEqual(result["migrated_apps"], ["org.example.Legacy"])
+            service.set_app_override.assert_called_once_with("org.example.Legacy")
 
     def test_v2_override_setup_and_removal_clean_legacy_overrides(self):
         from lsfg_vk.flatpak_service import FlatpakService

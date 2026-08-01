@@ -79,6 +79,7 @@ For per-game feedback and community support, please join the [decky-lsfg-vk Disc
 The plugin:
 - Downloads checksum-pinned x86_64 or Armada/aarch64 lsfg-vk v2 assets from the owner-fork release to `~/.local/lib/`
 - Bundles checksum-pinned lsfg-vk v2 Flatpak extensions for runtimes 23.08, 24.08, and 25.08, and installs the selected local bundle
+- Updates already-installed user Flatpak runtimes and migrates the plugin's legacy app overrides when the native layer is updated
 - Configures the v2 Vulkan layer in `~/.local/share/vulkan/implicit_layer.d/`
 - Migrates the existing `~/.config/lsfg-vk/conf.toml` from v1 to v2 automatically on layer update, retaining a one-time `.v1.bak` backup
 - Automatically detects your Lossless Scaling DLL installation
