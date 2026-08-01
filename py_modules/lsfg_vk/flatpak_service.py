@@ -9,7 +9,16 @@ from typing import Dict, Any, List, Optional
 
 from .base_service import BaseService
 from .config_schema import ConfigurationManager
+from .constants import (
+    BIN_DIR,
+    FLATPAK_23_08_FILENAME,
+    FLATPAK_24_08_FILENAME,
+    FLATPAK_25_08_FILENAME,
+)
 from .types import BaseResponse
+
+
+SUPPORTED_FLATPAK_VERSIONS = ("23.08", "24.08", "25.08")
 
 
 class FlatpakExtensionStatus(BaseResponse):
@@ -66,6 +75,40 @@ class FlatpakService(BaseService):
         except (OSError, ValueError, KeyError, TypeError) as error:
             self.log.debug("Could not read configured DLL path for Flatpak override: %s", error)
         return config_path, dll_directory
+
+    def _get_bundled_extension_path(self, version: str) -> Path:
+        """Return the checksum-pinned Flatpak bundle shipped with this plugin."""
+        filenames = {
+            "23.08": FLATPAK_23_08_FILENAME,
+            "24.08": FLATPAK_24_08_FILENAME,
+            "25.08": FLATPAK_25_08_FILENAME,
+        }
+        try:
+            filename = filenames[version]
+        except KeyError as error:
+            raise ValueError(f"Unsupported Flatpak runtime version: {version}") from error
+
+        plugin_dir = Path(__file__).resolve().parent.parent.parent
+        return plugin_dir / BIN_DIR / filename
+
+    def _get_installed_extension_versions(self) -> list[str]:
+        """Return installed lsfg-vk runtime branches from the user Flatpak installation."""
+        result = self._run_flatpak_command(
+            ["list", "--user", "--runtime"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        installed_runtimes = result.stdout
+        base_extension_name = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
+        return [
+            version
+            for version in SUPPORTED_FLATPAK_VERSIONS
+            if any(
+                base_extension_name in line and version in line
+                for line in installed_runtimes.splitlines()
+            )
+        ]
 
     def _remove_legacy_app_overrides(self, app_id: str) -> list[str]:
         """Remove only the v1 overrides previously created by this plugin."""
@@ -154,26 +197,10 @@ class FlatpakService(BaseService):
                                           error_msg,
                                           installed_23_08=False, installed_24_08=False, installed_25_08=False)
 
-            result = self._run_flatpak_command(
-                ["list", "--runtime"],
-                capture_output=True, text=True, check=True
-            )
-
-            installed_runtimes = result.stdout
-
-            base_extension_name = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
-            installed_23_08 = False
-            installed_24_08 = False
-            installed_25_08 = False
-
-            for line in installed_runtimes.split('\n'):
-                if base_extension_name in line:
-                    if "23.08" in line:
-                        installed_23_08 = True
-                    elif "24.08" in line:
-                        installed_24_08 = True
-                    elif "25.08" in line:
-                        installed_25_08 = True
+            installed_versions = self._get_installed_extension_versions()
+            installed_23_08 = "23.08" in installed_versions
+            installed_24_08 = "24.08" in installed_versions
+            installed_25_08 = "25.08" in installed_versions
 
             status_msg = []
             if installed_23_08:
@@ -199,22 +226,29 @@ class FlatpakService(BaseService):
                                       installed_23_08=False, installed_24_08=False, installed_25_08=False)
 
     def install_extension(self, version: str) -> BaseResponse:
-        """Install a specific version of the lsfg-vk Flatpak extension"""
+        """Install or update a specific version of the lsfg-vk Flatpak extension."""
         try:
-            if version not in ["23.08", "24.08", "25.08"]:
+            if version not in SUPPORTED_FLATPAK_VERSIONS:
                 return self._error_response(BaseResponse, "Invalid version. Must be '23.08', '24.08', or '25.08'")
 
             if not self.check_flatpak_available():
                 return self._error_response(BaseResponse, "Flatpak is not available on this system")
 
-            if version == "23.08":
-                return self._error_response(
-                    BaseResponse,
-                    "Flathub supplies the lsfg-vk v2 extension for runtimes 24.08 and 25.08; install 23.08 manually.",
-                )
+            bundle_path = self._get_bundled_extension_path(version)
+            if not bundle_path.is_file():
+                error_msg = f"Bundled Flatpak extension not found at {bundle_path}; reinstall the plugin"
+                self.log.error(error_msg)
+                return self._error_response(BaseResponse, error_msg)
 
             result = self._run_flatpak_command(
-                ["install", "--user", "--noninteractive", "flathub", f"org.freedesktop.Platform.VulkanLayer.lsfgvk//{version}"],
+                [
+                    "install",
+                    "--user",
+                    "--or-update",
+                    "--assumeyes",
+                    "--noninteractive",
+                    str(bundle_path),
+                ],
                 capture_output=True, text=True
             )
 
@@ -223,18 +257,172 @@ class FlatpakService(BaseService):
                 self.log.error(error_msg)
                 return self._error_response(BaseResponse, error_msg)
 
-            self.log.info(f"Successfully installed lsfg-vk Flatpak extension {version}")
-            return self._success_response(BaseResponse, f"lsfg-vk {version} runtime extension installed successfully")
+            self.log.info("Successfully installed bundled lsfg-vk Flatpak extension %s", version)
+            return self._success_response(
+                BaseResponse,
+                f"lsfg-vk {version} runtime extension installed successfully from the bundled asset",
+            )
 
         except Exception as e:
             error_msg = f"Error installing Flatpak extension {version}: {str(e)}"
             self.log.error(error_msg)
             return self._error_response(BaseResponse, error_msg)
 
+    def _get_flatpak_app_ids(self) -> list[str]:
+        """Return application IDs in the user Flatpak installation."""
+        result = self._run_flatpak_command(
+            ["list", "--app"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        app_ids = []
+        for line in result.stdout.splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 2 and parts[1].strip():
+                app_ids.append(parts[1].strip())
+        return app_ids
+
+    def _get_app_override_output(self, app_id: str) -> Optional[str]:
+        """Return an app's user override output, or None if it cannot be read."""
+        result = self._run_flatpak_command(
+            ["override", "--user", "--show", app_id],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout
+
+    def _has_legacy_app_override(self, output: str) -> bool:
+        """Detect only overrides written by the v1 plugin."""
+        config_path, _ = self._get_lsfg_paths()
+        legacy_dll_path = self.user_home / ".local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+        legacy_config = f"LSFG_CONFIG={config_path}/conf.toml"
+        return (
+            legacy_config in output
+            or str(legacy_dll_path) in output
+            or str(self.lsfg_launch_script_path) in output
+        )
+
+    def _migrate_legacy_app_overrides(self) -> Dict[str, Any]:
+        """Upgrade v1 app overrides without changing unrelated Flatpak apps."""
+        migrated_apps = []
+        failed_apps = []
+        try:
+            for app_id in self._get_flatpak_app_ids():
+                output = self._get_app_override_output(app_id)
+                if output is None or not self._has_legacy_app_override(output):
+                    continue
+
+                result = self.set_app_override(app_id)
+                if result.get("success"):
+                    migrated_apps.append(app_id)
+                else:
+                    failed_apps.append({"app_id": app_id, "error": result.get("error", "unknown error")})
+        except (subprocess.CalledProcessError, OSError) as error:
+            stderr = getattr(error, "stderr", None)
+            return self._error_response(
+                BaseResponse,
+                f"Could not inspect Flatpak applications: {stderr or error}",
+                migrated_apps=migrated_apps,
+                failed_apps=failed_apps,
+            )
+
+        if failed_apps:
+            return self._error_response(
+                BaseResponse,
+                f"Failed to migrate overrides for {len(failed_apps)} Flatpak application(s)",
+                migrated_apps=migrated_apps,
+                failed_apps=failed_apps,
+            )
+        return self._success_response(
+            BaseResponse,
+            f"Migrated {len(migrated_apps)} legacy Flatpak app override(s)",
+            migrated_apps=migrated_apps,
+            failed_apps=failed_apps,
+        )
+
+    def update_installed_extensions(self) -> Dict[str, Any]:
+        """Update existing user Flatpak extensions and migrate their v1 app overrides."""
+        empty_result = {
+            "updated_versions": [],
+            "failed_versions": [],
+            "migrated_apps": [],
+            "failed_apps": [],
+        }
+        try:
+            if not self.check_flatpak_available():
+                return self._success_response(
+                    BaseResponse,
+                    "Flatpak is unavailable; skipped runtime and app-override migration",
+                    skipped=True,
+                    **empty_result,
+                )
+
+            installed_versions = self._get_installed_extension_versions()
+            if not installed_versions:
+                return self._success_response(
+                    BaseResponse,
+                    "No installed lsfg-vk Flatpak runtimes require migration",
+                    skipped=True,
+                    **empty_result,
+                )
+
+            updated_versions = []
+            failed_versions = []
+            for version in installed_versions:
+                result = self.install_extension(version)
+                if result.get("success"):
+                    updated_versions.append(version)
+                else:
+                    failed_versions.append({"version": version, "error": result.get("error", "unknown error")})
+
+            if failed_versions:
+                return self._error_response(
+                    BaseResponse,
+                    "Flatpak runtime migration failed; legacy app overrides were left unchanged",
+                    skipped=False,
+                    updated_versions=updated_versions,
+                    failed_versions=failed_versions,
+                    migrated_apps=[],
+                    failed_apps=[],
+                )
+
+            override_result = self._migrate_legacy_app_overrides()
+            response = {
+                "updated_versions": updated_versions,
+                "failed_versions": [],
+                "migrated_apps": override_result.get("migrated_apps", []),
+                "failed_apps": override_result.get("failed_apps", []),
+            }
+            if not override_result.get("success"):
+                return self._error_response(
+                    BaseResponse,
+                    override_result.get("error", "Flatpak app override migration failed"),
+                    skipped=False,
+                    **response,
+                )
+            return self._success_response(
+                BaseResponse,
+                f"Updated {len(updated_versions)} Flatpak runtime(s); "
+                f"migrated {len(response['migrated_apps'])} app override(s)",
+                skipped=False,
+                **response,
+            )
+        except (subprocess.CalledProcessError, OSError) as error:
+            stderr = getattr(error, "stderr", None)
+            return self._error_response(
+                BaseResponse,
+                f"Could not migrate installed Flatpak runtimes: {stderr or error}",
+                skipped=False,
+                **empty_result,
+            )
+
     def uninstall_extension(self, version: str) -> BaseResponse:
         """Uninstall a specific version of the lsfg-vk Flatpak extension"""
         try:
-            if version not in ["23.08", "24.08", "25.08"]:
+            if version not in SUPPORTED_FLATPAK_VERSIONS:
                 return self._error_response(BaseResponse, "Invalid version. Must be '23.08', '24.08', or '25.08'")
 
             if not self.check_flatpak_available():
@@ -277,7 +465,7 @@ class FlatpakService(BaseService):
                                           apps=[], total_apps=0)
 
             result = self._run_flatpak_command(
-                ["list", "--app"],
+                ["list", "--user", "--app"],
                 capture_output=True, text=True, check=True
             )
 
@@ -313,15 +501,9 @@ class FlatpakService(BaseService):
     def _check_app_override_status(self, app_id: str) -> Dict[str, bool]:
         """Check if an app has lsfg-vk overrides set"""
         try:
-            result = self._run_flatpak_command(
-                ["override", "--user", "--show", app_id],
-                capture_output=True, text=True
-            )
-
-            if result.returncode != 0:
+            output = self._get_app_override_output(app_id)
+            if output is None:
                 return {"filesystem": False, "env": False}
-
-            output = result.stdout
             config_path, dll_directory = self._get_lsfg_paths()
 
             filesystem_section = ""

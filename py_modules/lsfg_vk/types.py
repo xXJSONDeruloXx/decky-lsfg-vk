@@ -25,6 +25,7 @@ class InstallationResponse(BaseResponse):
     """Response for installation operations"""
     message: str
     error: Optional[str]
+    flatpak_update: Optional[Dict[str, Any]]
 
 
 class UninstallationResponse(BaseResponse):

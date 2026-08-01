@@ -7,6 +7,18 @@ export interface InstallationResult {
   error?: string;
   message?: string;
   removed_files?: string[];
+  flatpak_update?: FlatpakMigrationResult;
+}
+
+export interface FlatpakMigrationResult {
+  success: boolean;
+  message: string;
+  error?: string;
+  skipped?: boolean;
+  updated_versions: string[];
+  failed_versions: Array<{ version: string; error: string }>;
+  migrated_apps: string[];
+  failed_apps: Array<{ app_id: string; error: string }>;
 }
 
 export interface InstallationStatus {

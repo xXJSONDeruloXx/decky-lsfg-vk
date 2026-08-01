@@ -37,12 +37,23 @@ class Plugin:
         self.flatpak_service = FlatpakService()
 
     async def install_lsfg_vk(self) -> Dict[str, Any]:
-        """Install lsfg-vk by extracting the zip file to ~/.local
+        """Install/update the native layer and migrate installed Flatpak integrations.
         
         Returns:
             InstallationResponse dict with success status and message/error
         """
-        return self.installation_service.install()
+        installation_result = self.installation_service.install()
+        if not installation_result.get("success"):
+            return installation_result
+
+        flatpak_result = self.flatpak_service.update_installed_extensions()
+        installation_result["flatpak_update"] = flatpak_result
+        if not flatpak_result.get("success") and not flatpak_result.get("skipped"):
+            installation_result["message"] = (
+                f"{installation_result.get('message', 'lsfg-vk updated successfully')}; "
+                f"Flatpak migration warning: {flatpak_result.get('error', 'unknown error')}"
+            )
+        return installation_result
 
     async def check_lsfg_vk_installed(self) -> Dict[str, Any]:
         """Check if lsfg-vk is already installed
@@ -354,15 +365,15 @@ class Plugin:
         """Check status of lsfg-vk Flatpak runtime extensions
         
         Returns:
-            FlatpakExtensionStatus dict with installation status for both runtime versions
+            FlatpakExtensionStatus dict with installation status for all supported runtime versions
         """
         return self.flatpak_service.get_extension_status()
 
     async def install_flatpak_extension(self, version: str) -> Dict[str, Any]:
-        """Install lsfg-vk Flatpak runtime extension
+        """Install or update an lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to install ("23.08" or "24.08")
+            version: Runtime version to install ("23.08", "24.08", or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
@@ -373,7 +384,7 @@ class Plugin:
         """Uninstall lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to uninstall ("23.08" or "24.08")
+            version: Runtime version to uninstall ("23.08", "24.08", or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
