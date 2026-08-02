@@ -17,6 +17,13 @@ importers:
       tslib:
         specifier: ^2.7.0
         version: 2.7.0
+    optionalDependencies:
+      '@rollup/rollup-linux-x64-gnu':
+        specifier: 4.22.5
+        version: 4.22.5
+      '@rollup/rollup-linux-x64-musl':
+        specifier: 4.22.5
+        version: 4.22.5
     devDependencies:
       '@decky/rollup':
         specifier: ^1.0.1
