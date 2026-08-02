@@ -18,7 +18,7 @@
 
 A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
 
-> The v2 native layer and Flatpak runtime payloads are pinned to the owner-fork prerelease [`v2.0.0-decky.2`](https://github.com/xXJSONDeruloXx/lsfg-vk/releases/tag/v2.0.0-decky.2).
+> The v2 native layer and Flatpak runtime payloads are pinned to the ARM-port prerelease [`v2.0.0-decky.3-arm64`](https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/tag/v2.0.0-decky.3-arm64).
 
 ## Installation
 

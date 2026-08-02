@@ -1,6 +1,6 @@
 {
   "name": "decky-lsfg-vk",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Use Lossless Scaling on the Steam Deck using the lsfg-vk vulkan layer",
   "type": "module",
   "scripts": {
@@ -50,28 +50,28 @@
   "remote_binary": [
     {
       "name": "lsfg-vk-layer-x86_64.tar.xz",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/lsfg-vk-layer-x86_64.tar.xz",
-      "sha256hash": "3bf5baaf391c6240de9978161a68aa8c9a54eff4246b79f9ea5b2ad1ec1a53a4"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/download/v2.0.0-decky.3-arm64/lsfg-vk-layer-x86_64.tar.xz",
+      "sha256hash": "404432b3c8ab3c73c2162b8d54b2f074a784abe78e3e80a3d3d93160c8d432a9"
     },
     {
       "name": "lsfg-vk-layer-aarch64.tar.xz",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/lsfg-vk-layer-aarch64.tar.xz",
-      "sha256hash": "ce08a04dc78ed1b1ca4bd03b9cf6c97ee233b0f5b2c2cc514509fae7e2eec412"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/download/v2.0.0-decky.3-arm64/lsfg-vk-layer-aarch64.tar.xz",
+      "sha256hash": "b7999d7eb58ecf3b0f59de6fea9d053c04d2cfdf1eef46f1148fdaff3e9be25c"
     },
     {
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
-      "sha256hash": "7eff81f96b278fde6fe395c88461c55e611547bf5991d179b9145ec6f5a778b1"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/download/v2.0.0-decky.3-arm64/org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
+      "sha256hash": "368437a75e74134a54aa8ec7b203be93da3ec437ad3a9d1c677357d1a63808e1"
     },
     {
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
-      "sha256hash": "cbd663b9021c355dddec61ec51fd4388c12705f16637cadd4b45aead0e5dc427"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/download/v2.0.0-decky.3-arm64/org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
+      "sha256hash": "2ff1e8f08e469ebff7602c17384ee18b277958e453d89e9e81a414750c36be6c"
     },
     {
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
-      "sha256hash": "615e87c03b18368ed1cca97e036f1bf54fff95fc6126aac697bb368f33281cbf"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/download/v2.0.0-decky.3-arm64/org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
+      "sha256hash": "9c74a24553dbfea92d49bc17a58ed2a5819bfa2e3271dc390fe02a7baf580ce6"
     }
   ],
   "pnpm": {
