@@ -1,10 +1,10 @@
-import { PanelSectionRow, ToggleField, SliderField, ButtonItem, TextField } from "@decky/ui";
+import { PanelSectionRow, ToggleField, SliderField, ButtonItem } from "@decky/ui";
 import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
-  ACTIVE_IN, ALLOW_FP16, DISABLE_LSFGVK, DLL, FLOW_SCALE, GPU,
-  PERFORMANCE_MODE, USE_NATIVE_MATCHING, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
+  ALLOW_FP16, DISABLE_LSFGVK, FLOW_SCALE,
+  PERFORMANCE_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
 
@@ -114,15 +114,6 @@ export function ConfigurationSection({
       {!configCollapsed && (
         <>
           <PanelSectionRow>
-            <TextField
-              label="Lossless.dll Path"
-              description="Optional full path to Lossless.dll. Leave blank for lsfg-vk automatic discovery."
-              value={config.dll}
-              onChange={(event) => onConfigChange(DLL, event.currentTarget.value)}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
             <SliderField
               label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`}
               description="Lowers internal motion estimation resolution, improving performance slightly"
@@ -149,33 +140,6 @@ export function ConfigurationSection({
               description="Improves performance on AMD; disable for older NVIDIA GPUs."
               checked={config.allow_fp16}
               onChange={(value) => onConfigChange(ALLOW_FP16, value)}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <TextField
-              label="GPU"
-              description="Optional GPU name, vendor:device ID, or PCI bus ID."
-              value={config.gpu}
-              onChange={(event) => onConfigChange(GPU, event.currentTarget.value)}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <TextField
-              label="Active In"
-              description="Executable/process names separated by commas."
-              value={config.active_in}
-              onChange={(event) => onConfigChange(ACTIVE_IN, event.currentTarget.value)}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ToggleField
-              label="Use Automatic Profile Matching"
-              description="Let lsfg-vk choose a matching Active In profile instead of forcing the profile selected in Decky."
-              checked={config.use_native_matching}
-              onChange={(value) => onConfigChange(USE_NATIVE_MATCHING, value)}
             />
           </PanelSectionRow>
 

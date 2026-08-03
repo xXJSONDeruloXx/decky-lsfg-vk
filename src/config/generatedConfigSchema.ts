@@ -8,15 +8,11 @@ export enum ConfigFieldType {
 }
 
 // Field name constants for type-safe access
-export const DLL = "dll" as const;
 export const ALLOW_FP16 = "allow_fp16" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
 export const PACING = "pacing" as const;
-export const ACTIVE_IN = "active_in" as const;
-export const USE_NATIVE_MATCHING = "use_native_matching" as const;
-export const GPU = "gpu" as const;
 export const DISABLE_LSFGVK = "disable_lsfgvk" as const;
 export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
 export const ENABLE_WOW64 = "enable_wow64" as const;
@@ -37,12 +33,6 @@ export interface ConfigField {
 
 // Configuration schema - auto-generated from Python
 export const CONFIG_SCHEMA: Record<string, ConfigField> = {
-  dll: {
-    name: "dll",
-    fieldType: ConfigFieldType.STRING,
-    default: "",
-    description: "optional full path to Lossless.dll; leave blank for automatic discovery"
-  },
   allow_fp16: {
     name: "allow_fp16",
     fieldType: ConfigFieldType.BOOLEAN,
@@ -72,24 +62,6 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     fieldType: ConfigFieldType.STRING,
     default: "none",
     description: "frame pacing mode (currently only none is supported)"
-  },
-  active_in: {
-    name: "active_in",
-    fieldType: ConfigFieldType.STRING,
-    default: "",
-    description: "optional executable or process names, separated by commas"
-  },
-  use_native_matching: {
-    name: "use_native_matching",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "let lsfg-vk choose a profile from Active In instead of forcing the selected profile"
-  },
-  gpu: {
-    name: "gpu",
-    fieldType: ConfigFieldType.STRING,
-    default: "",
-    description: "optional GPU name, vendor:device ID, or PCI bus ID"
   },
   disable_lsfgvk: {
     name: "disable_lsfgvk",
@@ -149,15 +121,11 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
 
 // Type-safe configuration data structure
 export interface ConfigurationData {
-  dll: string;
   allow_fp16: boolean;
   multiplier: number;
   flow_scale: number;
   performance_mode: boolean;
   pacing: string;
-  active_in: string;
-  use_native_matching: boolean;
-  gpu: string;
   disable_lsfgvk: boolean;
   dxvk_frame_rate: number;
   enable_wow64: boolean;
@@ -176,15 +144,11 @@ export function getFieldNames(): string[] {
 
 export function getDefaults(): ConfigurationData {
   return {
-    dll: "",
     allow_fp16: true,
     multiplier: 2,
     flow_scale: 0.9,
     performance_mode: false,
     pacing: "none",
-    active_in: "",
-    use_native_matching: false,
-    gpu: "",
     disable_lsfgvk: false,
     dxvk_frame_rate: 0,
     enable_wow64: false,
@@ -199,15 +163,11 @@ export function getDefaults(): ConfigurationData {
 
 export function getFieldTypes(): Record<string, ConfigFieldType> {
   return {
-    dll: ConfigFieldType.STRING,
     allow_fp16: ConfigFieldType.BOOLEAN,
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
     pacing: ConfigFieldType.STRING,
-    active_in: ConfigFieldType.STRING,
-    use_native_matching: ConfigFieldType.BOOLEAN,
-    gpu: ConfigFieldType.STRING,
     disable_lsfgvk: ConfigFieldType.BOOLEAN,
     dxvk_frame_rate: ConfigFieldType.INTEGER,
     enable_wow64: ConfigFieldType.BOOLEAN,

@@ -35,7 +35,6 @@ def get_env_var_name(field_name: str) -> str:
         "disable_steamdeck_mode": "SteamDeck",
         "mangohud_workaround": "MANGOHUD",
         "disable_lsfgvk": "DISABLE_LSFGVK",
-        "use_native_matching": "DECKY_LSFGVK_AUTO_PROFILE",
         "disable_vkbasalt": "DISABLE_VKBASALT",
         "force_enable_vkbasalt": "ENABLE_VKBASALT",
         "enable_wsi": "ENABLE_GAMESCOPE_WSI",

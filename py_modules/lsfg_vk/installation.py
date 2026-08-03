@@ -183,9 +183,6 @@ class InstallationService(BaseService):
 
     def _create_config_file(self) -> ProfileData:
         """Migrate v1 once, normalize v2, and retain Decky launch workarounds."""
-        from .dll_detection import DllDetectionService
-
-        dll_service = DllDetectionService(self.log)
         profile_data: ProfileData
         was_legacy = False
         self._config_recovery_backup = None
@@ -201,23 +198,23 @@ class InstallationService(BaseService):
                     self._config_recovery_backup,
                     error,
                 )
-                default = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+                default = ConfigurationManager.get_defaults()
                 profile_data = ProfileData(
                     current_profile="decky-lsfg-vk",
                     profiles={"decky-lsfg-vk": default},
-                    global_config={"dll": default["dll"], "allow_fp16": default["allow_fp16"]},
+                    global_config={"allow_fp16": default["allow_fp16"]},
                 )
             if was_legacy:
                 self._backup_legacy_config(content)
         else:
-            default = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+            default = ConfigurationManager.get_defaults()
             profile_data = ProfileData(
                 current_profile="decky-lsfg-vk",
                 profiles={"decky-lsfg-vk": default},
-                global_config={"dll": default["dll"], "allow_fp16": default["allow_fp16"]},
+                global_config={"allow_fp16": default["allow_fp16"]},
             )
 
-        profile_data = self._merge_config_with_defaults(profile_data, dll_service)
+        profile_data = self._merge_config_with_defaults(profile_data)
         script_values = self._read_script_values()
         current_profile = profile_data["current_profile"]
         profile_data["profiles"][current_profile] = ConfigurationManager.merge_config_with_script(
@@ -267,21 +264,12 @@ class InstallationService(BaseService):
         script = configuration_service._generate_script_content_for_profile(profile_data)
         self._write_file(self.lsfg_launch_script_path, script, 0o755)
 
-    def _merge_config_with_defaults(self, existing: ProfileData, dll_service) -> ProfileData:
-        defaults = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
-        global_config = dict(existing.get("global_config", {}))
-        configured_dll = str(global_config.get("dll", "") or "").strip()
-        detected_dll = str(defaults.get("dll", "") or "").strip()
-        if configured_dll and Path(configured_dll).is_file():
-            global_config["dll"] = configured_dll
-        elif detected_dll and Path(detected_dll).is_file():
-            self.log.warning("Replacing stale configured Lossless.dll path %s with %s", configured_dll, detected_dll)
-            global_config["dll"] = detected_dll
-        else:
-            if configured_dll:
-                self.log.warning("Clearing stale configured Lossless.dll path %s", configured_dll)
-            global_config["dll"] = ""
-        global_config.setdefault("allow_fp16", defaults["allow_fp16"])
+    def _merge_config_with_defaults(self, existing: ProfileData) -> ProfileData:
+        defaults = ConfigurationManager.get_defaults()
+        existing_global = existing.get("global_config", {})
+        global_config = {
+            "allow_fp16": existing_global.get("allow_fp16", defaults["allow_fp16"]),
+        }
 
         profiles: Dict[str, Any] = {}
         for name, existing_config in existing.get("profiles", {}).items():

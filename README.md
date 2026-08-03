@@ -35,7 +35,7 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 1. **Purchase and install** [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam
 2. **Open the plugin** from the Decky menu
 3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
-4. **Configure settings** using the plugin's UI - adjust FPS multiplier, flow scale, performance mode, FP16, automatic profile matching, and optional GPU selection
+4. **Configure settings** using the plugin's UI - adjust FPS multiplier, flow scale, performance mode, FP16, and launch workarounds
 5. **Apply launch option** to games you want to use frame generation with:
    - Add `~/lsfg %command%` to your game's launch options in Steam Properties
    - Or use the "Launch Option Clipboard" button in the plugin to copy the command
@@ -50,9 +50,6 @@ The plugin provides several configuration options to optimize frame generation f
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
 - **Performance Mode**: Uses a lighter processing model
 - **Allow FP16**: Enable half-precision acceleration; disable it for older NVIDIA GPUs
-- **Active In**: Optionally match a profile to executable names, Wine executables, or process names
-- **Automatic Profile Matching**: Explicitly let lsfg-vk choose an `Active In` profile; otherwise the Decky-selected profile is always forced
-- **GPU**: Optionally select the GPU by name, vendor/device ID, or PCI bus ID
 - **Disable Frame Generation**: Disable the layer for the next launch without creating an invalid 1x profile
 
 ## Feedback and Support
@@ -65,7 +62,6 @@ For per-game feedback and community support, please join the [decky-lsfg-vk Disc
 - Ensure you've added `~/lsfg %command%` to your game's launch options
 - Check that the Lossless Scaling DLL was detected correctly in the plugin
 - Try enabling Performance Mode if you're experiencing crashes
-- Disable **Automatic Profile Matching** to force the profile selected in Decky, even when it has an `Active In` value
 - Make sure your game is running in fullscreen mode for best results
 
 **Performance issues?**
@@ -88,7 +84,7 @@ The plugin:
   - **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
   - **Flow Scale**: Adjust motion estimation quality vs performance
   - **Performance Mode**: Use lighter processing for better performance
-  - **FP16, Active In, GPU, and explicit automatic matching**: Use v2 profile parameters without ambiguous profile selection
+  - **FP16 and explicit Decky profile selection**: Use v2 profile parameters without ambiguous profile selection
   - **Launch workarounds**: Preserve existing DXVK, Gamescope, Zink, MangoHud, and vkBasalt launch options
 - **Hot-reloading**: Multiplier, flow scale, and performance-mode changes are reloaded while games run; other changes may require a swapchain recreation or restart
 - Easy uninstallation that removes all installed files when no longer needed

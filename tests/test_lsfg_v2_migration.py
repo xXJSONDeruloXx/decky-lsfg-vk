@@ -48,6 +48,35 @@ class ConfigurationMigrationTests(unittest.TestCase):
         self.assertNotIn("no_fp16", serialized)
         self.assertNotIn("hdr_mode", serialized)
         self.assertNotIn("experimental_present_mode", serialized)
+        self.assertNotIn("dll =", serialized)
+        self.assertNotIn("active_in", serialized)
+        self.assertNotIn("gpu", serialized)
+
+    def test_removed_v2_controls_are_not_reintroduced_when_normalizing(self):
+        content = '''\
+version = 2
+
+[global]
+dll = "/tmp/Lossless.dll"
+allow_fp16 = true
+
+[[profile]]
+name = "decky-lsfg-vk"
+active_in = "Game.exe"
+gpu = "0x10DE:0x2684"
+multiplier = 2
+flow_scale = 0.9
+performance_mode = false
+pacing = "none"
+'''
+
+        serialized = ConfigurationManager.generate_toml_content_multi_profile(
+            ConfigurationManager.parse_toml_content_multi_profile(content)
+        )
+
+        self.assertNotIn("dll =", serialized)
+        self.assertNotIn("active_in", serialized)
+        self.assertNotIn("gpu", serialized)
 
     def test_v2_normalization_is_idempotent(self):
         migrated = ConfigurationManager.parse_toml_content_multi_profile(LEGACY_CONFIG)
@@ -66,7 +95,7 @@ class ConfigurationMigrationTests(unittest.TestCase):
         profile_data = {
             "current_profile": "decky-lsfg-vk",
             "profiles": {"decky-lsfg-vk": ConfigurationManager.get_defaults()},
-            "global_config": {"dll": "/games/Lossless Scaling/Lossless.dll", "allow_fp16": True},
+            "global_config": {"allow_fp16": True},
         }
         script = service._generate_script_content_for_profile(profile_data)
 
@@ -74,37 +103,12 @@ class ConfigurationMigrationTests(unittest.TestCase):
         self.assertIn("LSFGVK_PROFILE=decky-lsfg-vk", script)
         self.assertNotIn("LSFG_PROCESS", script)
 
-    def test_active_in_does_not_implicitly_override_the_selected_profile(self):
+    def test_launch_script_always_forces_selected_profile(self):
         config = ConfigurationManager.get_defaults()
-        config["active_in"] = "Game.exe, GameThread"
         self.assertEqual(
-            ConfigurationService._profile_selection_lines("decky-lsfg-vk", config),
+            ConfigurationService._profile_selection_lines("decky-lsfg-vk"),
             ["export LSFGVK_PROFILE=decky-lsfg-vk"],
         )
-
-        config["use_native_matching"] = True
-        self.assertEqual(
-            ConfigurationService._profile_selection_lines("decky-lsfg-vk", config),
-            ["# lsfg-vk will select a matching profile from Active In."],
-        )
-        self.assertEqual(
-            ConfigurationManager.parse_script_content("export DECKY_LSFGVK_AUTO_PROFILE=1\n"),
-            {"use_native_matching": True},
-        )
-
-    def test_cloned_profile_disables_native_matching_until_explicitly_enabled(self):
-        config = ConfigurationManager.get_defaults()
-        config["active_in"] = "Game.exe"
-        config["use_native_matching"] = True
-        profile_data = {
-            "current_profile": "decky-lsfg-vk",
-            "profiles": {"decky-lsfg-vk": config},
-            "global_config": {"dll": "", "allow_fp16": True},
-        }
-
-        cloned = ConfigurationManager.create_profile(profile_data, "Other")
-        self.assertEqual(cloned["profiles"]["Other"]["active_in"], "Game.exe")
-        self.assertFalse(cloned["profiles"]["Other"]["use_native_matching"])
 
 
 class InstallerInfrastructureTests(unittest.TestCase):
@@ -191,44 +195,6 @@ class InstallerInfrastructureTests(unittest.TestCase):
             )
             self.assertIn("version = 2", config_path.read_text(encoding="utf-8"))
             self.assertEqual(service._config_recovery_backup, config_dir / "conf.toml.unrecognized.bak")
-
-    def test_stale_dll_path_is_replaced_when_detection_finds_a_valid_file(self):
-        from lsfg_vk.installation import InstallationService
-
-        with tempfile.TemporaryDirectory() as directory:
-            home = Path(directory)
-            config_dir = home / ".config" / "lsfg-vk"
-            config_dir.mkdir(parents=True)
-            config_path = config_dir / "conf.toml"
-            detected_dll = home / "Lossless.dll"
-            detected_dll.write_bytes(b"dll")
-            profile_data = {
-                "current_profile": "decky-lsfg-vk",
-                "profiles": {"decky-lsfg-vk": ConfigurationManager.get_defaults()},
-                "global_config": {"dll": str(home / "missing" / "Lossless.dll"), "allow_fp16": True},
-            }
-            config_path.write_text(
-                ConfigurationManager.generate_toml_content_multi_profile(profile_data),
-                encoding="utf-8",
-            )
-
-            service = InstallationService.__new__(InstallationService)
-            service.log = mock.Mock()
-            service.user_home = home
-            service.config_dir = config_dir
-            service.config_file_path = config_path
-            service.lsfg_script_path = home / "lsfg"
-            service.lsfg_launch_script_path = home / "lsfg"
-
-            with mock.patch("lsfg_vk.dll_detection.DllDetectionService") as detection_service:
-                detection_service.return_value.check_lossless_scaling_dll.return_value = {
-                    "detected": True,
-                    "path": str(detected_dll),
-                }
-                migrated = service._create_config_file()
-
-            self.assertEqual(migrated["global_config"]["dll"], str(detected_dll))
-            self.assertIn(str(detected_dll), config_path.read_text(encoding="utf-8"))
 
     def test_invalid_layer_manifest_fails_without_copying_unmodified_json(self):
         from lsfg_vk.installation import InstallationService

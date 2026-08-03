@@ -1,7 +1,6 @@
 """lsfg-vk v2 configuration and Decky profile management."""
 
 import json
-import logging
 import re
 import sys
 import tomllib
@@ -31,12 +30,12 @@ CONFIG_SCHEMA: Dict[str, ConfigField] = {
     )
     for name, definition in CONFIG_SCHEMA_DEF.items()
 }
-GLOBAL_SECTION_FIELDS = {"dll", "allow_fp16"}
+GLOBAL_SECTION_FIELDS = {"allow_fp16"}
 SCRIPT_ONLY_FIELDS = {
     name for name, definition in CONFIG_SCHEMA_DEF.items()
     if definition["location"] == "script"
 }
-PROFILE_TOML_FIELDS = {"active_in", "gpu", "multiplier", "flow_scale", "performance_mode", "pacing"}
+PROFILE_TOML_FIELDS = {"multiplier", "flow_scale", "performance_mode", "pacing"}
 DEFAULT_PROFILE_NAME = "decky-lsfg-vk"
 CURRENT_PROFILE_COMMENT = re.compile(r'^\s*#\s*decky-current-profile\s*=\s*"([^"]+)"\s*$')
 
@@ -57,18 +56,6 @@ class ConfigurationManager:
     @staticmethod
     def get_defaults() -> ConfigurationData:
         return cast(ConfigurationData, dict(get_defaults()))
-
-    @staticmethod
-    def get_defaults_with_dll_detection(dll_detection_service=None) -> ConfigurationData:
-        defaults = ConfigurationManager.get_defaults()
-        if dll_detection_service:
-            try:
-                result = dll_detection_service.check_lossless_scaling_dll()
-                if result.get("detected") and result.get("path"):
-                    defaults["dll"] = result["path"]
-            except (OSError, IOError, KeyError, TypeError) as error:
-                logging.getLogger(__name__).debug("DLL detection failed: %s", error)
-        return defaults
 
     @staticmethod
     def get_field_names() -> list[str]:
@@ -108,8 +95,6 @@ class ConfigurationManager:
             if field not in profile:
                 continue
             value = profile[field]
-            if field == "active_in" and isinstance(value, list):
-                value = ", ".join(str(item) for item in value)
             config[field] = value
         for field in GLOBAL_SECTION_FIELDS:
             if field in global_config:
@@ -134,20 +119,11 @@ class ConfigurationManager:
             "",
             "[global]",
         ]
-        if global_config.get("dll"):
-            lines.append(f"dll = {_toml_string(str(global_config['dll']))}")
         lines.append(f"allow_fp16 = {str(bool(global_config.get('allow_fp16', True))).lower()}")
 
         for profile_name, raw_config in profile_data["profiles"].items():
             config = ConfigurationManager.validate_config({**raw_config, **global_config})
             lines.extend(["", "[[profile]]", f"name = {_toml_string(profile_name)}"])
-            active_in = [entry.strip() for entry in config["active_in"].split(",") if entry.strip()]
-            if len(active_in) == 1:
-                lines.append(f"active_in = {_toml_string(active_in[0])}")
-            elif active_in:
-                lines.append("active_in = [" + ", ".join(_toml_string(entry) for entry in active_in) + "]")
-            if config["gpu"]:
-                lines.append(f"gpu = {_toml_string(config['gpu'])}")
             lines.extend([
                 f"multiplier = {config['multiplier']}",
                 f"flow_scale = {config['flow_scale']}",
@@ -160,7 +136,6 @@ class ConfigurationManager:
     def _profile_data_from_v1(data: Dict[str, Any]) -> ProfileData:
         old_global = data.get("global", {})
         global_config = {
-            "dll": str(old_global.get("dll", "")),
             "allow_fp16": not bool(old_global.get("no_fp16", False)),
         }
         profiles: Dict[str, ConfigurationData] = {}
@@ -199,7 +174,6 @@ class ConfigurationManager:
 
         raw_global = dict(data.get("global", {}))
         global_config = {
-            "dll": str(raw_global.get("dll", "")),
             "allow_fp16": bool(raw_global.get("allow_fp16", True)),
         }
         profiles: Dict[str, ConfigurationData] = {}
@@ -260,9 +234,6 @@ class ConfigurationManager:
             raise ValueError(f"Profile '{normalized}' already exists")
         source = source_profile if source_profile in profile_data["profiles"] else profile_data["current_profile"]
         new_profile = dict(profile_data["profiles"][source])
-        # A cloned profile may inherit Active In values that collide with its source.
-        # Force the newly selected profile until the user explicitly enables native matching.
-        new_profile["use_native_matching"] = False
         return ProfileData(
             current_profile=profile_data["current_profile"],
             profiles={**profile_data["profiles"], normalized: new_profile},

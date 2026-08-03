@@ -12,13 +12,6 @@ class ConfigFieldType(str, Enum):
 
 
 CONFIG_SCHEMA_DEF = {
-    "dll": {
-        "name": "dll",
-        "fieldType": ConfigFieldType.STRING,
-        "default": "",
-        "description": "optional full path to Lossless.dll; leave blank for automatic discovery",
-        "location": "global",
-    },
     "allow_fp16": {
         "name": "allow_fp16",
         "fieldType": ConfigFieldType.BOOLEAN,
@@ -52,27 +45,6 @@ CONFIG_SCHEMA_DEF = {
         "fieldType": ConfigFieldType.STRING,
         "default": "none",
         "description": "frame pacing mode (currently only none is supported)",
-        "location": "profile",
-    },
-    "active_in": {
-        "name": "active_in",
-        "fieldType": ConfigFieldType.STRING,
-        "default": "",
-        "description": "optional executable or process names, separated by commas",
-        "location": "profile",
-    },
-    "use_native_matching": {
-        "name": "use_native_matching",
-        "fieldType": ConfigFieldType.BOOLEAN,
-        "default": False,
-        "description": "let lsfg-vk choose a profile from Active In instead of forcing the selected profile",
-        "location": "script",
-    },
-    "gpu": {
-        "name": "gpu",
-        "fieldType": ConfigFieldType.STRING,
-        "default": "",
-        "description": "optional GPU name, vendor:device ID, or PCI bus ID",
         "location": "profile",
     },
     "disable_lsfgvk": {

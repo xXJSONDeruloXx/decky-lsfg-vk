@@ -13,15 +13,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from shared_config import CONFIG_SCHEMA_DEF, ConfigFieldType
 
 # Field name constants for type-safe access
-DLL = "dll"
 ALLOW_FP16 = "allow_fp16"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
 PERFORMANCE_MODE = "performance_mode"
 PACING = "pacing"
-ACTIVE_IN = "active_in"
-USE_NATIVE_MATCHING = "use_native_matching"
-GPU = "gpu"
 DISABLE_LSFGVK = "disable_lsfgvk"
 DXVK_FRAME_RATE = "dxvk_frame_rate"
 ENABLE_WOW64 = "enable_wow64"
@@ -35,15 +31,11 @@ ENABLE_ZINK = "enable_zink"
 
 class ConfigurationData(TypedDict):
     """Type-safe configuration data structure - AUTO-GENERATED"""
-    dll: str
     allow_fp16: bool
     multiplier: int
     flow_scale: float
     performance_mode: bool
     pacing: str
-    active_in: str
-    use_native_matching: bool
-    gpu: str
     disable_lsfgvk: bool
     dxvk_frame_rate: int
     enable_wow64: bool
@@ -70,8 +62,6 @@ def get_script_parsing_logic():
                 value = value.strip()
 
                 # Auto-generated parsing logic:
-                if key == "DECKY_LSFGVK_AUTO_PROFILE":
-                        script_values["use_native_matching"] = value == "1"
                 if key == "DISABLE_LSFGVK":
                         script_values["disable_lsfgvk"] = value == "1"
                 if key == "DXVK_FRAME_RATE":
@@ -106,8 +96,6 @@ def get_script_generation_logic():
     """Return the script generation logic as a callable"""
     def generate_script_lines(config):
         lines = []
-        if config.get("use_native_matching", False):
-            lines.append("export DECKY_LSFGVK_AUTO_PROFILE=1")
         if config.get("disable_lsfgvk", False):
             lines.append("export DISABLE_LSFGVK=1")
         dxvk_frame_rate = config.get("dxvk_frame_rate", 0)
@@ -133,4 +121,4 @@ def get_script_generation_logic():
     return generate_script_lines
 
 
-ALL_FIELDS = ['dll', 'allow_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing', 'active_in', 'use_native_matching', 'gpu', 'disable_lsfgvk', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+ALL_FIELDS = ['allow_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'pacing', 'disable_lsfgvk', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']

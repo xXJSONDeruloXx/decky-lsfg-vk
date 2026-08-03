@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager
 from .constants import (
     BIN_DIR,
     FLATPAK_23_08_FILENAME,
@@ -63,17 +62,6 @@ class FlatpakService(BaseService):
         """Return the v2 config directory and directory containing Lossless.dll."""
         config_path = str(self.config_dir)
         dll_directory = str(self.user_home / ".local/share/Steam/steamapps/common")
-        if not self.config_file_path.exists():
-            return config_path, dll_directory
-        try:
-            profile_data = ConfigurationManager.parse_toml_content_multi_profile(
-                self.config_file_path.read_text(encoding="utf-8")
-            )
-            configured_dll = profile_data["global_config"].get("dll", "")
-            if configured_dll:
-                dll_directory = str(Path(str(configured_dll)).parent)
-        except (OSError, ValueError, KeyError, TypeError) as error:
-            self.log.debug("Could not read configured DLL path for Flatpak override: %s", error)
         return config_path, dll_directory
 
     def _get_bundled_extension_path(self, version: str) -> Path:

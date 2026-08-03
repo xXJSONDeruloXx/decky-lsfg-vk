@@ -17,10 +17,8 @@ class ConfigurationService(BaseService):
     """Service for managing TOML-based lsfg configuration"""
 
     @staticmethod
-    def _profile_selection_lines(profile_name: str, config: ConfigurationData) -> list[str]:
-        """Force the selected profile unless the user explicitly opts into native matching."""
-        if config.get("use_native_matching", False):
-            return ["# lsfg-vk will select a matching profile from Active In."]
+    def _profile_selection_lines(profile_name: str) -> list[str]:
+        """Force the profile selected in Decky for every launch."""
         return [f"export LSFGVK_PROFILE={shlex.quote(profile_name)}"]
     
     def get_config(self) -> ConfigurationResponse:
@@ -31,9 +29,7 @@ class ConfigurationService(BaseService):
         """
         try:
             if not self.config_file_path.exists():
-                from .dll_detection import DllDetectionService
-                dll_service = DllDetectionService(self.log)
-                toml_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+                toml_config = ConfigurationManager.get_defaults()
             else:
                 content = self.config_file_path.read_text(encoding='utf-8')
                 toml_config = ConfigurationManager.parse_toml_content(content)
@@ -58,9 +54,7 @@ class ConfigurationService(BaseService):
         except Exception as e:
             error_msg = f"Error parsing config file: {str(e)}"
             self.log.error(error_msg)
-            from .dll_detection import DllDetectionService
-            dll_service = DllDetectionService(self.log)
-            config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+            config = ConfigurationManager.get_defaults()
             return self._success_response(ConfigurationResponse, 
                                         f"Using default configuration due to parse error: {str(e)}", 
                                         config=config)
@@ -134,7 +128,7 @@ class ConfigurationService(BaseService):
         
         lines.extend([
             f"export LSFGVK_CONFIG={shlex.quote(str(self.config_file_path))}",
-            *self._profile_selection_lines(DEFAULT_PROFILE_NAME, config),
+            *self._profile_selection_lines(DEFAULT_PROFILE_NAME),
         ])
         lines.extend(self._generate_game_launch_lines())
         
@@ -166,7 +160,7 @@ class ConfigurationService(BaseService):
         
         lines.extend([
             f"export LSFGVK_CONFIG={shlex.quote(str(self.config_file_path))}",
-            *self._profile_selection_lines(current_profile, cast(ConfigurationData, merged_config)),
+            *self._profile_selection_lines(current_profile),
         ])
         lines.extend(self._generate_game_launch_lines())
         
@@ -193,14 +187,11 @@ class ConfigurationService(BaseService):
     def _get_profile_data(self) -> ProfileData:
         """Get current profile data from config file"""
         if not self.config_file_path.exists():
-            from .dll_detection import DllDetectionService
-            dll_service = DllDetectionService(self.log)
-            default_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
+            default_config = ConfigurationManager.get_defaults()
             return ProfileData(
                 current_profile=DEFAULT_PROFILE_NAME,
                 profiles={DEFAULT_PROFILE_NAME: default_config},
                 global_config={
-                    "dll": default_config.get("dll", ""),
                     "allow_fp16": default_config.get("allow_fp16", True)
                 }
             )
@@ -416,7 +407,7 @@ class ConfigurationService(BaseService):
             profile_data["profiles"][profile_name] = config
             
             # Update global config fields if they're in the config
-            for field_name in ["dll", "allow_fp16"]:
+            for field_name in ["allow_fp16"]:
                 if field_name in config:
                     profile_data["global_config"][field_name] = config[field_name]
             
