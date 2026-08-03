@@ -6,7 +6,7 @@ import {
   updateLsfgConfigFromObject,
   type ConfigUpdateResult
 } from "../api/lsfgApi";
-import { ConfigurationData, ConfigurationManager } from "../config/configSchema";
+import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { showErrorToast, ToastMessages } from "../utils/toastUtils";
 
 export function useInstallationStatus() {
@@ -71,7 +71,7 @@ export function useDllDetection() {
 }
 
 export function useLsfgConfig() {
-  const [config, setConfig] = useState<ConfigurationData>(() => ConfigurationManager.getDefaults());
+  const [config, setConfig] = useState<ConfigurationData>(() => getDefaults());
 
   const loadLsfgConfig = useCallback(async () => {
     try {
@@ -80,11 +80,11 @@ export function useLsfgConfig() {
         setConfig(result.config);
       } else {
         console.log("lsfg config not available, using defaults:", result.error);
-        setConfig(ConfigurationManager.getDefaults());
+        setConfig(getDefaults());
       }
     } catch (error) {
       console.error("Error loading lsfg config:", error);
-      setConfig(ConfigurationManager.getDefaults());
+      setConfig(getDefaults());
     }
   }, []);
 

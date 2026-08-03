@@ -144,7 +144,7 @@ export function Content() {
         </>
       )}
 
-      <UsageInstructions config={config} />
+      <UsageInstructions />
 
       <PanelSectionRow>
         <ButtonItem

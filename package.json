@@ -1,6 +1,6 @@
 {
   "name": "decky-lsfg-vk",
-  "version": "0.12.3",
+  "version": "0.12.7",
   "description": "Use Lossless Scaling on the Steam Deck using the lsfg-vk vulkan layer",
   "type": "module",
   "scripts": {
@@ -42,6 +42,10 @@
     "react-icons": "^5.3.0",
     "tslib": "^2.7.0"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.22.5",
+    "@rollup/rollup-linux-x64-musl": "4.22.5"
+  },
   "remote_binary_bundling" : true,
   "remote_binary": [
     {
@@ -63,9 +67,19 @@
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
       "url": "https://github.com/PancakeTAS/lsfg-vk/releases/download/v1.0.0/org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
       "sha256hash": "0651bda96751ef0f1314a5179585926a0cd354476790ca2616662c39fe6fae54"
+    },
+    {
+      "name": "liblsfg-vk-arm64.so",
+      "url": "https://github.com/Janleyx/decky-lsfg-vk-for-Ayn-Odin-2/releases/download/arm64-layer-3e89e54/liblsfg-vk-arm64.so",
+      "sha256hash": "2e84f8d1a1dd0344474846f6252d6f948f72caaaeab3cd316c04254be05a9949"
     }
   ],
   "pnpm": {
+    "supportedArchitectures": {
+      "cpu": ["arm64", "x64"],
+      "libc": ["glibc", "musl"],
+      "os": ["darwin", "linux"]
+    },
     "peerDependencyRules": {
       "ignoreMissing": [
         "react",

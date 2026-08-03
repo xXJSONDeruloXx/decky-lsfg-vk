@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
-  FLOW_SCALE, PERFORMANCE_MODE, HDR_MODE,
+  FLOW_SCALE, NO_FP16, PERFORMANCE_MODE, HDR_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
@@ -123,6 +123,15 @@ export function ConfigurationSection({
               max={1.0}
               step={0.01}
               onChange={(value) => onConfigChange(FLOW_SCALE, value)}
+            />
+          </PanelSectionRow>
+
+          <PanelSectionRow>
+            <ToggleField
+              label="FP16 Acceleration"
+              description="Use FP16 shaders when supported"
+              checked={!config.no_fp16}
+              onChange={(value) => onConfigChange(NO_FP16, !value)}
             />
           </PanelSectionRow>
 

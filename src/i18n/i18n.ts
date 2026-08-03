@@ -2,6 +2,14 @@
 // to generate for localhost/dev, run `build_i18n_json.sh` script
 import * as languages from "./languages.json";
 
+const steamLanguageMap: Record<string, string> =
+  languages.steam_language_map as Record<string, string>;
+
+const normalizeLanguage = (language: string): string => {
+  const normalized = language.trim().toLowerCase();
+  return steamLanguageMap[normalized] ?? normalized;
+};
+
 function getLangs() {
   const langs = languages.language_metadata;
 
@@ -32,13 +40,13 @@ let cachedLang: string | undefined;
 export const getCurrentLanguage = (): string => {
   if (cachedLang) return cachedLang;
 
-  const lang = window.LocalizationManager.m_rgLocalesToUse[0];
+  const lang = normalizeLanguage(window.LocalizationManager.m_rgLocalesToUse[0]);
   cachedLang = lang;
   return lang;
 };
 
 export const getLanguageName = (lang?: string): string => {
-  const targetLang = lang || getCurrentLanguage();
+  const targetLang = normalizeLanguage(lang || getCurrentLanguage());
   return LANGS[targetLang]?.name || targetLang;
 };
 

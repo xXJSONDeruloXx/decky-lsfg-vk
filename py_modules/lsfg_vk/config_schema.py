@@ -71,10 +71,6 @@ SCRIPT_ONLY_FIELDS = {
 # Complete configuration schema (TOML + script-only fields)
 COMPLETE_CONFIG_SCHEMA = {**CONFIG_SCHEMA, **SCRIPT_ONLY_FIELDS}
 
-
-# Import auto-generated configuration components
-from .config_schema_generated import ConfigurationData, get_script_parsing_logic, get_script_generation_logic
-
 # Constants for profile management
 DEFAULT_PROFILE_NAME = "decky-lsfg-vk"
 GLOBAL_SECTION_FIELDS = {"dll", "no_fp16"}
@@ -182,7 +178,7 @@ class ConfigurationManager:
             "profiles": {DEFAULT_PROFILE_NAME: config},
             "global_config": {
                 "dll": config.get("dll", ""),
-                "no_fp16": False  # Always enabled even if previously set
+                "no_fp16": config.get("no_fp16", False)
             }
         }
         return ConfigurationManager.generate_toml_content_multi_profile(profile_data)
@@ -192,7 +188,7 @@ class ConfigurationManager:
         """Generate TOML configuration file content with multiple profiles"""
         lines = ["version = 1"]
         lines.append("")
-        
+
         # Add global section with global fields
         lines.append("[global]")
         
@@ -206,10 +202,11 @@ class ConfigurationManager:
         if dll_path:
             lines.append(f"# specify where Lossless.dll is stored")
             lines.append(f'dll = "{dll_path}"')
-            lines.append("")
-            
+        lines.append("")
+
         lines.append(f"# FP16 acceleration")
-        lines.append(f"no_fp16 = false")
+        no_fp16 = bool(profile_data["global_config"].get("no_fp16", False))
+        lines.append(f"no_fp16 = {str(no_fp16).lower()}")
         lines.append("")
         
         # Add game sections for each profile
@@ -343,8 +340,7 @@ class ConfigurationManager:
                         elif key == "dll":
                             global_config["dll"] = value
                         elif key == "no_fp16":
-                            # Always enforce FP16 to be enabled (no_fp16 = false)
-                            global_config["no_fp16"] = False
+                            global_config["no_fp16"] = value.lower() in ('true', '1', 'yes', 'on')
                     
                     # Handle game section
                     elif in_game_section:
@@ -446,13 +442,6 @@ class ConfigurationManager:
         
         return cast(ConfigurationData, merged_config)
 
-    @staticmethod
-    @staticmethod
-    def create_config_from_args(**kwargs) -> ConfigurationData:
-        """Create configuration from keyword arguments - USES GENERATED CODE"""
-        from .config_schema_generated import create_config_dict
-        return create_config_dict(**kwargs)
-    
     @staticmethod
     def normalize_profile_name(profile_name: str) -> str:
         """Normalize profile name by converting spaces to dashes and trimming
