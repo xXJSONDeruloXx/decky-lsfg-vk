@@ -50,8 +50,8 @@
   "remote_binary": [
     {
       "name": "lsfg-vk-layer-x86_64.tar.xz",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/lsfg-vk-layer-x86_64.tar.xz",
-      "sha256hash": "3bf5baaf391c6240de9978161a68aa8c9a54eff4246b79f9ea5b2ad1ec1a53a4"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.3/lsfg-vk-layer-x86_64.tar.xz",
+      "sha256hash": "56c272fce333c420ee68522b3c5ba1509787ecb714e4c1217be69ba9d4985007"
     },
     {
       "name": "lsfg-vk-layer-aarch64.tar.xz",
