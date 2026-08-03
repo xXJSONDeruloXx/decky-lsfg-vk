@@ -128,7 +128,7 @@ export function ConfigurationSection({
           <PanelSectionRow>
             <ToggleField
               label="FP16 Acceleration"
-              description="Use FP16 shaders when supported; disable this on older NVIDIA GPUs if needed"
+              description="Use FP16 shaders when supported"
               checked={!config.no_fp16}
               onChange={(value) => onConfigChange(NO_FP16, !value)}
             />
