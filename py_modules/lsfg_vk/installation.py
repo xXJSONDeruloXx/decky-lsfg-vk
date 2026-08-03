@@ -55,7 +55,7 @@ class InstallationService(BaseService):
                 arm_so_path = plugin_dir / BIN_DIR / ARM_LIB_FILENAME
                 self._copy_plugin_file(arm_so_path, self.lib_file)
                 self.log.info(f"Overwrote with ARM binary: {self.lib_file}")
-            
+
             self._create_config_file()
             
             self._create_lsfg_launch_script()
@@ -74,7 +74,7 @@ class InstallationService(BaseService):
     
     def _is_arm_architecture(self) -> bool:
         """Check if running on ARM architecture
-        
+
         Returns:
             True if running on ARM (aarch64), False otherwise
         """
@@ -107,7 +107,7 @@ class InstallationService(BaseService):
         """Copy plugin content without preserving FEX-incompatible metadata."""
         shutil.copyfile(src_file, dst_file)
         dst_file.chmod(0o644)
-    
+
     def _extract_and_install_files(self, zip_path: Path) -> None:
         """Extract zip file and install files to appropriate locations
         

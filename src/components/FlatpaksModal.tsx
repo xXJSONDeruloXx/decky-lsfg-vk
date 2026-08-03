@@ -27,6 +27,7 @@ import {
   FlatpakApp,
   FlatpakAppInfo
 } from '../api/lsfgApi';
+import t from '../i18n/i18n';
 
 interface FlatpaksModalProps {
   closeModal?: () => void;
@@ -116,7 +117,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
   if (loading) {
     return (
       <ModalRoot closeModal={closeModal}>
-        <DialogHeader>Flatpak Extensions</DialogHeader>
+        <DialogHeader>{t('FLATPAK_MODAL_TITLE', 'Flatpak Extensions')}</DialogHeader>
         <DialogBody>
           <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
             <Spinner />
@@ -129,17 +130,17 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
   const instructionSteps = [
     {
       id: 'try-first',
-      title: 'Try first:',
+      title: t('FLATPAK_STEP_TRY_FIRST', 'Try first:'),
       command: '~/lsfg'
     },
     {
       id: 'try-full-path',
-      title: "If that doesn't work, try full path:",
+      title: t('FLATPAK_STEP_TRY_FULL_PATH', "If that doesn't work, try full path:"),
       command: '/home/(username)/lsfg'
     },
     {
       id: 'final-result',
-      title: 'Final result should look like:',
+      title: t('FLATPAK_STEP_FINAL', 'Final result should look like:'),
       command: '~/lsfg "usr/bin/flatpak"'
     }
   ];
@@ -162,20 +163,20 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
 
   return (
     <ModalRoot closeModal={closeModal}>
-      <DialogHeader>Flatpak Extensions</DialogHeader>
+      <DialogHeader>{t('FLATPAK_MODAL_TITLE', 'Flatpak Extensions')}</DialogHeader>
       <DialogBody>
         <Focusable>
           {/* Extension Status Section */}
           <DialogControlsSection>
-            <DialogControlsSectionHeader>Runtime Extension Installer</DialogControlsSectionHeader>
+            <DialogControlsSectionHeader>{t('FLATPAK_RUNTIME_INSTALLER', 'Runtime Extension Installer')}</DialogControlsSectionHeader>
 
             {extensionStatus && extensionStatus.success ? (
               <>
                 {/* 23.08 Runtime */}
                 <PanelSectionRow>
-                  <Field 
-                    label="Runtime 23.08"
-                    description={extensionStatus.installed_23_08 ? "Installed" : "Not installed"}
+                  <Field
+                    label={t('FLATPAK_RUNTIME_23', 'Runtime 23.08')}
+                    description={extensionStatus.installed_23_08 ? t('FLATPAK_INSTALLED', 'Installed') : t('FLATPAK_NOT_INSTALLED', 'Not installed')}
                     icon={extensionStatus.installed_23_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
                   >
                     <ButtonItem
@@ -187,8 +188,8 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                         if (operation === 'uninstall') {
                           confirmOperation(
                             action,
-                            'Uninstall Runtime Extension',
-                            'Are you sure you want to uninstall the 23.08 runtime extension?'
+                            t('FLATPAK_UNINSTALL_TITLE', 'Uninstall Runtime Extension'),
+                            `${t('FLATPAK_UNINSTALL_CONFIRM_PREFIX', 'Are you sure you want to uninstall the')} 23.08 ${t('FLATPAK_UNINSTALL_CONFIRM_SUFFIX', 'runtime extension?')}`
                           );
                         } else {
                           action();
@@ -200,11 +201,11 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                         <Spinner />
                       ) : extensionStatus.installed_23_08 ? (
                         <>
-                          <FaTrash /> Uninstall
+                          <FaTrash /> {t('FLATPAK_UNINSTALL_BTN', 'Uninstall')}
                         </>
                       ) : (
                         <>
-                          <FaDownload /> Install
+                          <FaDownload /> {t('FLATPAK_INSTALL_BTN', 'Install')}
                         </>
                       )}
                     </ButtonItem>
@@ -213,9 +214,9 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
 
                 {/* 24.08 Runtime */}
                 <PanelSectionRow>
-                  <Field 
-                    label="Runtime 24.08"
-                    description={extensionStatus.installed_24_08 ? "Installed" : "Not installed"}
+                  <Field
+                    label={t('FLATPAK_RUNTIME_24', 'Runtime 24.08')}
+                    description={extensionStatus.installed_24_08 ? t('FLATPAK_INSTALLED', 'Installed') : t('FLATPAK_NOT_INSTALLED', 'Not installed')}
                     icon={extensionStatus.installed_24_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
                   >
                     <ButtonItem
@@ -227,8 +228,8 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                         if (operation === 'uninstall') {
                           confirmOperation(
                             action,
-                            'Uninstall Runtime Extension',
-                            'Are you sure you want to uninstall the 24.08 runtime extension?'
+                            t('FLATPAK_UNINSTALL_TITLE', 'Uninstall Runtime Extension'),
+                            `${t('FLATPAK_UNINSTALL_CONFIRM_PREFIX', 'Are you sure you want to uninstall the')} 24.08 ${t('FLATPAK_UNINSTALL_CONFIRM_SUFFIX', 'runtime extension?')}`
                           );
                         } else {
                           action();
@@ -240,11 +241,11 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                         <Spinner />
                       ) : extensionStatus.installed_24_08 ? (
                         <>
-                          <FaTrash /> Uninstall
+                          <FaTrash /> {t('FLATPAK_UNINSTALL_BTN', 'Uninstall')}
                         </>
                       ) : (
                         <>
-                          <FaDownload /> Install
+                          <FaDownload /> {t('FLATPAK_INSTALL_BTN', 'Install')}
                         </>
                       )}
                     </ButtonItem>
@@ -253,9 +254,9 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
 
                 {/* 25.08 Runtime */}
                 <PanelSectionRow>
-                  <Field 
-                    label="Runtime 25.08"
-                    description={extensionStatus.installed_25_08 ? "Installed" : "Not installed"}
+                  <Field
+                    label={t('FLATPAK_RUNTIME_25', 'Runtime 25.08')}
+                    description={extensionStatus.installed_25_08 ? t('FLATPAK_INSTALLED', 'Installed') : t('FLATPAK_NOT_INSTALLED', 'Not installed')}
                     icon={extensionStatus.installed_25_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
                   >
                     <ButtonItem
@@ -267,8 +268,8 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                         if (operation === 'uninstall') {
                           confirmOperation(
                             action,
-                            'Uninstall Runtime Extension',
-                            'Are you sure you want to uninstall the 25.08 runtime extension?'
+                            t('FLATPAK_UNINSTALL_TITLE', 'Uninstall Runtime Extension'),
+                            `${t('FLATPAK_UNINSTALL_CONFIRM_PREFIX', 'Are you sure you want to uninstall the')} 25.08 ${t('FLATPAK_UNINSTALL_CONFIRM_SUFFIX', 'runtime extension?')}`
                           );
                         } else {
                           action();
@@ -280,11 +281,11 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                         <Spinner />
                       ) : extensionStatus.installed_25_08 ? (
                         <>
-                          <FaTrash /> Uninstall
+                          <FaTrash /> {t('FLATPAK_UNINSTALL_BTN', 'Uninstall')}
                         </>
                       ) : (
                         <>
-                          <FaDownload /> Install
+                          <FaDownload /> {t('FLATPAK_INSTALL_BTN', 'Install')}
                         </>
                       )}
                     </ButtonItem>
@@ -293,9 +294,9 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
               </>
             ) : (
               <PanelSectionRow>
-                <Field 
-                  label="Error"
-                  description={extensionStatus?.error || 'Failed to check extension status'}
+                <Field
+                  label={t('FLATPAK_ERROR', 'Error')}
+                  description={extensionStatus?.error || t('FLATPAK_ERROR_STATUS', 'Failed to check extension status')}
                   icon={<FaTimes style={{color: 'red'}} />}
                 />
               </PanelSectionRow>
@@ -304,7 +305,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
 
           {/* Flatpak Apps Section */}
           <DialogControlsSection>
-            <DialogControlsSectionHeader>Flatpak Applications</DialogControlsSectionHeader>
+            <DialogControlsSectionHeader>{t('FLATPAK_APPS_TITLE', 'Flatpak Applications')}</DialogControlsSectionHeader>
 
             {flatpakApps && flatpakApps.success ? (
               flatpakApps.apps.length > 0 ? (
@@ -313,14 +314,14 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                   const partialOverrides = app.has_filesystem_override || app.has_env_override;
 
                   let statusColor = 'red';
-                  let statusText = 'No overrides';
+                  let statusText = t('FLATPAK_STATUS_NO_OVERRIDES', 'No overrides');
 
                   if (hasOverrides) {
                     statusColor = 'green';
-                    statusText = 'Configured';
+                    statusText = t('FLATPAK_STATUS_CONFIGURED', 'Configured');
                   } else if (partialOverrides) {
                     statusColor = 'orange';
-                    statusText = 'Partial';
+                    statusText = t('FLATPAK_STATUS_PARTIAL', 'Partial');
                   }
 
                   return (
@@ -341,17 +342,17 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                 })
               ) : (
                 <PanelSectionRow>
-                  <Field 
-                    label="No Flatpak Apps Found"
-                    description="No Flatpak applications are currently installed"
+                  <Field
+                    label={t('FLATPAK_NO_APPS', 'No Flatpak Apps Found')}
+                    description={t('FLATPAK_NO_APPS_DESC', 'No Flatpak applications are currently installed')}
                   />
                 </PanelSectionRow>
               )
             ) : (
               <PanelSectionRow>
-                <Field 
-                  label="Error"
-                  description={flatpakApps?.error || 'Failed to load Flatpak applications'}
+                <Field
+                  label={t('FLATPAK_ERROR', 'Error')}
+                  description={flatpakApps?.error || t('FLATPAK_ERROR_APPS', 'Failed to load Flatpak applications')}
                   icon={<FaTimes style={{color: 'red'}} />}
                 />
               </PanelSectionRow>
@@ -360,7 +361,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
 
           {/* Steam Configuration Instructions */}
           <DialogControlsSection>
-            <DialogControlsSectionHeader>Steam Configuration</DialogControlsSectionHeader>
+            <DialogControlsSectionHeader>{t('FLATPAK_STEAM_CONFIG_TITLE', 'Steam Configuration')}</DialogControlsSectionHeader>
             <div
               style={{
                 padding: '12px',
@@ -372,13 +373,13 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
               }}
             >
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>
-                Configure Steam Flatpak Shortcuts
+                {t('FLATPAK_STEAM_CONFIG_HEADER', 'Configure Steam Flatpak Shortcuts')}
               </div>
               <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '8px' }}>
-                In Steam, open your flatpak game and click the cog wheel.
+                {t('FLATPAK_STEAM_CONFIG_DESC', 'In Steam, open your flatpak game and click the cog wheel.')}
               </div>
               <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '12px', color: '#ffa500' }}>
-                <strong>IMPORTANT:</strong> Set this in TARGET (NOT LAUNCH OPTIONS)
+                <strong>IMPORTANT:</strong> {t('FLATPAK_STEAM_CONFIG_IMPORTANT', 'Set this in TARGET (NOT LAUNCH OPTIONS)')}
               </div>
 
               {instructionSteps.map((step) => (
@@ -421,7 +422,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                 layout="below"
                 onClick={closeModal}
               >
-                Close
+                {t('FLATPAK_CLOSE', 'Close')}
               </ButtonItem>
             </PanelSectionRow>
           </DialogControlsSection>

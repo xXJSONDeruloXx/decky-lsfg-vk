@@ -8,6 +8,7 @@ import {
   ButtonItem
 } from "@decky/ui";
 import { getDllStats, DllStatsResult, getConfigFileContent, getLaunchScriptContent, FileContentResult } from "../api/lsfgApi";
+import t from '../i18n/i18n';
 
 interface NerdStuffModalProps {
   closeModal?: () => void;
@@ -63,7 +64,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
   return (
     <ModalRoot onCancel={closeModal} onOK={closeModal}>
       {loading && (
-        <div>Loading information...</div>
+        <div>{t('NERD_LOADING', 'Loading information...')}</div>
       )}
       
       {error && (
@@ -79,26 +80,26 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
                 <div>{dllStats.error || "Failed to get DLL stats"}</div>
               ) : (
                 <div>
-                  <Field label="DLL Path">
+                  <Field label={t('NERD_DLL_PATH', 'DLL Path')}>
                     <Focusable
                       onClick={() => dllStats.dll_path && copyToClipboard(dllStats.dll_path)}
                       onActivate={() => dllStats.dll_path && copyToClipboard(dllStats.dll_path)}
                     >
-                      {dllStats.dll_path || "Not available"}
+                      {dllStats.dll_path || t('NERD_NOT_AVAILABLE', 'Not available')}
                     </Focusable>
                   </Field>
                   
-                  <Field label="DLL SHA256 Hash">
+                  <Field label={t('NERD_DLL_HASH', 'DLL SHA256 Hash')}>
                     <Focusable
                       onClick={() => dllStats.dll_sha256 && copyToClipboard(dllStats.dll_sha256)}
                       onActivate={() => dllStats.dll_sha256 && copyToClipboard(dllStats.dll_sha256)}
                     >
-                      {dllStats.dll_sha256 ? formatSHA256(dllStats.dll_sha256) : "Not available"}
+                      {dllStats.dll_sha256 ? formatSHA256(dllStats.dll_sha256) : t('NERD_NOT_AVAILABLE', 'Not available')}
                     </Focusable>
                   </Field>
                   
                   {dllStats.dll_source && (
-                    <Field label="Detection Source">
+                    <Field label={t('NERD_DETECTION_SOURCE', 'Detection Source')}>
                       <div>{dllStats.dll_source}</div>
                     </Field>
                   )}
@@ -109,13 +110,13 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
 
           {/* Launch Script Section */}
           {scriptContent && (
-            <Field label="Launch Script">
+            <Field label={t('NERD_LAUNCH_SCRIPT', 'Launch Script')}>
               {!scriptContent.success ? (
-                <div>Script not found: {scriptContent.error}</div>
+                <div>{t('NERD_SCRIPT_NOT_FOUND_PREFIX', 'Script not found:')} {scriptContent.error}</div>
               ) : (
                 <div>
                   <div style={{ marginBottom: "8px", fontSize: "0.9em", opacity: 0.8 }}>
-                    Path: {scriptContent.path}
+                    {t('NERD_PATH_PREFIX', 'Path:')} {scriptContent.path}
                   </div>
                   <Focusable
                     onClick={() => scriptContent.content && copyToClipboard(scriptContent.content)}
@@ -130,7 +131,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
                       overflow: "auto",
                       maxHeight: "150px"
                     }}>
-                      {scriptContent.content || "No content"}
+                      {scriptContent.content || t('NERD_NO_CONTENT', 'No content')}
                     </pre>
                   </Focusable>
                 </div>
@@ -140,13 +141,13 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
 
           {/* Config File Section */}
           {configContent && (
-            <Field label="Configuration File">
+            <Field label={t('NERD_CONFIG_FILE', 'Configuration File')}>
               {!configContent.success ? (
-                <div>Config not found: {configContent.error}</div>
+                <div>{t('NERD_CONFIG_NOT_FOUND_PREFIX', 'Config not found:')} {configContent.error}</div>
               ) : (
                 <div>
                   <div style={{ marginBottom: "8px", fontSize: "0.9em", opacity: 0.8 }}>
-                    Path: {configContent.path}
+                    {t('NERD_PATH_PREFIX', 'Path:')} {configContent.path}
                   </div>
                   <Focusable
                     onClick={() => configContent.content && copyToClipboard(configContent.content)}
@@ -160,7 +161,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
                       whiteSpace: "pre-wrap",
                       overflow: "auto"
                     }}>
-                      {configContent.content || "No content"}
+                      {configContent.content || t('NERD_NO_CONTENT', 'No content')}
                     </pre>
                   </Focusable>
                 </div>
@@ -175,7 +176,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
                 layout="below"
                 onClick={closeModal}
               >
-                Close
+                {t('NERD_CLOSE', 'Close')}
               </ButtonItem>
             </PanelSectionRow>
           </DialogControlsSection>
