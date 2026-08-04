@@ -324,7 +324,7 @@
       "PROFILE_CANNOT_RENAME_TITLE": "无法重命名默认配置文件",
       "PROFILE_CANNOT_RENAME_MSG": "默认配置文件无法重命名",
       "USAGE_TITLE": "使用方法",
-      "USAGE_DESC": "点击"复制启动选项"按钮，然后将其粘贴到Steam游戏的启动选项中以启用帧生成。",
+      "USAGE_DESC": "点击「复制启动选项」按钮，然后将其粘贴到Steam游戏的启动选项中以启用帧生成。",
       "USAGE_CONFIG_NOTE": "配置保存在~/.config/lsfg-vk/conf.toml中，游戏运行时可热重载。",
       "CLIPBOARD_COPIED": "已复制到剪贴板",
       "CLIPBOARD_COPYING": "复制中...",
