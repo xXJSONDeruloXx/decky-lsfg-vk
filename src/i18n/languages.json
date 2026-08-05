@@ -3,7 +3,7 @@
     "CONTENT_FPS_MULTIPLIER": "Multiplicateur de FPS",
     "CONTENT_NERD_STUFF": "Informations techniques",
     "CONTENT_FLATPAK_SETUP": "Configuration Flatpak",
-    "MULTIPLIER_OFF": "DÉSACTIVÉ",
+    "MULTIPLIER_OFF": "OFF",
     "CONFIG_SECTION_TITLE": "Configuration",
     "CONFIG_WORKAROUNDS_TITLE": "Contournements",
     "CONFIG_FLOW_SCALE": "Échelle du flux",
