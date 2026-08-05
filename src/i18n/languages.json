@@ -15,7 +15,7 @@
     "CONFIG_PRESENT_MODE_FIFO": "FIFO - VSync",
     "CONFIG_PRESENT_MODE_MAILBOX": "Mailbox",
     "CONFIG_PRESENT_MODE_DESC": "Bascule entre les modes de présentation FIFO - VSync (par défaut) et Mailbox pour de meilleures performances ou compatibilité",
-    "CONFIG_PERFORMANCE_MODE": "Mode performances",
+    "CONFIG_PERFORMANCE_MODE": "Mode performance",
     "CONFIG_PERFORMANCE_MODE_DESC": "Utilise un modèle plus léger pour la génération d'images (recommandé pour la plupart des jeux)",
     "CONFIG_HDR_MODE": "Mode HDR",
     "CONFIG_HDR_MODE_DESC": "Active le mode HDR (uniquement pour les jeux compatibles HDR)",
