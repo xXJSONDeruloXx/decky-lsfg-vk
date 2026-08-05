@@ -7,6 +7,8 @@
   "CONFIG_WORKAROUNDS_TITLE": "Workarounds",
   "CONFIG_FLOW_SCALE": "Flow Scale",
   "CONFIG_FLOW_SCALE_DESC": "Lowers internal motion estimation resolution, improving performance slightly",
+  "CONFIG_NO_FP16": "FP16 Acceleration",
+  "CONFIG_NO_FP16_DESC": "Use FP16 shaders when supported",
   "CONFIG_BASE_FPS_CAP": "Base FPS Cap",
   "CONFIG_BASE_FPS_CAP_OFF": "Off",
   "CONFIG_BASE_FPS_CAP_DESC": "Base framerate cap for DirectX games, before frame multiplier. (Requires game restart to apply)",

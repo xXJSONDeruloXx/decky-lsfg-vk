@@ -128,8 +128,8 @@ export function ConfigurationSection({
 
           <PanelSectionRow>
             <ToggleField
-              label="FP16 Acceleration"
-              description="Use FP16 shaders when supported"
+              label={`${t('CONFIG_NO_FP16', 'FP16 Acceleration')}`}
+              description={t('CONFIG_NO_FP16_DESC', 'Use FP16 shaders when supported')}
               checked={!config.no_fp16}
               onChange={(value) => onConfigChange(NO_FP16, !value)}
             />
