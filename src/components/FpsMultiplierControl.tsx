@@ -1,7 +1,6 @@
 import { PanelSectionRow, DialogButton, Focusable } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import { MULTIPLIER } from "../config/generatedConfigSchema";
-import t from '../i18n/i18n';
 
 interface FpsMultiplierControlProps {
   config: ConfigurationData;
@@ -50,7 +49,7 @@ export function FpsMultiplierControl({
             textAlign: "center"
           }}
         >
-          {config.multiplier < 2 ? t('MULTIPLIER_OFF', 'OFF') : `${config.multiplier}X`}
+          {`${config.multiplier}X`}
         </div>
         <DialogButton
           style={{
