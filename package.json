@@ -50,8 +50,8 @@
   "remote_binary": [
     {
       "name": "lsfg-vk_noui.zip",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v1.0.0-amd-robust-image-quality/lsfg-vk_noui.zip",
-      "sha256hash": "bdb023c5bfb97ab0e79e7f7c5778e31807b02150086821fcfe6ba29ad7a2a9ba"
+      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v1.0.0-amd-robust-image-quality-init-fix/lsfg-vk_noui.zip",
+      "sha256hash": "d444e8f81d9287f25d4f91b4aa0e0f51f0d07118acbd30d38d4d362df5b321e5"
     },
     {
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
