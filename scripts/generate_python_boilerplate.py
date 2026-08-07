@@ -34,7 +34,6 @@ def get_env_var_name(field_name: str) -> str:
         "enable_wow64": "PROTON_USE_WOW64", 
         "disable_steamdeck_mode": "SteamDeck",
         "mangohud_workaround": "MANGOHUD",
-        "disable_lsfgvk": "DISABLE_LSFGVK",
         "use_native_matching": "DECKY_LSFGVK_AUTO_PROFILE",
         "disable_vkbasalt": "DISABLE_VKBASALT",
         "force_enable_vkbasalt": "ENABLE_VKBASALT",

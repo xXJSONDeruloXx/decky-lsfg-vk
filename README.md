@@ -18,7 +18,7 @@
 
 A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
 
-> The v2 x86_64 and Flatpak payloads remain pinned to [`v2.0.0-decky.2`](https://github.com/xXJSONDeruloXx/lsfg-vk/releases/tag/v2.0.0-decky.2); the Armada/aarch64 layer uses the rebuilt ARM-port prerelease [`v2.0.0-decky.3-arm64`](https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/tag/v2.0.0-decky.3-arm64).
+> The x86_64 layer uses the patched statically linked prerelease [`v2.0.0-decky.4-runtime-1x`](https://github.com/xXJSONDeruloXx/lsfg-vk/releases/tag/v2.0.0-decky.4-runtime-1x); the Armada/aarch64 layer uses the rebuilt ARM-port prerelease [`v2.0.0-decky.3-arm64`](https://github.com/xXJSONDeruloXx/lsfg-vk-arm64/releases/tag/v2.0.0-decky.3-arm64).
 
 ## Installation
 
@@ -46,14 +46,13 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 The plugin provides several configuration options to optimize frame generation for your games:
 
 ### Core Settings
-- **FPS Multiplier**: Choose between 2x, 3x, or 4x frame generation
+- **FPS Multiplier**: Choose between 1x, 2x, 3x, or 4x frame generation
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
 - **Performance Mode**: Uses a lighter processing model
 - **Allow FP16**: Enable half-precision acceleration; disable it for older NVIDIA GPUs
 - **Active In**: Optionally match a profile to executable names, Wine executables, or process names
 - **Automatic Profile Matching**: Explicitly let lsfg-vk choose an `Active In` profile; otherwise the Decky-selected profile is always forced
 - **GPU**: Optionally select the GPU by name, vendor/device ID, or PCI bus ID
-- **Disable Frame Generation**: Disable the layer for the next launch without creating an invalid 1x profile
 
 ## Feedback and Support
 
@@ -77,7 +76,7 @@ For per-game feedback and community support, please join the [decky-lsfg-vk Disc
 ## What it does
 
 The plugin:
-- Downloads checksum-pinned x86_64 or Armada/aarch64 lsfg-vk v2 assets from the owner-fork release to `~/.local/lib/`
+- Downloads checksum-pinned statically linked x86_64 or Armada/aarch64 lsfg-vk v2 layers to `~/.local/lib/`
 - Bundles checksum-pinned lsfg-vk v2 Flatpak extensions for runtimes 23.08, 24.08, and 25.08, and installs the selected local bundle
 - Updates already-installed user Flatpak runtimes and migrates the plugin's legacy app overrides when the native layer is updated
 - Records existing Flatpak runtime commits and rolls back already-updated runtimes when a multi-runtime migration fails, when Flatpak permits it
@@ -85,7 +84,7 @@ The plugin:
 - Migrates the existing `~/.config/lsfg-vk/conf.toml` from v1 to v2 automatically on layer update, retaining a one-time `.v1.bak` backup
 - Automatically detects your Lossless Scaling DLL installation
 - Provides an easy-to-use interface to configure frame generation settings:
-  - **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
+  - **FPS Multiplier**: Choose 1x, 2x, 3x, or 4x frame generation
   - **Flow Scale**: Adjust motion estimation quality vs performance
   - **Performance Mode**: Use lighter processing for better performance
   - **FP16, Active In, GPU, and explicit automatic matching**: Use v2 profile parameters without ambiguous profile selection

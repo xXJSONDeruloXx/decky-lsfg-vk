@@ -43,7 +43,7 @@ class ConfigurationMigrationTests(unittest.TestCase):
         self.assertIn("allow_fp16 = false", serialized)
         self.assertIn("[[profile]]", serialized)
         self.assertIn('name = "decky-lsfg-vk"', serialized)
-        self.assertIn("multiplier = 2", serialized)
+        self.assertIn("multiplier = 1", serialized)
         self.assertNotIn("[[game]]", serialized)
         self.assertNotIn("no_fp16", serialized)
         self.assertNotIn("hdr_mode", serialized)
@@ -155,12 +155,28 @@ class InstallerInfrastructureTests(unittest.TestCase):
             service._create_lsfg_launch_script(profile_data)
             launch_script = script_path.read_text(encoding="utf-8")
             self.assertIn("export DXVK_FRAME_RATE=45", launch_script)
-            self.assertIn("export DISABLE_LSFGVK=1", launch_script)
+            self.assertNotIn("DISABLE_LSFGVK", launch_script)
 
             with mock.patch("lsfg_vk.dll_detection.DllDetectionService") as detection_service:
                 detection_service.return_value.check_lossless_scaling_dll.return_value = {"detected": False}
                 service._create_config_file()
             self.assertEqual(len(list(config_dir.glob("conf.toml.v1.bak*"))), 1)
+
+    def test_multiplier_one_is_a_valid_runtime_passthrough_value(self):
+        config = ConfigurationManager.get_defaults()
+        config["multiplier"] = 1
+
+        self.assertEqual(ConfigurationManager.validate_config(config)["multiplier"], 1)
+
+    def test_legacy_disable_environment_is_removed_when_launcher_is_rewritten(self):
+        config = ConfigurationManager.get_defaults()
+        script = ConfigurationManager.parse_script_content(
+            "export DISABLE_LSFGVK=1\nexport DXVK_FRAME_RATE=45\n"
+        )
+        merged = ConfigurationManager.merge_config_with_script(config, script)
+
+        self.assertNotIn("disable_lsfgvk", merged)
+        self.assertEqual(merged["dxvk_frame_rate"], 45)
 
     def test_unrecognized_configuration_is_backed_up_before_reset(self):
         from lsfg_vk.installation import InstallationService

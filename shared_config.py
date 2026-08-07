@@ -75,13 +75,6 @@ CONFIG_SCHEMA_DEF = {
         "description": "optional GPU name, vendor:device ID, or PCI bus ID",
         "location": "profile",
     },
-    "disable_lsfgvk": {
-        "name": "disable_lsfgvk",
-        "fieldType": ConfigFieldType.BOOLEAN,
-        "default": False,
-        "description": "disable lsfg-vk on the next game launch",
-        "location": "script",
-    },
     "dxvk_frame_rate": {
         "name": "dxvk_frame_rate",
         "fieldType": ConfigFieldType.INTEGER,

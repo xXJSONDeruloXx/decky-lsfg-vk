@@ -33,8 +33,8 @@ export function FpsMultiplierControl({
             padding: "5px 0px 0px 0px",
             minWidth: "40px",
           }}
-          onClick={() => onConfigChange(MULTIPLIER, Math.max(2, config.multiplier - 1))}
-          disabled={config.multiplier <= 2}
+          onClick={() => onConfigChange(MULTIPLIER, Math.max(1, config.multiplier - 1))}
+          disabled={config.multiplier <= 1}
         >
           −
         </DialogButton>

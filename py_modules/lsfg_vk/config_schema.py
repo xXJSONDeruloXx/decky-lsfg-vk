@@ -93,8 +93,8 @@ class ConfigurationManager:
                 value = str(value)
             validated[name] = value
 
-        if validated["multiplier"] < 2:
-            raise ValueError("multiplier must be 2 or greater")
+        if validated["multiplier"] < 1:
+            raise ValueError("multiplier must be 1 or greater")
         if not 0.25 <= validated["flow_scale"] <= 1.0:
             raise ValueError("flow_scale must be between 0.25 and 1.0")
         if validated["pacing"] != "none":
@@ -167,9 +167,7 @@ class ConfigurationManager:
         for game in data.get("game", []):
             name = str(game.get("exe", DEFAULT_PROFILE_NAME))
             migrated_profile = dict(game)
-            if int(migrated_profile.get("multiplier", 2)) <= 1:
-                migrated_profile["disable_lsfgvk"] = True
-            migrated_profile["multiplier"] = max(2, int(migrated_profile.get("multiplier", 2)))
+            migrated_profile["multiplier"] = max(1, int(migrated_profile.get("multiplier", 2)))
             profiles[name] = ConfigurationManager._config_from_profile(migrated_profile, global_config)
         if not profiles:
             profiles[DEFAULT_PROFILE_NAME] = ConfigurationManager.get_defaults()

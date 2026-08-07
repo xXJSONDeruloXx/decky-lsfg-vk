@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
-  ACTIVE_IN, ALLOW_FP16, DISABLE_LSFGVK, DLL, FLOW_SCALE, GPU,
+  ACTIVE_IN, ALLOW_FP16, DLL, FLOW_SCALE, GPU,
   PERFORMANCE_MODE, USE_NATIVE_MATCHING, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
@@ -131,15 +131,6 @@ export function ConfigurationSection({
               max={1.0}
               step={0.01}
               onChange={(value) => onConfigChange(FLOW_SCALE, value)}
-            />
-          </PanelSectionRow>
-
-          <PanelSectionRow>
-            <ToggleField
-              label="Disable Frame Generation"
-              description="Disables lsfg-vk on the next game launch. Requires a game restart."
-              checked={config.disable_lsfgvk}
-              onChange={(value) => onConfigChange(DISABLE_LSFGVK, value)}
             />
           </PanelSectionRow>
 
