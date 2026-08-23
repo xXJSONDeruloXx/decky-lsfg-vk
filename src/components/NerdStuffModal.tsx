@@ -38,7 +38,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
         setConfigContent(configResult);
         setScriptContent(scriptResult);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
+        setError(err instanceof Error ? err.message : t('NERD_FAILED_LOAD', 'Failed to load data'));
       } finally {
         setLoading(false);
       }
@@ -68,7 +68,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
       )}
       
       {error && (
-        <div>Error: {error}</div>
+        <div>{t('NERD_ERROR_PREFIX', 'Error:')} {error}</div>
       )}
       
       {!loading && !error && (
@@ -77,7 +77,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
           {dllStats && (
             <>
               {!dllStats.success ? (
-                <div>{dllStats.error || "Failed to get DLL stats"}</div>
+                <div>{dllStats.error || t('NERD_FAILED_DLL_STATS', 'Failed to get DLL stats')}</div>
               ) : (
                 <div>
                   <Field label={t('NERD_DLL_PATH', 'DLL Path')}>
