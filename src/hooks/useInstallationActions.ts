@@ -6,6 +6,7 @@ import {
   showUninstallSuccessToast, 
   showUninstallErrorToast 
 } from "../utils/toastUtils";
+import t from "../i18n/i18n";
 
 export function useInstallationActions() {
   const [isInstalling, setIsInstalling] = useState<boolean>(false);
@@ -17,13 +18,13 @@ export function useInstallationActions() {
     reloadConfig?: () => Promise<void>
   ) => {
     setIsInstalling(true);
-    setInstallationStatus("Installing lsfg-vk...");
+    setInstallationStatus(t('STATUS_INSTALLING_LSFG', 'Installing lsfg-vk...'));
 
     try {
       const result = await installLsfgVk();
       if (result.success) {
         setIsInstalled(true);
-        setInstallationStatus("lsfg-vk installed");
+        setInstallationStatus(t('STATUS_LSFG_INSTALL_COMPLETE', 'lsfg-vk installed'));
         showInstallSuccessToast();
 
         // Reload lsfg config after installation
@@ -31,11 +32,11 @@ export function useInstallationActions() {
           await reloadConfig();
         }
       } else {
-        setInstallationStatus(`Installation failed: ${result.error}`);
+        setInstallationStatus(`${t('STATUS_INSTALL_FAILED_PREFIX', 'Installation failed:')} ${result.error}`);
         showInstallErrorToast(result.error);
       }
     } catch (error) {
-      setInstallationStatus(`Installation failed: ${error}`);
+      setInstallationStatus(`${t('STATUS_INSTALL_FAILED_PREFIX', 'Installation failed:')} ${error}`);
       showInstallErrorToast(String(error));
     } finally {
       setIsInstalling(false);
@@ -47,20 +48,20 @@ export function useInstallationActions() {
     setInstallationStatus: (value: string) => void
   ) => {
     setIsUninstalling(true);
-    setInstallationStatus("Uninstalling lsfg-vk...");
+    setInstallationStatus(t('STATUS_UNINSTALLING_LSFG', 'Uninstalling lsfg-vk...'));
 
     try {
       const result = await uninstallLsfgVk();
       if (result.success) {
         setIsInstalled(false);
-        setInstallationStatus("lsfg-vk uninstalled successfully!");
+        setInstallationStatus(t('STATUS_LSFG_UNINSTALL_COMPLETE', 'lsfg-vk uninstalled successfully!'));
         showUninstallSuccessToast();
       } else {
-        setInstallationStatus(`Uninstallation failed: ${result.error}`);
+        setInstallationStatus(`${t('STATUS_UNINSTALL_FAILED_PREFIX', 'Uninstallation failed:')} ${result.error}`);
         showUninstallErrorToast(result.error);
       }
     } catch (error) {
-      setInstallationStatus(`Uninstallation failed: ${error}`);
+      setInstallationStatus(`${t('STATUS_UNINSTALL_FAILED_PREFIX', 'Uninstallation failed:')} ${error}`);
       showUninstallErrorToast(String(error));
     } finally {
       setIsUninstalling(false);

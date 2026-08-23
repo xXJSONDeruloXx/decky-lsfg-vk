@@ -8,6 +8,7 @@ import {
 } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { showErrorToast, ToastMessages } from "../utils/toastUtils";
+import t from "../i18n/i18n";
 
 export function useInstallationStatus() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
@@ -18,13 +19,13 @@ export function useInstallationStatus() {
       const status = await checkLsfgVkInstalled();
       setIsInstalled(status.installed);
       if (status.installed) {
-        setInstallationStatus("lsfg-vk Installed");
+        setInstallationStatus(t('STATUS_LSFG_INSTALLED', 'lsfg-vk Installed'));
       } else {
-        setInstallationStatus("lsfg-vk Not Installed");
+        setInstallationStatus(t('STATUS_LSFG_NOT_INSTALLED', 'lsfg-vk Not Installed'));
       }
       return status.installed;
     } catch (error) {
-      setInstallationStatus("lsfg-vk Not Installed");
+      setInstallationStatus(t('STATUS_LSFG_NOT_INSTALLED', 'lsfg-vk Not Installed'));
       return false;
     }
   };
@@ -51,12 +52,12 @@ export function useDllDetection() {
       const result = await checkLosslessScalingDll();
       setDllDetected(result.detected);
       if (result.detected) {
-        setDllDetectionStatus("Lossless Scaling Installed");
+        setDllDetectionStatus(t('STATUS_LOSSLESS_INSTALLED', 'Lossless Scaling Installed'));
       } else {
-        setDllDetectionStatus("Lossless Scaling Not Installed");
+        setDllDetectionStatus(t('STATUS_LOSSLESS_NOT_INSTALLED', 'Lossless Scaling Not Installed'));
       }
     } catch (error) {
-      setDllDetectionStatus("Lossless Scaling Not Installed");
+      setDllDetectionStatus(t('STATUS_LOSSLESS_NOT_INSTALLED', 'Lossless Scaling Not Installed'));
     }
   };
 

@@ -379,7 +379,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
                 {t('FLATPAK_STEAM_CONFIG_DESC', 'In Steam, open your flatpak game and click the cog wheel.')}
               </div>
               <div style={{ fontSize: '0.9em', lineHeight: '1.4', marginBottom: '12px', color: '#ffa500' }}>
-                <strong>IMPORTANT:</strong> {t('FLATPAK_STEAM_CONFIG_IMPORTANT', 'Set this in TARGET (NOT LAUNCH OPTIONS)')}
+                <strong>{t('FLATPAK_IMPORTANT_LABEL', 'IMPORTANT:')}</strong> {t('FLATPAK_STEAM_CONFIG_IMPORTANT', 'Set this in TARGET (NOT LAUNCH OPTIONS)')}
               </div>
 
               {instructionSteps.map((step) => (
