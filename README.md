@@ -16,7 +16,7 @@
 
 ## What is this?
 
-A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://github.com/PancakeTAS/lsfg-vk)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
+A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://lsfg-vk.dev/)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
 
 ## Installation
 
@@ -33,7 +33,7 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 1. **Purchase and install** [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam
 2. **Open the plugin** from the Decky menu
 3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
-4. **Configure settings** using the plugin's UI - adjust FPS multiplier, flow scale, performance mode, HDR settings, and experimental features
+4. **Configure settings** using the plugin's UI - adjust FPS multiplier, flow scale, FP16 acceleration, performance mode, and launch workarounds
 5. **Apply launch option** to games you want to use frame generation with:
    - Add `~/lsfg %command%` to your game's launch options in Steam Properties
    - Or use the "Launch Option Clipboard" button in the plugin to copy the command
@@ -44,7 +44,7 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 The plugin provides several configuration options to optimize frame generation for your games:
 
 ### Core Settings
-- **FPS Multiplier**: Choose between 2x, 3x, or 4x frame generation
+- **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
 - **Performance Mode**: Uses a lighter processing model - recommended for most games
 - **HDR Mode**: Enable for games that support HDR output
@@ -70,17 +70,17 @@ For per-game feedback and community support, please join the [decky-lsfg-vk Disc
 ## What it does
 
 The plugin:
-- Automatically downloads and installs the latest lsfg-vk Vulkan layer to `~/.local/lib/`
+- Installs the pinned lsfg-vk 2.0.0 x86_64 and x86 Vulkan layers from the official upstream build
 - Configures the Vulkan layer in `~/.local/share/vulkan/implicit_layer.d/`
-- Creates a TOML configuration file in `~/.config/lsfg-vk/conf.toml` with your settings
+- Creates and migrates the v2 TOML configuration in `~/.config/lsfg-vk/conf.toml`, preserving a one-time v1 backup during upgrade
 - Automatically detects your Lossless Scaling DLL installation
 - Provides an easy-to-use interface to configure frame generation settings:
-  - **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
+  - **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
   - **Flow Scale**: Adjust motion estimation quality vs performance
   - **Performance Mode**: Use lighter processing for better performance
   - **HDR Mode**: Enable for HDR-compatible games
   - **Experimental Features**: Override present mode and set FPS limits
-- **Hot-reloading**: Configuration changes apply immediately without restarting games
+- **Hot-reloading**: Multiplier, flow scale, and performance mode changes apply without restarting games
 - Easy uninstallation that removes all installed files when no longer needed
 
 ## Credits
