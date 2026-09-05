@@ -172,46 +172,6 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
 
             {extensionStatus && extensionStatus.success ? (
               <>
-                {/* 23.08 Runtime */}
-                <PanelSectionRow>
-                  <Field
-                    label={t('FLATPAK_RUNTIME_23', 'Runtime 23.08')}
-                    description={extensionStatus.installed_23_08 ? t('FLATPAK_INSTALLED', 'Installed') : t('FLATPAK_NOT_INSTALLED', 'Not installed')}
-                    icon={extensionStatus.installed_23_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
-                  >
-                    <ButtonItem
-                      layout="below"
-                      onClick={() => {
-                        const operation = extensionStatus.installed_23_08 ? 'uninstall' : 'install';
-                        const action = () => handleExtensionOperation(operation, '23.08');
-
-                        if (operation === 'uninstall') {
-                          confirmOperation(
-                            action,
-                            t('FLATPAK_UNINSTALL_TITLE', 'Uninstall Runtime Extension'),
-                            `${t('FLATPAK_UNINSTALL_CONFIRM_PREFIX', 'Are you sure you want to uninstall the')} 23.08 ${t('FLATPAK_UNINSTALL_CONFIRM_SUFFIX', 'runtime extension?')}`
-                          );
-                        } else {
-                          action();
-                        }
-                      }}
-                      disabled={operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08'}
-                    >
-                      {operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08' ? (
-                        <Spinner />
-                      ) : extensionStatus.installed_23_08 ? (
-                        <>
-                          <FaTrash /> {t('FLATPAK_UNINSTALL_BTN', 'Uninstall')}
-                        </>
-                      ) : (
-                        <>
-                          <FaDownload /> {t('FLATPAK_INSTALL_BTN', 'Install')}
-                        </>
-                      )}
-                    </ButtonItem>
-                  </Field>
-                </PanelSectionRow>
-
                 {/* 24.08 Runtime */}
                 <PanelSectionRow>
                   <Field

@@ -84,7 +84,6 @@ export interface FlatpakExtensionStatus {
   success: boolean;
   message: string;
   error?: string;
-  installed_23_08: boolean;
   installed_24_08: boolean;
   installed_25_08: boolean;
 }

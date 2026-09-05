@@ -440,36 +440,19 @@ class Plugin:
         # Clean up lsfg-vk files when the plugin is uninstalled
         self.installation_service.cleanup_on_uninstall()
         
-        # Also clean up flatpak extensions if they are installed
         try:
-            decky.logger.info("Checking for flatpak extensions to uninstall")
-            
             extension_status = self.flatpak_service.get_extension_status()
-            
-            if extension_status.get("success"):
-                if extension_status.get("installed_23_08"):
-                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 23.08")
-                    result = self.flatpak_service.uninstall_extension("23.08")
-                    if result.get("success"):
-                        decky.logger.info("Successfully uninstalled flatpak runtime 23.08")
-                    else:
-                        decky.logger.warning(f"Failed to uninstall flatpak runtime 23.08: {result.get('error')}")
-                
-                if extension_status.get("installed_24_08"):
-                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 24.08")
-                    result = self.flatpak_service.uninstall_extension("24.08")
-                    if result.get("success"):
-                        decky.logger.info("Successfully uninstalled flatpak runtime 24.08")
-                    else:
-                        decky.logger.warning(f"Failed to uninstall flatpak runtime 24.08: {result.get('error')}")
-                        
-                decky.logger.info("Flatpak extension cleanup completed")
-            else:
-                decky.logger.info(f"Could not check flatpak status for cleanup: {extension_status.get('error')}")
-                
-        except Exception as e:
-            decky.logger.error(f"Error during flatpak cleanup: {e}")
-        
+            for version, key in (
+                ("24.08", "installed_24_08"),
+                ("25.08", "installed_25_08"),
+            ):
+                if extension_status.get(key):
+                    result = self.flatpak_service.uninstall_extension(version)
+                    if not result.get("success"):
+                        decky.logger.warning(result.get("error"))
+        except Exception as error:
+            decky.logger.error(f"Error during Flatpak cleanup: {error}")
+
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
     async def _migration(self):
@@ -492,4 +475,9 @@ class Plugin:
             os.path.join(decky.DECKY_HOME, "lossless-scaling-vk"),
             os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-lossless-scaling-vk"))
         
+        try:
+            self.flatpak_service.migrate_v2()
+        except Exception as error:
+            decky.logger.warning(f"Flatpak v2 migration skipped: {error}")
+
         decky.logger.info("decky-lsfg-vk plugin migrations completed")

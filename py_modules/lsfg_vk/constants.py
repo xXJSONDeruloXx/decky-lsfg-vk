@@ -22,6 +22,6 @@ BIN_DIR = "bin"
 STEAM_COMMON_PATH = Path("steamapps/common/Lossless Scaling")
 LOSSLESS_DLL_NAME = "lsfg-vk.dll"
 
-ENV_LSFG_DLL_PATH = "LSFG_DLL_PATH"
+ENV_LSFG_DLL_PATH = "LSFGVK_DLL_PATH"
 ENV_XDG_DATA_HOME = "XDG_DATA_HOME"
 ENV_HOME = "HOME"

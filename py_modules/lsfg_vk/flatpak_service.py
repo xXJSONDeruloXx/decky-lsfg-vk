@@ -1,459 +1,321 @@
-"""
-Flatpak service for managing lsfg-vk Flatpak runtime extensions.
-"""
-
-import subprocess
 import os
+import shutil
+import subprocess
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List
 
 from .base_service import BaseService
-from .constants import (
-    FLATPAK_23_08_FILENAME, FLATPAK_24_08_FILENAME, FLATPAK_25_08_FILENAME, BIN_DIR, CONFIG_DIR
-)
+from .config_schema import ConfigurationManager
+from .dll_detection import DllDetectionService
 from .types import BaseResponse
 
 
-class FlatpakExtensionStatus(BaseResponse):
-    """Response for Flatpak extension status"""
-    def __init__(self, success: bool = False, message: str = "", error: str = "", 
-                 installed_23_08: bool = False, installed_24_08: bool = False, installed_25_08: bool = False):
-        super().__init__(success, message, error)
-        self.installed_23_08 = installed_23_08
-        self.installed_24_08 = installed_24_08
-        self.installed_25_08 = installed_25_08
-
-
-class FlatpakAppInfo(BaseResponse):
-    """Response for Flatpak app information"""
-    def __init__(self, success: bool = False, message: str = "", error: str = "",
-                 apps: List[Dict[str, Any]] = None, total_apps: int = 0):
-        super().__init__(success, message, error)
-        self.apps = apps or []
-        self.total_apps = total_apps
-
-
-class FlatpakOverrideResponse(BaseResponse):
-    """Response for Flatpak override operations"""
-    def __init__(self, success: bool = False, message: str = "", error: str = "",
-                 app_id: str = "", operation: str = ""):
-        super().__init__(success, message, error)
-        self.app_id = app_id
-        self.operation = operation
-
-
 class FlatpakService(BaseService):
-    """Service for handling Flatpak runtime extensions and app overrides"""
+    EXTENSION_ID = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
+    SUPPORTED_RUNTIMES = ("24.08", "25.08")
 
     def __init__(self, logger=None):
         super().__init__(logger)
-        self.extension_id_23_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/23.08"
-        self.extension_id_24_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08"
-        self.extension_id_25_08 = "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/25.08"
         self.flatpak_command = None
 
-    def _get_clean_env(self):
-        """Get a clean environment without PyInstaller's bundled libraries"""
+    def _get_clean_env(self) -> Dict[str, str]:
         env = os.environ.copy()
-
-        if 'LD_LIBRARY_PATH' in env:
-            del env['LD_LIBRARY_PATH']
-
-        standard_paths = ['/usr/bin', '/usr/local/bin', '/bin']
-        current_path = env.get('PATH', '')
-
-        path_parts = current_path.split(':') if current_path else []
-        for std_path in standard_paths:
-            if std_path not in path_parts:
-                path_parts.insert(0, std_path)
-
-        env['PATH'] = ':'.join(path_parts)
-
+        env.pop("LD_LIBRARY_PATH", None)
+        path_entries = [entry for entry in env.get("PATH", "").split(":") if entry]
+        for entry in ("/usr/bin", "/usr/local/bin", "/bin"):
+            if entry not in path_entries:
+                path_entries.insert(0, entry)
+        env["PATH"] = ":".join(path_entries)
         return env
 
-    def _run_flatpak_command(self, args: List[str], **kwargs):
-        """Run flatpak command with clean environment to avoid library conflicts"""
-        if self.flatpak_command is None:
-            raise FileNotFoundError("Flatpak command not available")
-
-        env = self._get_clean_env()
-
-        self.log.info(f"Running flatpak with PATH: {env.get('PATH')}")
-        self.log.info(f"LD_LIBRARY_PATH removed: {'LD_LIBRARY_PATH' not in env}")
-
-        return subprocess.run([self.flatpak_command] + args, env=env, **kwargs)
-
     def check_flatpak_available(self) -> bool:
-        """Check if flatpak command is available and store the working command"""
-        self.log.info(f"PATH: {os.environ.get('PATH', 'Not set')}")
-        self.log.info(f"HOME: {os.environ.get('HOME', 'Not set')}")
-        self.log.info(f"USER: {os.environ.get('USER', 'Not set')}")
+        env = self._get_clean_env()
+        self.flatpak_command = shutil.which("flatpak", path=env["PATH"])
+        return self.flatpak_command is not None
 
-        flatpak_paths = [
-            "flatpak",
-            "/usr/bin/flatpak",
-            "/var/lib/flatpak/exports/bin/flatpak",
-            "/home/deck/.local/bin/flatpak"
-        ]
+    def _run_flatpak_command(self, args: List[str], **kwargs):
+        if self.flatpak_command is None and not self.check_flatpak_available():
+            raise FileNotFoundError("Flatpak command not available")
+        return subprocess.run(
+            [self.flatpak_command, *args],
+            env=self._get_clean_env(),
+            **kwargs,
+        )
 
-        for flatpak_path in flatpak_paths:
+    @classmethod
+    def _extension_ref(cls, version: str) -> str:
+        return f"{cls.EXTENSION_ID}/x86_64/{version}"
+
+    @classmethod
+    def _validate_runtime(cls, version: str) -> None:
+        if version not in cls.SUPPORTED_RUNTIMES:
+            raise ValueError("Unsupported Flatpak runtime")
+
+    def get_extension_status(self) -> Dict[str, Any]:
+        try:
+            if not self.check_flatpak_available():
+                raise FileNotFoundError("Flatpak is not available on this system")
+
+            result = self._run_flatpak_command(
+                ["list", "--user", "--runtime", "--columns=application,arch,branch"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            installed = {
+                tuple(line.split("\t")[:3])
+                for line in result.stdout.splitlines()
+                if line.strip()
+            }
+            return self._success_response(
+                BaseResponse,
+                "Flatpak runtime status retrieved",
+                installed_24_08=(self.EXTENSION_ID, "x86_64", "24.08") in installed,
+                installed_25_08=(self.EXTENSION_ID, "x86_64", "25.08") in installed,
+            )
+        except Exception as error:
+            return self._error_response(
+                BaseResponse,
+                str(error),
+                installed_24_08=False,
+                installed_25_08=False,
+            )
+
+    def install_extension(self, version: str) -> Dict[str, Any]:
+        try:
+            self._validate_runtime(version)
+            if not self.check_flatpak_available():
+                raise FileNotFoundError("Flatpak is not available on this system")
+            result = self._run_flatpak_command(
+                [
+                    "install",
+                    "--user",
+                    "--noninteractive",
+                    "--or-update",
+                    "flathub",
+                    f"{self.EXTENSION_ID}//{version}",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                raise OSError(result.stderr.strip() or "Flatpak installation failed")
+            return self._success_response(
+                BaseResponse,
+                f"lsfg-vk {version} runtime extension installed",
+            )
+        except Exception as error:
+            return self._error_response(BaseResponse, str(error))
+
+    def uninstall_extension(self, version: str) -> Dict[str, Any]:
+        try:
+            self._validate_runtime(version)
+            if not self.check_flatpak_available():
+                raise FileNotFoundError("Flatpak is not available on this system")
+            result = self._run_flatpak_command(
+                ["uninstall", "--user", "--noninteractive", self._extension_ref(version)],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                raise OSError(result.stderr.strip() or "Flatpak uninstall failed")
+            return self._success_response(
+                BaseResponse,
+                f"lsfg-vk {version} runtime extension uninstalled",
+            )
+        except Exception as error:
+            return self._error_response(BaseResponse, str(error))
+
+    def _dll_directory(self) -> Path:
+        if self.config_file_path.exists():
             try:
-                result = subprocess.run([flatpak_path, "--version"], 
-                                      capture_output=True, check=True, text=True,
-                                      env=self._get_clean_env())
-                self.log.info(f"Flatpak found at {flatpak_path}: {result.stdout.strip()}")
-                self.flatpak_command = flatpak_path
-                return True
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                self.log.debug(f"Flatpak not found at {flatpak_path}")
-                continue
+                profile_data = ConfigurationManager.parse_toml_content_multi_profile(
+                    self.config_file_path.read_text(encoding="utf-8")
+                )
+                dll_path = profile_data["global_config"].get("dll")
+                if dll_path:
+                    return Path(dll_path).parent
+            except Exception:
+                pass
 
-        self.log.error("Flatpak command not found in any known locations")
-        self.flatpak_command = None
-        return False
+        result = DllDetectionService(self.log).check_lossless_scaling_dll()
+        if result.get("detected") and result.get("path"):
+            return Path(result["path"]).parent
+        return self.user_home / ".local/share/Steam/steamapps/common"
 
-    def get_extension_status(self) -> FlatpakExtensionStatus:
-        """Check if lsfg-vk Flatpak extensions are installed"""
-        try:
-            if not self.check_flatpak_available():
-                error_msg = "Flatpak is not available on this system"
-                if self.flatpak_command is None:
-                    error_msg += ". Command not found in PATH or common install locations."
-                self.log.error(error_msg)
-                return self._error_response(FlatpakExtensionStatus, 
-                                          error_msg,
-                                          installed_23_08=False, installed_24_08=False, installed_25_08=False)
+    def _override_output(self, app_id: str) -> str:
+        result = self._run_flatpak_command(
+            ["override", "--user", "--show", app_id],
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout if result.returncode == 0 else ""
 
-            result = self._run_flatpak_command(
-                ["list", "--runtime"],
-                capture_output=True, text=True, check=True
-            )
-
-            installed_runtimes = result.stdout
-
-            base_extension_name = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
-            installed_23_08 = False
-            installed_24_08 = False
-            installed_25_08 = False
-
-            for line in installed_runtimes.split('\n'):
-                if base_extension_name in line:
-                    if "23.08" in line:
-                        installed_23_08 = True
-                    elif "24.08" in line:
-                        installed_24_08 = True
-                    elif "25.08" in line:
-                        installed_25_08 = True
-
-            status_msg = []
-            if installed_23_08:
-                status_msg.append("23.08 runtime extension installed")
-            if installed_24_08:
-                status_msg.append("24.08 runtime extension installed")
-            if installed_25_08:
-                status_msg.append("25.08 runtime extension installed")
-
-            if not status_msg:
-                status_msg.append("No lsfg-vk runtime extensions installed")
-
-            return self._success_response(FlatpakExtensionStatus,
-                                        "; ".join(status_msg),
-                                        installed_23_08=installed_23_08,
-                                        installed_24_08=installed_24_08,
-                                        installed_25_08=installed_25_08)
-
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Error checking Flatpak extensions: {e.stderr if e.stderr else str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(FlatpakExtensionStatus, error_msg,
-                                      installed_23_08=False, installed_24_08=False, installed_25_08=False)
-
-    def install_extension(self, version: str) -> BaseResponse:
-        """Install a specific version of the lsfg-vk Flatpak extension"""
-        try:
-            if version not in ["23.08", "24.08", "25.08"]:
-                return self._error_response(BaseResponse, "Invalid version. Must be '23.08', '24.08', or '25.08'")
-
-            if not self.check_flatpak_available():
-                return self._error_response(BaseResponse, "Flatpak is not available on this system")
-
-            plugin_dir = Path(__file__).parent.parent.parent
-            if version == "23.08":
-                filename = FLATPAK_23_08_FILENAME
-            elif version == "24.08":
-                filename = FLATPAK_24_08_FILENAME
-            else:
-                filename = FLATPAK_25_08_FILENAME
-            flatpak_path = plugin_dir / BIN_DIR / filename
-
-            if not flatpak_path.exists():
-                return self._error_response(BaseResponse, f"Flatpak file not found: {flatpak_path}")
-
-            result = self._run_flatpak_command(
-                ["install", "--user", "--noninteractive", str(flatpak_path)],
-                capture_output=True, text=True
-            )
-
-            if result.returncode != 0:
-                error_msg = f"Failed to install Flatpak extension: {result.stderr}"
-                self.log.error(error_msg)
-                return self._error_response(BaseResponse, error_msg)
-
-            self.log.info(f"Successfully installed lsfg-vk Flatpak extension {version}")
-            return self._success_response(BaseResponse, f"lsfg-vk {version} runtime extension installed successfully")
-
-        except Exception as e:
-            error_msg = f"Error installing Flatpak extension {version}: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(BaseResponse, error_msg)
-
-    def uninstall_extension(self, version: str) -> BaseResponse:
-        """Uninstall a specific version of the lsfg-vk Flatpak extension"""
-        try:
-            if version not in ["23.08", "24.08", "25.08"]:
-                return self._error_response(BaseResponse, "Invalid version. Must be '23.08', '24.08', or '25.08'")
-
-            if not self.check_flatpak_available():
-                return self._error_response(BaseResponse, "Flatpak is not available on this system")
-
-            if version == "23.08":
-                extension_id = self.extension_id_23_08
-            elif version == "24.08":
-                extension_id = self.extension_id_24_08
-            else:
-                extension_id = self.extension_id_25_08
-
-            result = self._run_flatpak_command(
-                ["uninstall", "--user", "--noninteractive", extension_id],
-                capture_output=True, text=True
-            )
-
-            if result.returncode != 0:
-                error_msg = f"Failed to uninstall Flatpak extension: {result.stderr}"
-                self.log.error(error_msg)
-                return self._error_response(BaseResponse, error_msg)
-
-            self.log.info(f"Successfully uninstalled lsfg-vk Flatpak extension {version}")
-            return self._success_response(BaseResponse, f"lsfg-vk {version} runtime extension uninstalled successfully")
-
-        except Exception as e:
-            error_msg = f"Error uninstalling Flatpak extension {version}: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(BaseResponse, error_msg)
-
-    def get_flatpak_apps(self) -> FlatpakAppInfo:
-        """Get list of installed Flatpak apps and their lsfg-vk override status"""
-        try:
-            if not self.check_flatpak_available():
-                error_msg = "Flatpak is not available on this system"
-                if self.flatpak_command is None:
-                    error_msg += ". Command not found in PATH or common install locations."
-                return self._error_response(FlatpakAppInfo, 
-                                          error_msg,
-                                          apps=[], total_apps=0)
-
-            result = self._run_flatpak_command(
-                ["list", "--app"],
-                capture_output=True, text=True, check=True
-            )
-
-            apps = []
-            for line in result.stdout.strip().split('\n'):
-                if not line.strip():
-                    continue
-
-                parts = line.split('\t')
-                if len(parts) >= 2:
-                    app_name = parts[0].strip()
-                    app_id = parts[1].strip()
-
-                    # Check override status
-                    override_status = self._check_app_override_status(app_id)
-
-                    apps.append({
-                        "app_id": app_id,
-                        "app_name": app_name,
-                        "has_filesystem_override": override_status["filesystem"],
-                        "has_env_override": override_status["env"]
-                    })
-
-            return self._success_response(FlatpakAppInfo,
-                                        f"Found {len(apps)} Flatpak applications",
-                                        apps=apps, total_apps=len(apps))
-
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Error getting Flatpak apps: {e.stderr if e.stderr else str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(FlatpakAppInfo, error_msg, apps=[], total_apps=0)
+    def _override_paths(self) -> Dict[str, str]:
+        return {
+            "config_dir": str(self.config_dir),
+            "config_file": str(self.config_file_path),
+            "dll_dir": str(self._dll_directory()),
+            "legacy_dll": str(
+                self.user_home
+                / ".local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
+            ),
+            "legacy_script": str(self.lsfg_launch_script_path),
+        }
 
     def _check_app_override_status(self, app_id: str) -> Dict[str, bool]:
-        """Check if an app has lsfg-vk overrides set"""
-        try:
-            result = self._run_flatpak_command(
-                ["override", "--user", "--show", app_id],
-                capture_output=True, text=True
-            )
+        output = self._override_output(app_id)
+        paths = self._override_paths()
+        return {
+            "filesystem": (
+                paths["config_dir"] in output
+                and paths["dll_dir"] in output
+            ),
+            "env": f"LSFGVK_CONFIG={paths['config_file']}" in output,
+        }
 
-            if result.returncode != 0:
-                return {"filesystem": False, "env": False}
-
-            output = result.stdout
-            home_path = os.path.expanduser("~")
-            config_path = f"{home_path}/.config/lsfg-vk"
-            dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
-            lsfg_path = f"{home_path}/lsfg"
-
-            filesystem_section = ""
-            in_context = False
-            
-            for line in output.split('\n'):
-                line = line.strip()
-                if line == "[Context]":
-                    in_context = True
-                elif line.startswith("[") and line != "[Context]":
-                    in_context = False
-                elif in_context and line.startswith("filesystems="):
-                    filesystem_section = line
-                    break
-            
-            has_config_fs = config_path in filesystem_section
-            has_dll_fs = dll_path in filesystem_section
-            has_lsfg_fs = lsfg_path in filesystem_section
-
-            filesystem_override = has_config_fs and has_dll_fs and has_lsfg_fs
-
-            env_override = False
-            in_environment = False
-            
-            for line in output.split('\n'):
-                line = line.strip()
-                if line == "[Environment]":
-                    in_environment = True
-                elif line.startswith("[") and line != "[Environment]":
-                    in_environment = False
-                elif in_environment and line.startswith(f"LSFG_CONFIG={config_path}/conf.toml"):
-                    env_override = True
-                    break
-
-            self.log.debug(f"Override status for {app_id}: filesystem={filesystem_override} ({has_config_fs}/{has_dll_fs}/{has_lsfg_fs}), env={env_override}")
-            
-            return {"filesystem": filesystem_override, "env": env_override}
-
-        except Exception as e:
-            self.log.error(f"Error checking override status for {app_id}: {e}")
-            return {"filesystem": False, "env": False}
-
-    def set_app_override(self, app_id: str) -> FlatpakOverrideResponse:
-        """Set lsfg-vk overrides for a Flatpak app"""
+    def get_flatpak_apps(self) -> Dict[str, Any]:
         try:
             if not self.check_flatpak_available():
-                return self._error_response(FlatpakOverrideResponse,
-                                          "Flatpak is not available on this system",
-                                          app_id=app_id, operation="set")
-
-            home_path = os.path.expanduser("~")
-            config_path = f"{home_path}/.config/lsfg-vk"
-            dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
-            lsfg_path = f"{home_path}/lsfg"
-
-            filesystem_overrides = [
-                f"--filesystem={dll_path}",
-                f"--filesystem={config_path}:rw", 
-                f"--filesystem={lsfg_path}:rw"
-            ]
-            
-            for override in filesystem_overrides:
-                result = self._run_flatpak_command(
-                    ["override", "--user", override, app_id],
-                    capture_output=True, text=True
-                )
-                if result.returncode != 0:
-                    error_msg = f"Failed to set filesystem override {override}: {result.stderr}"
-                    return self._error_response(FlatpakOverrideResponse, error_msg,
-                                              app_id=app_id, operation="set")
-
+                raise FileNotFoundError("Flatpak is not available on this system")
             result = self._run_flatpak_command(
-                ["override", "--user", f"--env=LSFG_CONFIG={config_path}/conf.toml", app_id],
-                capture_output=True, text=True
+                ["list", "--user", "--app", "--columns=name,application"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            apps = []
+            for line in result.stdout.splitlines():
+                parts = line.split("\t", 1)
+                if len(parts) != 2:
+                    continue
+                status = self._check_app_override_status(parts[1])
+                apps.append(
+                    {
+                        "app_id": parts[1],
+                        "app_name": parts[0],
+                        "has_filesystem_override": status["filesystem"],
+                        "has_env_override": status["env"],
+                    }
+                )
+            return self._success_response(
+                BaseResponse,
+                f"Found {len(apps)} Flatpak applications",
+                apps=apps,
+                total_apps=len(apps),
+            )
+        except Exception as error:
+            return self._error_response(
+                BaseResponse,
+                str(error),
+                apps=[],
+                total_apps=0,
             )
 
-            if result.returncode != 0:
-                error_msg = f"Failed to set environment override: {result.stderr}"
-                return self._error_response(FlatpakOverrideResponse, error_msg,
-                                          app_id=app_id, operation="set")
-
-            self.log.info(f"Successfully set lsfg-vk overrides for {app_id}")
-            return self._success_response(FlatpakOverrideResponse,
-                                        f"lsfg-vk overrides set for {app_id}",
-                                        app_id=app_id, operation="set")
-
-        except Exception as e:
-            error_msg = f"Error setting overrides for {app_id}: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(FlatpakOverrideResponse, error_msg,
-                                      app_id=app_id, operation="set")
-
-    def remove_app_override(self, app_id: str) -> FlatpakOverrideResponse:
-        """Remove lsfg-vk overrides for a Flatpak app"""
+    def set_app_override(self, app_id: str) -> Dict[str, Any]:
         try:
             if not self.check_flatpak_available():
-                return self._error_response(FlatpakOverrideResponse,
-                                          "Flatpak is not available on this system",
-                                          app_id=app_id, operation="remove")
-
-            home_path = os.path.expanduser("~")
-            config_path = f"{home_path}/.config/lsfg-vk"
-            dll_path = f"{home_path}/.local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
-            lsfg_path = f"{home_path}/lsfg"
-
-            reset_result = self._run_flatpak_command(
-                ["override", "--user", "--reset", app_id],
-                capture_output=True, text=True
-            )
-            
-            if reset_result.returncode == 0:
-                self.log.info(f"Successfully reset all overrides for {app_id}")
-                return self._success_response(FlatpakOverrideResponse,
-                                            f"All overrides reset for {app_id}",
-                                            app_id=app_id, operation="remove")
-            
-            self.log.debug(f"Reset failed, trying individual removal: {reset_result.stderr}")
-            
-            filesystem_overrides = [
-                f"--nofilesystem={dll_path}",
-                f"--nofilesystem={config_path}",
-                f"--nofilesystem={lsfg_path}"
-            ]
-            
-            removal_errors = []
-            
-            # Remove filesystem overrides
-            for override in filesystem_overrides:
-                result = self._run_flatpak_command(
-                    ["override", "--user", override, app_id],
-                    capture_output=True, text=True
-                )
-                if result.returncode != 0:
-                    removal_errors.append(f"{override}: {result.stderr}")
-
+                raise FileNotFoundError("Flatpak is not available on this system")
+            paths = self._override_paths()
             result = self._run_flatpak_command(
-                ["override", "--user", "--unset-env=LSFG_CONFIG", app_id],
-                capture_output=True, text=True
+                [
+                    "override",
+                    "--user",
+                    f"--filesystem={paths['config_dir']}:rw",
+                    f"--filesystem={paths['dll_dir']}:ro",
+                    f"--env=LSFGVK_CONFIG={paths['config_file']}",
+                    f"--nofilesystem={paths['legacy_dll']}",
+                    f"--nofilesystem={paths['legacy_script']}",
+                    "--unset-env=LSFG_CONFIG",
+                    app_id,
+                ],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                raise OSError(result.stderr.strip() or "Failed to set Flatpak overrides")
+            return self._success_response(
+                BaseResponse,
+                f"lsfg-vk overrides set for {app_id}",
+                app_id=app_id,
+                operation="set",
+            )
+        except Exception as error:
+            return self._error_response(
+                BaseResponse,
+                str(error),
+                app_id=app_id,
+                operation="set",
             )
 
+    def remove_app_override(self, app_id: str) -> Dict[str, Any]:
+        try:
+            if not self.check_flatpak_available():
+                raise FileNotFoundError("Flatpak is not available on this system")
+            paths = self._override_paths()
+            result = self._run_flatpak_command(
+                [
+                    "override",
+                    "--user",
+                    f"--nofilesystem={paths['config_dir']}",
+                    f"--nofilesystem={paths['dll_dir']}",
+                    f"--nofilesystem={paths['legacy_dll']}",
+                    f"--nofilesystem={paths['legacy_script']}",
+                    "--unset-env=LSFGVK_CONFIG",
+                    "--unset-env=LSFG_CONFIG",
+                    app_id,
+                ],
+                capture_output=True,
+                text=True,
+            )
             if result.returncode != 0:
-                removal_errors.append(f"unset-env: {result.stderr}")
+                raise OSError(result.stderr.strip() or "Failed to remove Flatpak overrides")
+            return self._success_response(
+                BaseResponse,
+                f"lsfg-vk overrides removed for {app_id}",
+                app_id=app_id,
+                operation="remove",
+            )
+        except Exception as error:
+            return self._error_response(
+                BaseResponse,
+                str(error),
+                app_id=app_id,
+                operation="remove",
+            )
 
-            if removal_errors:
-                self.log.warning(f"Some override removals had issues for {app_id}: {'; '.join(removal_errors)}")
-            
-            self.log.info(f"Completed override removal for {app_id}")
-            return self._success_response(FlatpakOverrideResponse,
-                                        f"lsfg-vk overrides removed for {app_id}",
-                                        app_id=app_id, operation="remove")
+    def migrate_v2(self) -> None:
+        if not self.check_flatpak_available():
+            return
 
-        except Exception as e:
-            error_msg = f"Error removing overrides for {app_id}: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(FlatpakOverrideResponse, error_msg,
-                                      app_id=app_id, operation="remove")
+        status = self.get_extension_status()
+        for version, key in (
+            ("24.08", "installed_24_08"),
+            ("25.08", "installed_25_08"),
+        ):
+            if not status.get(key):
+                continue
+            result = self._run_flatpak_command(
+                ["update", "--user", "--noninteractive", self._extension_ref(version)],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode != 0:
+                self.log.warning(result.stderr.strip())
+
+        apps_result = self._run_flatpak_command(
+            ["list", "--user", "--app", "--columns=application"],
+            capture_output=True,
+            text=True,
+        )
+        if apps_result.returncode != 0:
+            return
+
+        for app_id in apps_result.stdout.splitlines():
+            app_id = app_id.strip()
+            if not app_id:
+                continue
+            if "LSFG_CONFIG=" in self._override_output(app_id):
+                result = self.set_app_override(app_id)
+                if not result.get("success"):
+                    self.log.warning(result.get("error"))
