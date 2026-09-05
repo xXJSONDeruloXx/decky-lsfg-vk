@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import {
-  FLOW_SCALE, NO_FP16, PERFORMANCE_MODE, HDR_MODE,
+  FLOW_SCALE, NO_FP16, PERFORMANCE_MODE,
   EXPERIMENTAL_PRESENT_MODE, DXVK_FRAME_RATE, DISABLE_STEAMDECK_MODE,
   MANGOHUD_WORKAROUND, DISABLE_VKBASALT, FORCE_ENABLE_VKBASALT, ENABLE_WSI, ENABLE_ZINK
 } from "../config/generatedConfigSchema";
@@ -149,8 +149,8 @@ export function ConfigurationSection({
 
           <PanelSectionRow>
             <ToggleField
-              label={`${t('CONFIG_PRESENT_MODE', 'Present Mode')} (${(config.experimental_present_mode || "fifo") === "fifo" ? t('CONFIG_PRESENT_MODE_FIFO', 'FIFO - VSync') : t('CONFIG_PRESENT_MODE_MAILBOX', 'Mailbox')})`}
-              description={t('CONFIG_PRESENT_MODE_DESC', 'Toggle between FIFO - VSync (default) and Mailbox presentation modes for better performance or compatibility')}
+              label={`${t('CONFIG_PRESENT_MODE', 'Present Mode Override')} (${(config.experimental_present_mode || "fifo") === "fifo" ? t('CONFIG_PRESENT_MODE_FIFO', 'FIFO - VSync') : 'App Default'})`}
+              description={t('CONFIG_PRESENT_MODE_DESC', 'Force FIFO/VSync for v2 frame pacing, or leave the game present mode unchanged')}
               checked={(config.experimental_present_mode || "fifo") === "fifo"}
               onChange={(value) => onConfigChange(EXPERIMENTAL_PRESENT_MODE, value ? "fifo" : "mailbox")}
             />
@@ -165,14 +165,6 @@ export function ConfigurationSection({
             />
           </PanelSectionRow>
 
-          <PanelSectionRow>
-            <ToggleField
-              label={t('CONFIG_HDR_MODE', 'HDR Mode')}
-              description={t('CONFIG_HDR_MODE_DESC', 'Enables HDR mode (only for games that support HDR)')}
-              checked={config.hdr_mode}
-              onChange={(value) => onConfigChange(HDR_MODE, value)}
-            />
-          </PanelSectionRow>
         </>
       )}
 

@@ -13,7 +13,6 @@ export const NO_FP16 = "no_fp16" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
-export const HDR_MODE = "hdr_mode" as const;
 export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
 export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
 export const ENABLE_WOW64 = "enable_wow64" as const;
@@ -37,7 +36,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   dll: {
     name: "dll",
     fieldType: ConfigFieldType.STRING,
-    default: "/games/Lossless Scaling/Lossless.dll",
+    default: "",
     description: "specify where Lossless.dll is stored"
   },
   no_fp16: {
@@ -55,20 +54,14 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
   flow_scale: {
     name: "flow_scale",
     fieldType: ConfigFieldType.FLOAT,
-    default: 0.8,
-    description: "change the flow scale"
+    default: 1,
+    description: "motion estimation resolution scale"
   },
   performance_mode: {
     name: "performance_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
     description: "use a lighter model for FG (recommended for most games)"
-  },
-  hdr_mode: {
-    name: "hdr_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable HDR mode (only for games that support HDR)"
   },
   experimental_present_mode: {
     name: "experimental_present_mode",
@@ -133,7 +126,6 @@ export interface ConfigurationData {
   multiplier: number;
   flow_scale: number;
   performance_mode: boolean;
-  hdr_mode: boolean;
   experimental_present_mode: string;
   dxvk_frame_rate: number;
   enable_wow64: boolean;
@@ -152,12 +144,11 @@ export function getFieldNames(): string[] {
 
 export function getDefaults(): ConfigurationData {
   return {
-    dll: "/games/Lossless Scaling/Lossless.dll",
+    dll: "",
     no_fp16: false,
     multiplier: 1,
-    flow_scale: 0.8,
+    flow_scale: 1,
     performance_mode: false,
-    hdr_mode: false,
     experimental_present_mode: "fifo",
     dxvk_frame_rate: 0,
     enable_wow64: false,
@@ -177,7 +168,6 @@ export function getFieldTypes(): Record<string, ConfigFieldType> {
     multiplier: ConfigFieldType.INTEGER,
     flow_scale: ConfigFieldType.FLOAT,
     performance_mode: ConfigFieldType.BOOLEAN,
-    hdr_mode: ConfigFieldType.BOOLEAN,
     experimental_present_mode: ConfigFieldType.STRING,
     dxvk_frame_rate: ConfigFieldType.INTEGER,
     enable_wow64: ConfigFieldType.BOOLEAN,

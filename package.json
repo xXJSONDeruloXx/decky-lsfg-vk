@@ -49,9 +49,9 @@
   "remote_binary_bundling" : true,
   "remote_binary": [
     {
-      "name": "lsfg-vk_noui.zip",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/fp16-test-2/lsfg-vk_noui.zip",
-      "sha256hash": "a406b3730144c2011e2c2acd3cf44f3ec6c048ee86099bc9c3ac90aa1515e5ec"
+      "name": "lsfg-vk-2.0.0.tar.xz",
+      "url": "https://builds.lsfg-vk.dev/lsfg-vk-2.0.0.tar.xz",
+      "sha256hash": "08bdbdf373a111022df87dac7aa87e3b564bb841f961552e3ca85fea12b5aa74"
     },
     {
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",

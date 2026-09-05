@@ -18,7 +18,6 @@ NO_FP16 = "no_fp16"
 MULTIPLIER = "multiplier"
 FLOW_SCALE = "flow_scale"
 PERFORMANCE_MODE = "performance_mode"
-HDR_MODE = "hdr_mode"
 EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode"
 DXVK_FRAME_RATE = "dxvk_frame_rate"
 ENABLE_WOW64 = "enable_wow64"
@@ -37,7 +36,6 @@ class ConfigurationData(TypedDict):
     multiplier: int
     flow_scale: float
     performance_mode: bool
-    hdr_mode: bool
     experimental_present_mode: str
     dxvk_frame_rate: int
     enable_wow64: bool
@@ -122,4 +120,4 @@ def get_script_generation_logic():
     return generate_script_lines
 
 
-ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'hdr_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
+ALL_FIELDS = ['dll', 'no_fp16', 'multiplier', 'flow_scale', 'performance_mode', 'experimental_present_mode', 'dxvk_frame_rate', 'enable_wow64', 'disable_steamdeck_mode', 'mangohud_workaround', 'disable_vkbasalt', 'force_enable_vkbasalt', 'enable_wsi', 'enable_zink']
