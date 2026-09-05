@@ -37,19 +37,19 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "dll",
     fieldType: ConfigFieldType.STRING,
     default: "",
-    description: "specify where Lossless.dll is stored"
+    description: "override the lsfg-vk.dll path"
   },
   no_fp16: {
     name: "no_fp16",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "force-disable fp16 (use on older nvidia cards)"
+    description: "disable FP16 acceleration"
   },
   multiplier: {
     name: "multiplier",
     fieldType: ConfigFieldType.INTEGER,
     default: 1,
-    description: "change the fps multiplier"
+    description: "frame generation multiplier"
   },
   flow_scale: {
     name: "flow_scale",
@@ -61,13 +61,13 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "performance_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "use a lighter model for FG (recommended for most games)"
+    description: "use the lighter frame generation model"
   },
   experimental_present_mode: {
     name: "experimental_present_mode",
     fieldType: ConfigFieldType.STRING,
     default: "fifo",
-    description: "override Vulkan present mode (may cause crashes)"
+    description: "control the v2 present mode override"
   },
   dxvk_frame_rate: {
     name: "dxvk_frame_rate",
@@ -85,13 +85,13 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "disable_steamdeck_mode",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "disable Steam Deck mode (unlocks hidden settings in some games)"
+    description: "disable Steam Deck mode"
   },
   mangohud_workaround: {
     name: "mangohud_workaround",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Enables a transparent mangohud overlay, sometimes fixes issues with 2X multiplier in game mode"
+    description: "enable a transparent MangoHud overlay workaround"
   },
   disable_vkbasalt: {
     name: "disable_vkbasalt",
@@ -103,19 +103,19 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "force_enable_vkbasalt",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Force vkBasalt to engage to fix framepacing issues in gamemode"
+    description: "force-enable vkBasalt"
   },
   enable_wsi: {
     name: "enable_wsi",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Enable Gamescope WSI Layer, disable if frame generation isn't applying or isn't feeling smooth (use with HDR off)"
+    description: "enable the Gamescope WSI layer"
   },
   enable_zink: {
     name: "enable_zink",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Enable Zink (Vulkan-based OpenGL implementation) for OpenGL games"
+    description: "enable Zink for OpenGL games"
   },
 };
 
