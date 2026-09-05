@@ -47,7 +47,7 @@ The plugin provides several configuration options to optimize frame generation f
 - **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
 - **Performance Mode**: Uses a lighter processing model - recommended for most games
-- **HDR Mode**: Enable for games that support HDR output
+- **FP16 Acceleration**: Use half-precision acceleration when supported
 
 ## Feedback and Support
 
@@ -78,14 +78,14 @@ The plugin:
   - **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
   - **Flow Scale**: Adjust motion estimation quality vs performance
   - **Performance Mode**: Use lighter processing for better performance
-  - **HDR Mode**: Enable for HDR-compatible games
+  - **FP16 Acceleration**: Use half-precision acceleration when supported
   - **Experimental Features**: Override present mode and set FPS limits
 - **Hot-reloading**: Multiplier, flow scale, and performance mode changes apply without restarting games
 - Easy uninstallation that removes all installed files when no longer needed
 
 ## Credits
 
-- **[PancakeTAS](https://github.com/PancakeTAS/lsfg-vk)** for creating the lsfg-vk Vulkan compatibility layer
+- **[PancakeTAS](https://lsfg-vk.dev/)** for creating the lsfg-vk Vulkan compatibility layer
 - **[Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/)** developers for the original frame generation technology
 - **[Deck Wizard](https://www.youtube.com/@DeckWizard)**  - Extensive community support including comprehensive guides, promotional content, thorough testing and feedback, custom artworks, and tutorial videos. His passionate advocacy and continuous support have been instrumental in this plugin's success.
 - The **Decky Loader** team for the plugin framework
