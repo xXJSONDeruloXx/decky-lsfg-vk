@@ -295,13 +295,9 @@ class FlatpakService(BaseService):
         ):
             if not status.get(key):
                 continue
-            result = self._run_flatpak_command(
-                ["update", "--user", "--noninteractive", self._extension_ref(version)],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode != 0:
-                self.log.warning(result.stderr.strip())
+            result = self.install_extension(version)
+            if not result.get("success"):
+                self.log.warning(result.get("error"))
 
         apps_result = self._run_flatpak_command(
             ["list", "--user", "--app", "--columns=application"],
