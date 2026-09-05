@@ -178,6 +178,18 @@ class InstallationService(BaseService):
         for path in (self.legacy_lib_file, self.legacy_json_file):
             self._remove_if_exists(path)
 
+    def needs_v2_migration(self) -> bool:
+        legacy_layer = self.legacy_lib_file.exists() or self.legacy_json_file.exists()
+        legacy_config = False
+        if self.config_file_path.exists():
+            try:
+                legacy_config = ConfigurationManager.is_legacy_v1(
+                    self.config_file_path.read_text(encoding="utf-8")
+                )
+            except OSError:
+                legacy_config = False
+        return legacy_layer or legacy_config
+
     def get_launch_script_path(self) -> str:
         return str(self.lsfg_launch_script_path)
 
