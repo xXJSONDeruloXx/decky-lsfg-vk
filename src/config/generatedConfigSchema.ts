@@ -79,7 +79,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "enable_wow64",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "enable PROTON_USE_WOW64=1 for 32-bit games (use with ProtonGE to fix crashing)"
+    description: "enable PROTON_USE_WOW64=1 for 32-bit games"
   },
   disable_steamdeck_mode: {
     name: "disable_steamdeck_mode",
@@ -97,7 +97,7 @@ export const CONFIG_SCHEMA: Record<string, ConfigField> = {
     name: "disable_vkbasalt",
     fieldType: ConfigFieldType.BOOLEAN,
     default: false,
-    description: "Disables vkBasalt layer which can conflict with LSFG (Reshade, some Decky plugins)"
+    description: "disable vkBasalt for games where it conflicts with lsfg-vk"
   },
   force_enable_vkbasalt: {
     name: "force_enable_vkbasalt",
