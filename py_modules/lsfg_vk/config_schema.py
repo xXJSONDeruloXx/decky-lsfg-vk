@@ -105,10 +105,9 @@ class ConfigurationManager:
         if not path_value:
             return ""
         path = Path(path_value)
-        if path.name.lower() != "lossless.dll":
-            return path_value
-        replacement = path.with_name("lsfg-vk.dll")
-        return str(replacement) if replacement.exists() else ""
+        if path.name.lower() in {"lossless.dll", "losslessscaling.dll"}:
+            return str(path.with_name("lsfg-vk.dll"))
+        return path_value
 
     @staticmethod
     def _config_from_profile(profile: Dict[str, Any], global_config: Dict[str, Any]) -> Dict[str, Any]:

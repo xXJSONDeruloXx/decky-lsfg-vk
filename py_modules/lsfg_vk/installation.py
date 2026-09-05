@@ -128,9 +128,10 @@ class InstallationService(BaseService):
 
         from .dll_detection import DllDetectionService
 
-        dll_result = DllDetectionService(self.log).check_lossless_scaling_dll()
-        if dll_result.get("detected") and dll_result.get("path"):
-            profile_data["global_config"]["dll"] = dll_result["path"]
+        if not profile_data["global_config"].get("dll"):
+            dll_result = DllDetectionService(self.log).check_lossless_scaling_dll()
+            if dll_result.get("detected") and dll_result.get("path"):
+                profile_data["global_config"]["dll"] = dll_result["path"]
 
         defaults = dict(ConfigurationManager.get_defaults())
         for profile_name, raw_profile in list(profile_data["profiles"].items()):
