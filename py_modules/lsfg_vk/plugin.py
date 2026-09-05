@@ -6,7 +6,6 @@ Vulkan layer for frame generation on Steam Deck.
 """
 
 import os
-import subprocess
 import hashlib
 from typing import Dict, Any
 from pathlib import Path
@@ -37,7 +36,7 @@ class Plugin:
         self.flatpak_service = FlatpakService()
 
     async def install_lsfg_vk(self) -> Dict[str, Any]:
-        """Install lsfg-vk by extracting the zip file to ~/.local
+        """Install the bundled lsfg-vk runtime to ~/.local
         
         Returns:
             InstallationResponse dict with success status and message/error
@@ -362,7 +361,7 @@ class Plugin:
         """Install lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to install ("23.08" or "24.08")
+            version: Runtime version to install ("24.08" or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
@@ -373,7 +372,7 @@ class Plugin:
         """Uninstall lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to uninstall ("23.08" or "24.08")
+            version: Runtime version to uninstall ("24.08" or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
