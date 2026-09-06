@@ -8,4 +8,4 @@ export { SmartClipboardButton } from "./SmartClipboardButton";
 export { FgmodClipboardButton } from "./FgmodClipboardButton";
 export { NerdStuffModal } from "./NerdStuffModal";
 export { FlatpaksModal } from "./FlatpaksModal";
-export { ProfileManagement } from "./ProfileManagement";
+export { GameConfigurationSelector } from "./GameConfigurationSelector";

@@ -128,6 +128,16 @@ class SteamService(BaseService):
             ),
         }
 
+    def find_lsfg_vk_dll(self) -> Optional[str]:
+        """Find the branch-specific upstream DLL in any Steam library."""
+        if self.get_branch_status().get("needs_switch"):
+            return None
+        for library_root in self._steam_library_roots():
+            dll_path = library_root / "steamapps/common/Lossless Scaling/lsfg-vk.dll"
+            if dll_path.is_file():
+                return str(dll_path)
+        return None
+
     def get_branch_status(self) -> Dict[str, object]:
         try:
             manifest_path = self._manifest_path()
@@ -165,3 +175,23 @@ class SteamService(BaseService):
                 needs_switch=False,
                 restart_required=False,
             )
+
+    def get_installed_games(self) -> Dict[str, object]:
+        """Return installed Steam app IDs and names for the Game Mode selector."""
+        try:
+            games = {}
+            for library_root in self._steam_library_roots():
+                for manifest in (library_root / "steamapps").glob("appmanifest_*.acf"):
+                    match = re.fullmatch(r"appmanifest_(\d+)\.acf", manifest.name)
+                    if not match:
+                        continue
+                    try:
+                        content = manifest.read_text(encoding="utf-8")
+                    except OSError:
+                        continue
+                    appid = match.group(1)
+                    name = self._section_value(content, "AppState", "name") or f"App {appid}"
+                    games[appid] = name
+            return self._success_response(dict, games=[{"appid": appid, "name": name} for appid, name in sorted(games.items(), key=lambda item: item[1].lower())])
+        except Exception as error:
+            return self._error_response(dict, str(error), games=[])

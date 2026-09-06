@@ -1,182 +1,31 @@
-// src/config/generatedConfigSchema.ts
-// Configuration field type enum - matches Python
-export enum ConfigFieldType {
-  BOOLEAN = "boolean",
-  INTEGER = "integer",
-  FLOAT = "float",
-  STRING = "string"
-}
+export enum ConfigFieldType { BOOLEAN = "boolean", INTEGER = "integer", FLOAT = "float", STRING = "string", ARRAY = "array" }
 
-// Field name constants for type-safe access
 export const DLL = "dll" as const;
 export const NO_FP16 = "no_fp16" as const;
+export const ACTIVE_IN = "active_in" as const;
+export const PACING_MODE = "pacing_mode" as const;
 export const MULTIPLIER = "multiplier" as const;
 export const FLOW_SCALE = "flow_scale" as const;
 export const PERFORMANCE_MODE = "performance_mode" as const;
-export const EXPERIMENTAL_PRESENT_MODE = "experimental_present_mode" as const;
-export const DXVK_FRAME_RATE = "dxvk_frame_rate" as const;
-export const ENABLE_WOW64 = "enable_wow64" as const;
-export const DISABLE_STEAMDECK_MODE = "disable_steamdeck_mode" as const;
-export const MANGOHUD_WORKAROUND = "mangohud_workaround" as const;
-export const DISABLE_VKBASALT = "disable_vkbasalt" as const;
-export const FORCE_ENABLE_VKBASALT = "force_enable_vkbasalt" as const;
-export const ENABLE_WSI = "enable_wsi" as const;
-export const ENABLE_ZINK = "enable_zink" as const;
+export const OVERRIDE_PRESENT_MODE = "override_present_mode" as const;
+export const PRESERVE_SWAPCHAIN_IMAGE_COUNT = "preserve_swapchain_image_count" as const;
 
-// Configuration field definition
-export interface ConfigField {
-  name: string;
-  fieldType: ConfigFieldType;
-  default: boolean | number | string;
-  description: string;
-}
-
-// Configuration schema - auto-generated from Python
-export const CONFIG_SCHEMA: Record<string, ConfigField> = {
-  dll: {
-    name: "dll",
-    fieldType: ConfigFieldType.STRING,
-    default: "",
-    description: "override the lsfg-vk.dll path"
-  },
-  no_fp16: {
-    name: "no_fp16",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "disable FP16 acceleration"
-  },
-  multiplier: {
-    name: "multiplier",
-    fieldType: ConfigFieldType.INTEGER,
-    default: 1,
-    description: "frame generation multiplier"
-  },
-  flow_scale: {
-    name: "flow_scale",
-    fieldType: ConfigFieldType.FLOAT,
-    default: 1,
-    description: "motion estimation resolution scale"
-  },
-  performance_mode: {
-    name: "performance_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "use the lighter frame generation model"
-  },
-  experimental_present_mode: {
-    name: "experimental_present_mode",
-    fieldType: ConfigFieldType.STRING,
-    default: "fifo",
-    description: "control the v2 present mode override"
-  },
-  dxvk_frame_rate: {
-    name: "dxvk_frame_rate",
-    fieldType: ConfigFieldType.INTEGER,
-    default: 0,
-    description: "base framerate cap for DirectX games before frame multiplier"
-  },
-  enable_wow64: {
-    name: "enable_wow64",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable PROTON_USE_WOW64=1 for 32-bit games"
-  },
-  disable_steamdeck_mode: {
-    name: "disable_steamdeck_mode",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "disable Steam Deck mode"
-  },
-  mangohud_workaround: {
-    name: "mangohud_workaround",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable a transparent MangoHud overlay workaround"
-  },
-  disable_vkbasalt: {
-    name: "disable_vkbasalt",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "disable vkBasalt for games where it conflicts with lsfg-vk"
-  },
-  force_enable_vkbasalt: {
-    name: "force_enable_vkbasalt",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "force-enable vkBasalt"
-  },
-  enable_wsi: {
-    name: "enable_wsi",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable the Gamescope WSI layer"
-  },
-  enable_zink: {
-    name: "enable_zink",
-    fieldType: ConfigFieldType.BOOLEAN,
-    default: false,
-    description: "enable Zink for OpenGL games"
-  },
-};
-
-// Type-safe configuration data structure
+export interface ConfigField { name: string; fieldType: ConfigFieldType; default: boolean | number | string | string[]; description: string; }
 export interface ConfigurationData {
-  dll: string;
-  no_fp16: boolean;
-  multiplier: number;
-  flow_scale: number;
-  performance_mode: boolean;
-  experimental_present_mode: string;
-  dxvk_frame_rate: number;
-  enable_wow64: boolean;
-  disable_steamdeck_mode: boolean;
-  mangohud_workaround: boolean;
-  disable_vkbasalt: boolean;
-  force_enable_vkbasalt: boolean;
-  enable_wsi: boolean;
-  enable_zink: boolean;
+  dll: string; no_fp16: boolean; active_in: string[]; pacing_mode: string; multiplier: number;
+  flow_scale: number; performance_mode: boolean; override_present_mode: boolean; preserve_swapchain_image_count: boolean;
 }
-
-// Helper functions
-export function getFieldNames(): string[] {
-  return Object.keys(CONFIG_SCHEMA);
-}
-
-export function getDefaults(): ConfigurationData {
-  return {
-    dll: "",
-    no_fp16: false,
-    multiplier: 1,
-    flow_scale: 1,
-    performance_mode: false,
-    experimental_present_mode: "fifo",
-    dxvk_frame_rate: 0,
-    enable_wow64: false,
-    disable_steamdeck_mode: false,
-    mangohud_workaround: false,
-    disable_vkbasalt: false,
-    force_enable_vkbasalt: false,
-    enable_wsi: false,
-    enable_zink: false,
-  };
-}
-
-export function getFieldTypes(): Record<string, ConfigFieldType> {
-  return {
-    dll: ConfigFieldType.STRING,
-    no_fp16: ConfigFieldType.BOOLEAN,
-    multiplier: ConfigFieldType.INTEGER,
-    flow_scale: ConfigFieldType.FLOAT,
-    performance_mode: ConfigFieldType.BOOLEAN,
-    experimental_present_mode: ConfigFieldType.STRING,
-    dxvk_frame_rate: ConfigFieldType.INTEGER,
-    enable_wow64: ConfigFieldType.BOOLEAN,
-    disable_steamdeck_mode: ConfigFieldType.BOOLEAN,
-    mangohud_workaround: ConfigFieldType.BOOLEAN,
-    disable_vkbasalt: ConfigFieldType.BOOLEAN,
-    force_enable_vkbasalt: ConfigFieldType.BOOLEAN,
-    enable_wsi: ConfigFieldType.BOOLEAN,
-    enable_zink: ConfigFieldType.BOOLEAN,
-  };
-}
-
+export const CONFIG_SCHEMA: Record<string, ConfigField> = {
+  dll: { name: "dll", fieldType: ConfigFieldType.STRING, default: "", description: "Override the lsfg-vk.dll path" },
+  no_fp16: { name: "no_fp16", fieldType: ConfigFieldType.BOOLEAN, default: false, description: "Disable FP16 acceleration" },
+  active_in: { name: "active_in", fieldType: ConfigFieldType.ARRAY, default: [], description: "Steam AppID or executable identifiers" },
+  pacing_mode: { name: "pacing_mode", fieldType: ConfigFieldType.STRING, default: "vsync", description: "Frame pacing mode" },
+  multiplier: { name: "multiplier", fieldType: ConfigFieldType.INTEGER, default: 2, description: "Frame generation multiplier" },
+  flow_scale: { name: "flow_scale", fieldType: ConfigFieldType.FLOAT, default: 1, description: "Motion estimation resolution scale" },
+  performance_mode: { name: "performance_mode", fieldType: ConfigFieldType.BOOLEAN, default: false, description: "Use the lighter frame generation model" },
+  override_present_mode: { name: "override_present_mode", fieldType: ConfigFieldType.BOOLEAN, default: true, description: "Override present mode" },
+  preserve_swapchain_image_count: { name: "preserve_swapchain_image_count", fieldType: ConfigFieldType.BOOLEAN, default: false, description: "Preserve the swapchain image count" },
+};
+export function getFieldNames(): string[] { return Object.keys(CONFIG_SCHEMA); }
+export function getDefaults(): ConfigurationData { return { dll: "", no_fp16: false, active_in: [], pacing_mode: "vsync", multiplier: 2, flow_scale: 1, performance_mode: false, override_present_mode: true, preserve_swapchain_image_count: false }; }
+export function getFieldTypes(): Record<string, ConfigFieldType> { return Object.fromEntries(Object.entries(CONFIG_SCHEMA).map(([key, value]) => [key, value.fieldType])); }

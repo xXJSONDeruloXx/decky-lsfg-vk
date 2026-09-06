@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { PanelSection, showModal, ButtonItem, PanelSectionRow } from "@decky/ui";
-import { useInstallationStatus, useLsfgConfig } from "../hooks/useLsfgHooks";
-import { useProfileManagement } from "../hooks/useProfileManagement";
+import { useInstallationStatus } from "../hooks/useLsfgHooks";
+import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { StatusDisplay } from "./StatusDisplay";
 import { InstallationButton } from "./InstallationButton";
 import { ConfigurationSection } from "./ConfigurationSection";
-import { ProfileManagement } from "./ProfileManagement";
+import { GameConfigurationSelector } from "./GameConfigurationSelector";
 import { UsageInstructions } from "./UsageInstructions";
 import { SmartClipboardButton } from "./SmartClipboardButton";
 import { FgmodClipboardButton } from "./FgmodClipboardButton";
@@ -28,40 +28,20 @@ export function Content() {
     checkInstallation
   } = useInstallationStatus();
 
-  const {
-    config,
-    loadLsfgConfig,
-    updateField
-  } = useLsfgConfig();
-
-  const {
-    currentProfile,
-    updateProfileConfig,
-    loadProfiles
-  } = useProfileManagement();
+  const { config, targets, runningGame, selectedAppId, setSelectedAppId, save, resetSelected, resetAll, reload } = useGameConfiguration();
 
   const { isInstalling, isUninstalling, handleInstall, handleUninstall } = useInstallationActions();
 
   useEffect(() => {
-    if (isInstalled) {
-      loadLsfgConfig();
-    }
-  }, [isInstalled, loadLsfgConfig]);
+    if (isInstalled) void reload();
+  }, [isInstalled, reload]);
 
-  const handleConfigChange = async (fieldName: keyof ConfigurationData, value: boolean | number | string) => {
-    if (currentProfile) {
-      const newConfig = { ...config, [fieldName]: value };
-      const result = await updateProfileConfig(currentProfile, newConfig);
-      if (result.success) {
-        await loadLsfgConfig();
-      }
-    } else {
-      await updateField(fieldName, value);
-    }
+  const handleConfigChange = async (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => {
+    await save({ ...config, [fieldName]: value });
   };
 
   const onInstall = () => {
-    handleInstall(setIsInstalled, setInstallationStatus, loadLsfgConfig, checkInstallation);
+    handleInstall(setIsInstalled, setInstallationStatus, reload, checkInstallation);
   };
 
   const onUninstall = () => {
@@ -124,13 +104,7 @@ export function Content() {
       )}
 
       {isInstalled && (
-        <ProfileManagement
-          currentProfile={currentProfile}
-          onProfileChange={async () => {
-            await loadProfiles();
-            await loadLsfgConfig();
-          }}
-        />
+        <GameConfigurationSelector targets={targets} runningGame={runningGame} selectedAppId={selectedAppId} onSelect={setSelectedAppId} onReset={resetSelected} onResetAll={resetAll} />
       )}
 
       {isInstalled && (

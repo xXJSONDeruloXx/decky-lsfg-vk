@@ -24,7 +24,7 @@ class RuntimeService(BaseService):
             HOME=str(self.user_home),
             XDG_CONFIG_HOME=str(self.user_home / ".config"),
         )
-        for name in ("LSFGVK_CONFIG", "LSFGVK_PROFILE", "LSFGVK_ENV"):
+        for name in ("LSFGVK_CONFIG", "LSFGVK_ENV"):
             environment.pop(name, None)
         return environment
 

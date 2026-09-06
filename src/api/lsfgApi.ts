@@ -44,12 +44,31 @@ export interface ConfigUpdateResult {
   error?: string;
 }
 
+export interface GameConfigEntry {
+  appid: string;
+  profile: string;
+  config: LsfgConfig;
+}
+export interface InstalledGame { appid: string; name: string; }
+export interface InstalledGamesResult { success: boolean; games?: InstalledGame[]; error?: string; }
+
+export interface GameConfigsResult {
+  success: boolean;
+  default?: LsfgConfig;
+  games?: GameConfigEntry[];
+  error?: string;
+}
+
+export interface GameConfigResult extends ConfigUpdateResult {
+  appid?: string;
+  exists?: boolean;
+  config?: LsfgConfig;
+}
+
 export interface ConfigSchemaResult {
   field_names: string[];
   field_types: Record<string, string>;
   defaults: ConfigurationData;
-  profiles?: string[];
-  current_profile?: string;
 }
 
 export interface LaunchOptionResult {
@@ -105,22 +124,6 @@ export interface FlatpakOperationResult {
   operation?: string;
 }
 
-// Profile management interfaces
-export interface ProfilesResult {
-  success: boolean;
-  profiles?: string[];
-  current_profile?: string;
-  message?: string;
-  error?: string;
-}
-
-export interface ProfileResult {
-  success: boolean;
-  profile_name?: string;
-  message?: string;
-  error?: string;
-}
-
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
@@ -146,17 +149,14 @@ export const updateLsfgConfig = callable<
   [ConfigurationData],
   ConfigUpdateResult
 >("update_lsfg_config");
+export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
+export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
+export const getGameConfig = callable<[string], GameConfigResult>("get_game_config");
+export const updateGameConfig = callable<[string, LsfgConfig], GameConfigResult>("update_game_config");
+export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
+export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
 
 // Legacy helper function for backward compatibility
 export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
   return updateLsfgConfig(config);
 };
-
-// Self-updater API functions
-// Profile management API functions
-export const getProfiles = callable<[], ProfilesResult>("get_profiles");
-export const createProfile = callable<[string, string?], ProfileResult>("create_profile");
-export const deleteProfile = callable<[string], ProfileResult>("delete_profile");
-export const renameProfile = callable<[string, string], ProfileResult>("rename_profile");
-export const setCurrentProfile = callable<[string], ProfileResult>("set_current_profile");
-export const updateProfileConfig = callable<[string, ConfigurationData], ConfigUpdateResult>("update_profile_config");

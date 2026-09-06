@@ -68,15 +68,16 @@ class ProfileConfig(TypedDict):
 
 
 class ProfilesResponse(BaseResponse):
-    """Response for profile operations"""
-    profiles: Optional[List[str]]
-    current_profile: Optional[str]
+    """Response for per-game upstream profiles"""
+    default: Optional[ConfigurationData]
+    games: Optional[List[Dict[str, Any]]]
     message: Optional[str]
     error: Optional[str]
 
 
 class ProfileResponse(BaseResponse):
-    """Response for single profile operations"""
-    profile_name: Optional[str]
+    """Response for a per-game upstream profile"""
+    appid: Optional[str]
+    config: Optional[ConfigurationData]
     message: Optional[str]
     error: Optional[str]

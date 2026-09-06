@@ -33,18 +33,18 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 1. **Purchase and install** [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam
 2. **Open the plugin** from the Decky menu
 3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
-4. **Configure settings** using the plugin's UI - adjust FPS multiplier, flow scale, FP16 acceleration, performance mode, and launch workarounds
+4. **Configure settings** using the plugin's UI - select Default or a running/configured game and adjust the upstream lsfg-vk settings
 5. **Apply launch option** to games you want to use frame generation with:
    - Add `~/lsfg %command%` to your game's launch options in Steam Properties
    - Or use the "Launch Option Clipboard" button in the plugin to copy the command
-6. **Launch your game** - frame generation will activate automatically using your plugin configuration
+6. **Launch your game** - frame generation activates when the game's Steam AppID matches an assigned upstream profile
 
 ## Configuration Options
 
-The plugin provides several configuration options to optimize frame generation for your games:
+The plugin edits upstream lsfg-vk v2 profiles directly. Unassigned games leave the layer unloaded.
 
 ### Core Settings
-- **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
+- **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
 - **Performance Mode**: Uses a lighter processing model - recommended for most games
 - **FP16 Acceleration**: Use half-precision acceleration when supported
@@ -79,8 +79,9 @@ The plugin:
   - **Flow Scale**: Adjust motion estimation quality vs performance
   - **Performance Mode**: Use lighter processing for better performance
   - **FP16 Acceleration**: Use half-precision acceleration when supported
-  - **Experimental Features**: Override present mode and set FPS limits
-- **Hot-reloading**: Multiplier, flow scale, and performance mode changes apply without restarting games
+- **Present Mode**: Override FIFO/VSync behavior
+- **Swapchain Image Count**: Preserve the application's swapchain image count
+- **Hot-reloading**: Upstream reloads settings for the active profile; profile assignment itself applies on the next launch
 - Easy uninstallation that removes all installed files when no longer needed
 
 ## Credits

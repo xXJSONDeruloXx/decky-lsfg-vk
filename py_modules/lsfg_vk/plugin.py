@@ -31,10 +31,13 @@ class Plugin:
     def __init__(self):
         """Initialize the plugin with all necessary services"""
         self.runtime_service = RuntimeService()
-        self.installation_service = InstallationService(runtime_service=self.runtime_service)
+        self.steam_service = SteamService()
+        self.installation_service = InstallationService(
+            runtime_service=self.runtime_service,
+            steam_service=self.steam_service,
+        )
         self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
         self.flatpak_service = FlatpakService()
-        self.steam_service = SteamService()
 
     async def install_lsfg_vk(self) -> Dict[str, Any]:
         """Install the bundled lsfg-vk runtime to ~/.local
@@ -74,33 +77,11 @@ class Plugin:
         Returns:
             Dict with field names, types, defaults, and profile information
         """
-        try:
-            profiles_response = self.configuration_service.get_profiles()
-            
-            schema_data = {
-                "field_names": ConfigurationManager.get_field_names(),
-                "field_types": {name: field_type.value for name, field_type in ConfigurationManager.get_field_types().items()},
-                "defaults": ConfigurationManager.get_defaults()
-            }
-            
-            if profiles_response.get("success"):
-                schema_data["profiles"] = profiles_response.get("profiles", [])
-                schema_data["current_profile"] = profiles_response.get("current_profile")
-            else:
-                schema_data["profiles"] = ["decky-lsfg-vk"]
-                schema_data["current_profile"] = "decky-lsfg-vk"
-            
-            return schema_data
-            
-        except (ValueError, KeyError, AttributeError) as e:
-            self.configuration_service.log.warning(f"Failed to get full schema, using fallback: {e}")
-            return {
-                "field_names": ConfigurationManager.get_field_names(),
-                "field_types": {name: field_type.value for name, field_type in ConfigurationManager.get_field_types().items()},
-                "defaults": ConfigurationManager.get_defaults(),
-                "profiles": ["decky-lsfg-vk"],
-                "current_profile": "decky-lsfg-vk"
-            }
+        return {
+            "field_names": ConfigurationManager.get_field_names(),
+            "field_types": ConfigurationManager.get_field_types(),
+            "defaults": ConfigurationManager.get_defaults(),
+        }
 
     async def update_lsfg_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Update lsfg TOML configuration using object-based API (single source of truth)
@@ -111,19 +92,35 @@ class Plugin:
         Returns:
             ConfigurationResponse dict with success status
         """
-        validated_config = ConfigurationManager.validate_config(config)
-        
-        return self.configuration_service.update_config_from_dict(validated_config)
+        return self.configuration_service.update_config_from_dict(config)
 
-    async def get_profiles(self) -> Dict[str, Any]:
+    async def get_game_configs(self) -> Dict[str, Any]:
+        return self.configuration_service.get_game_configs()
+
+    async def get_installed_games(self) -> Dict[str, Any]:
+        return self.steam_service.get_installed_games()
+
+    async def get_game_config(self, appid: str) -> Dict[str, Any]:
+        return self.configuration_service.get_game_config(appid)
+
+    async def update_game_config(self, appid: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        return self.configuration_service.update_game_config(appid, config)
+
+    async def reset_game_config(self, appid: str) -> Dict[str, Any]:
+        return self.configuration_service.reset_game_config(appid)
+
+    async def reset_all_game_configs(self) -> Dict[str, Any]:
+        return self.configuration_service.reset_all_game_configs()
+
+    async def _legacy_get_profiles(self) -> Dict[str, Any]:
         """Get list of all profiles and current profile
         
         Returns:
             ProfilesResponse dict with profile list and current profile
         """
-        return self.configuration_service.get_profiles()
+        return self.configuration_service.get_game_configs()
 
-    async def create_profile(self, profile_name: str, source_profile: str = None) -> Dict[str, Any]:
+    async def _legacy_create_profile(self, profile_name: str, source_profile: str = None) -> Dict[str, Any]:
         """Create a new profile
         
         Args:
@@ -133,9 +130,9 @@ class Plugin:
         Returns:
             ProfileResponse dict with success status
         """
-        return self.configuration_service.create_profile(profile_name, source_profile)
+        return {"success": False, "error": "Named profiles were replaced by per-game AppID profiles"}
 
-    async def delete_profile(self, profile_name: str) -> Dict[str, Any]:
+    async def _legacy_delete_profile(self, profile_name: str) -> Dict[str, Any]:
         """Delete a profile
         
         Args:
@@ -144,9 +141,9 @@ class Plugin:
         Returns:
             ProfileResponse dict with success status
         """
-        return self.configuration_service.delete_profile(profile_name)
+        return {"success": False, "error": "Named profiles were replaced by per-game AppID profiles"}
 
-    async def rename_profile(self, old_name: str, new_name: str) -> Dict[str, Any]:
+    async def _legacy_rename_profile(self, old_name: str, new_name: str) -> Dict[str, Any]:
         """Rename a profile
         
         Args:
@@ -156,9 +153,9 @@ class Plugin:
         Returns:
             ProfileResponse dict with success status
         """
-        return self.configuration_service.rename_profile(old_name, new_name)
+        return {"success": False, "error": "Named profiles were replaced by per-game AppID profiles"}
 
-    async def set_current_profile(self, profile_name: str) -> Dict[str, Any]:
+    async def _legacy_set_current_profile(self, profile_name: str) -> Dict[str, Any]:
         """Set the current active profile
         
         Args:
@@ -167,9 +164,9 @@ class Plugin:
         Returns:
             ProfileResponse dict with success status
         """
-        return self.configuration_service.set_current_profile(profile_name)
+        return {"success": False, "error": "There is no globally selected profile"}
 
-    async def update_profile_config(self, profile_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _legacy_update_profile_config(self, profile_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         """Update configuration for a specific profile
         
         Args:
@@ -179,9 +176,7 @@ class Plugin:
         Returns:
             ConfigurationResponse dict with success status
         """
-        validated_config = ConfigurationManager.validate_config(config)
-        
-        return self.configuration_service.update_profile_config(profile_name, validated_config)
+        return {"success": False, "error": "Use update_game_config with a Steam AppID"}
 
     async def get_launch_option(self) -> Dict[str, Any]:
         """Get the launch option that users need to set for their games
@@ -192,7 +187,7 @@ class Plugin:
         return {
             "launch_option": "~/lsfg %command%",
             "instructions": "Add this to your game's launch options in Steam Properties",
-            "explanation": "The lsfg script is created during installation and sets up the environment for the plugin"
+            "explanation": "The lsfg script points games at the upstream configuration; profiles are selected by Steam AppID"
         }
 
     async def get_config_file_content(self) -> Dict[str, Any]:

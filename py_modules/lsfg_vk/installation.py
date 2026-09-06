@@ -24,13 +24,20 @@ from .constants import (
     UI_ICON_FILENAME,
 )
 from .runtime_service import RuntimeService
+from .steam_service import SteamService
 from .types import InstallationCheckResponse, InstallationResponse, UninstallationResponse
 
 
 class InstallationService(BaseService):
-    def __init__(self, logger=None, runtime_service: RuntimeService = None):
+    def __init__(
+        self,
+        logger=None,
+        runtime_service: RuntimeService = None,
+        steam_service: SteamService = None,
+    ):
         super().__init__(logger)
         self.runtime_service = runtime_service or RuntimeService(logger=self.log)
+        self.steam_service = steam_service or SteamService(logger=self.log)
         self.lib_file = self.local_lib_dir / LIB_FILENAME
         self.lib_x86_file = self.local_lib_dir / LIB_X86_FILENAME
         self.json_file = self.local_share_dir / JSON_FILENAME
@@ -143,33 +150,25 @@ class InstallationService(BaseService):
                 },
             )
 
+        self._resolve_dll_path(profile_data)
         defaults = dict(ConfigurationManager.get_defaults())
         for profile_name, raw_profile in list(profile_data["profiles"].items()):
-            validated = ConfigurationManager.validate_config({**defaults, **raw_profile})
-            profile_data["profiles"][profile_name] = {**raw_profile, **validated}
-
-        if self.lsfg_script_path.exists():
-            script_content = self.lsfg_script_path.read_text(encoding="utf-8")
-            selected = ConfigurationManager.parse_profile_selection(script_content)
-            if selected in profile_data["profiles"]:
-                profile_data["current_profile"] = selected
-            current_profile = profile_data["current_profile"]
-            profile_data["profiles"][current_profile] = ConfigurationManager.merge_config_with_script(
-                profile_data["profiles"][current_profile],
-                ConfigurationManager.parse_script_content(script_content),
+            profile_data["profiles"][profile_name] = ConfigurationManager.validate_config(
+                {**defaults, **raw_profile, **profile_data["global_config"]}
             )
-
-        if profile_data["current_profile"] not in profile_data["profiles"]:
-            profile_data["current_profile"] = (
-                DEFAULT_PROFILE_NAME
-                if DEFAULT_PROFILE_NAME in profile_data["profiles"]
-                else next(iter(profile_data["profiles"]))
-            )
-
-        for profile in profile_data["profiles"].values():
-            profile["dll"] = profile_data["global_config"].get("dll", "")
-            profile["no_fp16"] = profile_data["global_config"].get("no_fp16", False)
+        profile_data["current_profile"] = DEFAULT_PROFILE_NAME
         return profile_data
+
+    def _resolve_dll_path(self, profile_data: ProfileData) -> bool:
+        current_path = str(profile_data["global_config"].get("dll") or "")
+        if current_path and Path(current_path).is_file():
+            return False
+
+        dll_path = self.steam_service.find_lsfg_vk_dll()
+        if dll_path and current_path != dll_path:
+            profile_data["global_config"]["dll"] = dll_path
+            return True
+        return False
 
     def _create_lsfg_launch_script(self, profile_data: ProfileData) -> None:
         from .configuration import ConfigurationService
@@ -202,6 +201,13 @@ class InstallationService(BaseService):
         if legacy_layer or legacy_config:
             return True
         try:
+            if self.config_file_path.exists():
+                data = ConfigurationManager.parse_toml_content_multi_profile(
+                    self.config_file_path.read_text(encoding="utf-8")
+                )
+                configured = str(data["global_config"].get("dll") or "")
+                if (not configured or not Path(configured).is_file()) and self.steam_service.find_lsfg_vk_dll():
+                    return True
             return not self.runtime_service.is_healthy()
         except Exception:
             return True
