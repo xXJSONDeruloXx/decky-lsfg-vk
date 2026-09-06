@@ -442,6 +442,7 @@ class Plugin:
         try:
             extension_status = self.flatpak_service.get_extension_status()
             for version, key in (
+                ("23.08", "installed_23_08"),
                 ("24.08", "installed_24_08"),
                 ("25.08", "installed_25_08"),
             ):
