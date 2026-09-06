@@ -18,6 +18,8 @@ UI_ICON_FILENAME = "gay.pancake.lsfg-vk-ui.png"
 FLATPAK_23_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak"
 FLATPAK_24_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak"
 FLATPAK_25_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak"
+STEAM_LOSSLESS_SCALING_APP_ID = "993090"
+STEAM_LOSSLESS_SCALING_BRANCH = "lsfg-vk"
 
 LEGACY_LIB_FILENAME = "liblsfg-vk.so"
 LEGACY_JSON_FILENAME = "VkLayer_LS_frame_generation.json"

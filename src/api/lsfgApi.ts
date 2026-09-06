@@ -16,6 +16,23 @@ export interface InstallationStatus {
   error?: string;
 }
 
+export interface SteamBranchStatus {
+  success: boolean;
+  message: string;
+  error?: string;
+  installed: boolean;
+  manifest_path?: string;
+  selected_branch?: string;
+  current_branch?: string;
+  target_branch: string;
+  needs_switch: boolean;
+  restart_required: boolean;
+}
+
+export interface SteamBranchOperationResult extends SteamBranchStatus {
+  changed: boolean;
+}
+
 // Use centralized configuration data type
 export type LsfgConfig = ConfigurationData;
 
@@ -112,6 +129,8 @@ export interface ProfileResult {
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
+export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
+export const selectLosslessScalingBranch = callable<[], SteamBranchOperationResult>("select_lossless_scaling_branch");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");

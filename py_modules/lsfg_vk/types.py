@@ -42,6 +42,23 @@ class InstallationCheckResponse(TypedDict):
     error: Optional[str]
 
 
+class SteamBranchStatusResponse(TypedDict):
+    success: bool
+    message: str
+    error: Optional[str]
+    installed: bool
+    manifest_path: Optional[str]
+    selected_branch: Optional[str]
+    current_branch: Optional[str]
+    target_branch: str
+    needs_switch: bool
+    restart_required: bool
+
+
+class SteamBranchOperationResponse(SteamBranchStatusResponse):
+    changed: bool
+
+
 class ConfigurationResponse(BaseResponse):
     """Response for configuration operations"""
     config: Optional[ConfigurationData]

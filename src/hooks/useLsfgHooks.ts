@@ -2,8 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import {
   checkLsfgVkInstalled,
   getLsfgConfig,
+  getLosslessScalingBranchStatus,
+  selectLosslessScalingBranch,
   updateLsfgConfigFromObject,
-  type ConfigUpdateResult
+  type ConfigUpdateResult,
+  type SteamBranchOperationResult,
+  type SteamBranchStatus
 } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { showErrorToast, ToastMessages } from "../utils/toastUtils";
@@ -13,8 +17,17 @@ export function useInstallationStatus() {
   const [installationStatus, setInstallationStatus] = useState<string>("");
   const [losslessScalingInstalled, setLosslessScalingInstalled] = useState<boolean>(false);
   const [losslessScalingStatus, setLosslessScalingStatus] = useState<string>("");
+  const [steamBranchStatus, setSteamBranchStatus] = useState<SteamBranchStatus | null>(null);
+  const [isSwitchingSteamBranch, setIsSwitchingSteamBranch] = useState<boolean>(false);
 
   const checkInstallation = async () => {
+    try {
+      setSteamBranchStatus(await getLosslessScalingBranchStatus());
+    } catch (error) {
+      console.error("Error checking Lossless Scaling Steam branch:", error);
+      setSteamBranchStatus(null);
+    }
+
     try {
       const status = await checkLsfgVkInstalled();
       setIsInstalled(status.installed);
@@ -27,10 +40,38 @@ export function useInstallationStatus() {
       }
       return status.installed;
     } catch (error) {
+      setSteamBranchStatus(null);
       setLosslessScalingInstalled(false);
       setLosslessScalingStatus("Lossless Scaling Not Installed");
       setInstallationStatus("lsfg-vk Not Installed");
       return false;
+    }
+  };
+
+  const selectLosslessScalingBranchForUser = async (): Promise<SteamBranchOperationResult> => {
+    setIsSwitchingSteamBranch(true);
+    try {
+      const result = await selectLosslessScalingBranch();
+      setSteamBranchStatus(result);
+      return result;
+    } catch (error) {
+      const result: SteamBranchOperationResult = {
+        success: false,
+        message: "",
+        error: String(error),
+        installed: false,
+        manifest_path: undefined,
+        selected_branch: undefined,
+        current_branch: undefined,
+        target_branch: "lsfg-vk",
+        needs_switch: false,
+        restart_required: false,
+        changed: false
+      };
+      setSteamBranchStatus(result);
+      return result;
+    } finally {
+      setIsSwitchingSteamBranch(false);
     }
   };
 
@@ -45,6 +86,9 @@ export function useInstallationStatus() {
     setInstallationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
+    steamBranchStatus,
+    isSwitchingSteamBranch,
+    selectLosslessScalingBranch: selectLosslessScalingBranchForUser,
     checkInstallation
   };
 }

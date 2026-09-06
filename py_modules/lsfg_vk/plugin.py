@@ -16,6 +16,7 @@ from .configuration import ConfigurationService
 from .config_schema import ConfigurationManager
 from .flatpak_service import FlatpakService
 from .runtime_service import RuntimeService
+from .steam_service import SteamService
 
 
 class Plugin:
@@ -33,6 +34,7 @@ class Plugin:
         self.installation_service = InstallationService(runtime_service=self.runtime_service)
         self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
         self.flatpak_service = FlatpakService()
+        self.steam_service = SteamService()
 
     async def install_lsfg_vk(self) -> Dict[str, Any]:
         """Install the bundled lsfg-vk runtime to ~/.local
@@ -319,6 +321,12 @@ class Plugin:
             FlatpakAppInfo dict with apps list and override status
         """
         return self.flatpak_service.get_flatpak_apps()
+
+    async def get_lossless_scaling_branch_status(self) -> Dict[str, Any]:
+        return self.steam_service.get_branch_status()
+
+    async def select_lossless_scaling_branch(self) -> Dict[str, Any]:
+        return self.steam_service.select_branch()
 
     async def set_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
         """Set lsfg-vk overrides for a Flatpak app
