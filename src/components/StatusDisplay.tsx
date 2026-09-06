@@ -20,13 +20,15 @@ export function StatusDisplay({
   isSwitchingSteamBranch,
   onSelectLosslessScalingBranch
 }: StatusDisplayProps) {
+  const losslessScalingAppInstalled = losslessScalingInstalled || steamBranchStatus?.installed === true;
+
   return (
     <>
       <PanelSectionRow>
         <div style={{ marginBottom: "8px", fontSize: "14px" }}>
           <div
             style={{
-              color: losslessScalingInstalled ? "#4CAF50" : "#F44336",
+              color: losslessScalingAppInstalled ? "#4CAF50" : "#F44336",
               fontWeight: "600",
               marginBottom: "6px",
               display: "flex",
@@ -35,11 +37,11 @@ export function StatusDisplay({
             }}
           >
             <span style={{ fontSize: "16px" }}>
-              {losslessScalingInstalled ? "✅" : "❌"}
+              {losslessScalingAppInstalled ? "✅" : "❌"}
             </span>
-            {losslessScalingInstalled ? "Lossless Scaling Installed" : "Lossless Scaling Not Installed"}
+            {losslessScalingAppInstalled ? "Lossless Scaling Installed" : "Lossless Scaling Not Installed"}
           </div>
-          {!losslessScalingInstalled && losslessScalingStatus && (
+          {!losslessScalingAppInstalled && losslessScalingStatus && (
             <div style={{ color: "#B8B8B8", fontSize: "12px", margin: "0 0 6px 22px" }}>
               {losslessScalingStatus}
             </div>
@@ -61,7 +63,7 @@ export function StatusDisplay({
         </div>
       </PanelSectionRow>
 
-      {losslessScalingInstalled && steamBranchStatus?.installed && (
+      {steamBranchStatus?.installed && (
         <PanelSectionRow>
           <div style={{ width: "100%" }}>
             <div
