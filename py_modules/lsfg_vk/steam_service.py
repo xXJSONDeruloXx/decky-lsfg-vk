@@ -1,6 +1,4 @@
-import os
 import re
-import tempfile
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -102,42 +100,6 @@ class SteamService(BaseService):
         return None
 
     @classmethod
-    def _set_section_value(cls, content: str, section_name: str, key: str, value: str) -> str:
-        bounds = cls._section_bounds(content, section_name)
-        if bounds is None:
-            if section_name != "UserConfig":
-                raise ValueError(f"Steam manifest is missing the {section_name} section")
-            app_state = cls._section_bounds(content, "AppState")
-            if app_state is None:
-                raise ValueError("Steam manifest is missing the AppState section")
-            _, app_state_end, app_state_indent = app_state
-            prefix = content[:app_state_end]
-            if not prefix.endswith(("\n", "\r")):
-                prefix += "\n"
-            entry_indent = app_state_indent + "\t"
-            section = (
-                f'{entry_indent}"UserConfig"\n'
-                f'{entry_indent}{{\n'
-                f'{entry_indent}\t"{key}"\t"{value}"\n'
-                f'{entry_indent}}}\n'
-            )
-            return prefix + section + content[app_state_end:]
-
-        body_start, body_end, section_indent = bounds
-        pattern = re.compile(
-            rf'(?m)^[ \t]*"{re.escape(key)}"[ \t]+"(?P<value>(?:\\.|[^"\\])*)"'
-        )
-        match = pattern.search(content, body_start, body_end)
-        if match is not None:
-            return content[: match.start("value")] + value + content[match.end("value") :]
-
-        prefix = content[:body_end]
-        if not prefix.endswith(("\n", "\r")):
-            prefix += "\n"
-        entry_indent = section_indent + "\t"
-        return prefix + f'{entry_indent}"{key}"\t"{value}"\n' + content[body_end:]
-
-    @classmethod
     def _branch_or_default(cls, branch: Optional[str]) -> str:
         return branch or cls.DEFAULT_BRANCH
 
@@ -195,74 +157,6 @@ class SteamService(BaseService):
             return self._error_response(
                 dict,
                 str(error),
-                installed=False,
-                manifest_path=None,
-                selected_branch=None,
-                current_branch=None,
-                target_branch=STEAM_LOSSLESS_SCALING_BRANCH,
-                needs_switch=False,
-                restart_required=False,
-            )
-
-    def select_branch(self) -> Dict[str, object]:
-        try:
-            manifest_path = self._manifest_path()
-            if manifest_path is None:
-                raise FileNotFoundError("Lossless Scaling is not installed through Steam")
-
-            content = manifest_path.read_text(encoding="utf-8")
-            fields = self._status_fields(manifest_path, content)
-            if not fields["needs_switch"]:
-                return self._success_response(
-                    dict,
-                    "Lossless Scaling is already using the lsfg-vk Steam branch",
-                    changed=False,
-                    **fields,
-                )
-
-            updated = self._set_section_value(
-                content,
-                "UserConfig",
-                "BetaKey",
-                STEAM_LOSSLESS_SCALING_BRANCH,
-            )
-            if updated != content:
-                file_mode = manifest_path.stat().st_mode & 0o777
-                temporary_path = None
-                try:
-                    with tempfile.NamedTemporaryFile(
-                        mode="w",
-                        encoding="utf-8",
-                        dir=manifest_path.parent,
-                        prefix=f".{manifest_path.name}.",
-                        delete=False,
-                    ) as temporary_file:
-                        temporary_path = Path(temporary_file.name)
-                        temporary_file.write(updated)
-                        temporary_file.flush()
-                        os.fsync(temporary_file.fileno())
-                    temporary_path.chmod(file_mode)
-                    os.replace(temporary_path, manifest_path)
-                except Exception:
-                    if temporary_path is not None:
-                        temporary_path.unlink(missing_ok=True)
-                    raise
-
-            new_fields = dict(fields)
-            new_fields["selected_branch"] = STEAM_LOSSLESS_SCALING_BRANCH
-            new_fields["needs_switch"] = new_fields["current_branch"] != STEAM_LOSSLESS_SCALING_BRANCH
-            new_fields["restart_required"] = new_fields["needs_switch"]
-            return self._success_response(
-                dict,
-                "lsfg-vk selected for Lossless Scaling; restart Steam to download it",
-                changed=updated != content,
-                **new_fields,
-            )
-        except Exception as error:
-            return self._error_response(
-                dict,
-                str(error),
-                changed=False,
                 installed=False,
                 manifest_path=None,
                 selected_branch=None,

@@ -15,7 +15,6 @@ import { NerdStuffModal } from "./NerdStuffModal";
 import { FlatpaksModal } from "./FlatpaksModal";
 import { ConfigurationData } from "../config/configSchema";
 import t from '../i18n/i18n';
-import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 
 export function Content() {
   const {
@@ -26,8 +25,6 @@ export function Content() {
     losslessScalingInstalled,
     losslessScalingStatus,
     steamBranchStatus,
-    isSwitchingSteamBranch,
-    selectLosslessScalingBranch,
     checkInstallation
   } = useInstallationStatus();
 
@@ -71,18 +68,6 @@ export function Content() {
     handleUninstall(setIsInstalled, setInstallationStatus, checkInstallation);
   };
 
-  const onSelectLosslessScalingBranch = async () => {
-    const result = await selectLosslessScalingBranch();
-    if (result.success) {
-      showSuccessToast("Steam branch selected", result.message);
-    } else {
-      showErrorToast(
-        "Steam branch selection failed",
-        result.error || "Unable to select the lsfg-vk Steam branch"
-      );
-    }
-  };
-
   const handleShowNerdStuff = () => {
     showModal(<NerdStuffModal />);
   };
@@ -109,8 +94,6 @@ export function Content() {
             losslessScalingInstalled={losslessScalingInstalled}
             losslessScalingStatus={losslessScalingStatus}
             steamBranchStatus={steamBranchStatus}
-            isSwitchingSteamBranch={isSwitchingSteamBranch}
-            onSelectLosslessScalingBranch={onSelectLosslessScalingBranch}
           />
         </>
       )}
@@ -192,8 +175,6 @@ export function Content() {
             losslessScalingInstalled={losslessScalingInstalled}
             losslessScalingStatus={losslessScalingStatus}
             steamBranchStatus={steamBranchStatus}
-            isSwitchingSteamBranch={isSwitchingSteamBranch}
-            onSelectLosslessScalingBranch={onSelectLosslessScalingBranch}
           />
 
           <InstallationButton

@@ -3,10 +3,8 @@ import {
   checkLsfgVkInstalled,
   getLsfgConfig,
   getLosslessScalingBranchStatus,
-  selectLosslessScalingBranch,
   updateLsfgConfigFromObject,
   type ConfigUpdateResult,
-  type SteamBranchOperationResult,
   type SteamBranchStatus
 } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
@@ -18,7 +16,6 @@ export function useInstallationStatus() {
   const [losslessScalingInstalled, setLosslessScalingInstalled] = useState<boolean>(false);
   const [losslessScalingStatus, setLosslessScalingStatus] = useState<string>("");
   const [steamBranchStatus, setSteamBranchStatus] = useState<SteamBranchStatus | null>(null);
-  const [isSwitchingSteamBranch, setIsSwitchingSteamBranch] = useState<boolean>(false);
 
   const checkInstallation = async () => {
     try {
@@ -48,33 +45,6 @@ export function useInstallationStatus() {
     }
   };
 
-  const selectLosslessScalingBranchForUser = async (): Promise<SteamBranchOperationResult> => {
-    setIsSwitchingSteamBranch(true);
-    try {
-      const result = await selectLosslessScalingBranch();
-      setSteamBranchStatus(result);
-      return result;
-    } catch (error) {
-      const result: SteamBranchOperationResult = {
-        success: false,
-        message: "",
-        error: String(error),
-        installed: false,
-        manifest_path: undefined,
-        selected_branch: undefined,
-        current_branch: undefined,
-        target_branch: "lsfg-vk",
-        needs_switch: false,
-        restart_required: false,
-        changed: false
-      };
-      setSteamBranchStatus(result);
-      return result;
-    } finally {
-      setIsSwitchingSteamBranch(false);
-    }
-  };
-
   useEffect(() => {
     checkInstallation();
   }, []);
@@ -87,8 +57,6 @@ export function useInstallationStatus() {
     losslessScalingInstalled,
     losslessScalingStatus,
     steamBranchStatus,
-    isSwitchingSteamBranch,
-    selectLosslessScalingBranch: selectLosslessScalingBranchForUser,
     checkInstallation
   };
 }

@@ -132,11 +132,11 @@ def main():
         target_file = project_root / "src" / "config" / "generatedConfigSchema.ts"
         target_file.write_text(ts_content)
         
-        print(f"✅ Generated {target_file} from shared_config.py")
+        print(f"Generated {target_file} from shared_config.py")
         print(f"   Fields: {len(CONFIG_SCHEMA_DEF)}")
         
         # Also generate Python boilerplate
-        print("\n🔄 Generating Python boilerplate...")
+        print("\nGenerating Python boilerplate...")
         from pathlib import Path
         import subprocess
         
@@ -147,10 +147,10 @@ def main():
         if result.returncode == 0:
             print(result.stdout)
         else:
-            print(f"⚠️  Python boilerplate generation had issues:\n{result.stderr}")
+            print(f"Warning: Python boilerplate generation had issues:\n{result.stderr}")
         
     except Exception as e:
-        print(f"❌ Error generating schema: {e}")
+        print(f"Error generating schema: {e}")
         sys.exit(1)
 
 

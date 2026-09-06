@@ -325,9 +325,6 @@ class Plugin:
     async def get_lossless_scaling_branch_status(self) -> Dict[str, Any]:
         return self.steam_service.get_branch_status()
 
-    async def select_lossless_scaling_branch(self) -> Dict[str, Any]:
-        return self.steam_service.select_branch()
-
     async def set_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
         """Set lsfg-vk overrides for a Flatpak app
         

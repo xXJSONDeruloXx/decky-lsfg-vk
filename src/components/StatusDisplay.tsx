@@ -1,4 +1,4 @@
-import { ButtonItem, PanelSectionRow } from "@decky/ui";
+import { PanelSectionRow } from "@decky/ui";
 import type { SteamBranchStatus } from "../api/lsfgApi";
 
 interface StatusDisplayProps {
@@ -7,8 +7,6 @@ interface StatusDisplayProps {
   losslessScalingInstalled: boolean;
   losslessScalingStatus: string;
   steamBranchStatus: SteamBranchStatus | null;
-  isSwitchingSteamBranch: boolean;
-  onSelectLosslessScalingBranch: () => void;
 }
 
 export function StatusDisplay({
@@ -16,9 +14,7 @@ export function StatusDisplay({
   installationStatus,
   losslessScalingInstalled,
   losslessScalingStatus,
-  steamBranchStatus,
-  isSwitchingSteamBranch,
-  onSelectLosslessScalingBranch
+  steamBranchStatus
 }: StatusDisplayProps) {
   const losslessScalingAppInstalled = losslessScalingInstalled || steamBranchStatus?.installed === true;
 
@@ -36,9 +32,6 @@ export function StatusDisplay({
               gap: "6px"
             }}
           >
-            <span style={{ fontSize: "16px" }}>
-              {losslessScalingAppInstalled ? "✅" : "❌"}
-            </span>
             {losslessScalingAppInstalled ? "Lossless Scaling Installed" : "Lossless Scaling Not Installed"}
           </div>
           {!losslessScalingAppInstalled && losslessScalingStatus && (
@@ -55,9 +48,6 @@ export function StatusDisplay({
               gap: "6px"
             }}
           >
-            <span style={{ fontSize: "16px" }}>
-              {isInstalled ? "✅" : "❌"}
-            </span>
             {installationStatus}
           </div>
         </div>
@@ -80,15 +70,6 @@ export function StatusDisplay({
                 </div>
               )}
             </div>
-            {steamBranchStatus.needs_switch && (
-              <ButtonItem
-                layout="below"
-                onClick={onSelectLosslessScalingBranch}
-                disabled={isSwitchingSteamBranch}
-              >
-                {isSwitchingSteamBranch ? "Selecting lsfg-vk..." : "Use lsfg-vk Steam branch"}
-              </ButtonItem>
-            )}
           </div>
         </PanelSectionRow>
       )}

@@ -54,11 +54,6 @@ class SteamBranchStatusResponse(TypedDict):
     needs_switch: bool
     restart_required: bool
 
-
-class SteamBranchOperationResponse(SteamBranchStatusResponse):
-    changed: bool
-
-
 class ConfigurationResponse(BaseResponse):
     """Response for configuration operations"""
     config: Optional[ConfigurationData]

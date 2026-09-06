@@ -244,7 +244,7 @@ def main():
         print(f"Generated {schema_file.relative_to(project_root)}")
         
     except Exception as e:
-        print(f"❌ Error generating Python files: {e}")
+        print(f"Error generating Python files: {e}")
         sys.exit(1)
 
 
