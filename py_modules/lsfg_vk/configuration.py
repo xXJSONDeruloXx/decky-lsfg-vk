@@ -1,5 +1,4 @@
 import re
-import shlex
 from typing import Any, Dict
 
 from .base_service import BaseService
@@ -29,10 +28,27 @@ class ConfigurationService(BaseService):
         self._write_file(self.config_file_path, content, 0o644)
 
     @staticmethod
-    def _game_profile_name(appid: str) -> str:
-        if not re.fullmatch(r"[0-9]+", str(appid)):
-            raise ValueError("appid must be numeric")
-        return f"game-{appid}"
+    def _profile_name(data: ProfileData, appid: str, game_name: str) -> str:
+        name = str(game_name).strip()
+        if not name:
+            raise ValueError("game name is required")
+        if name == DEFAULT_PROFILE_NAME:
+            name = f"{name} ({appid})"
+        existing = data["profiles"].get(name)
+        if existing is not None and str(appid) not in existing.get("active_in", []):
+            name = f"{name} ({appid})"
+        return name
+
+    @staticmethod
+    def _profile_for_appid(data: ProfileData, appid: str):
+        return next(
+            (
+                (name, profile)
+                for name, profile in data["profiles"].items()
+                if str(appid) in profile.get("active_in", [])
+            ),
+            (None, None),
+        )
 
     @staticmethod
     def _public_config(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -52,7 +68,7 @@ class ConfigurationService(BaseService):
             games = []
             for name, raw in data["profiles"].items():
                 active_in = raw.get("active_in", [])
-                if len(active_in) != 1 or not str(active_in[0]).isdigit():
+                if len(active_in) != 1 or not re.fullmatch(r"-?[0-9]+", str(active_in[0])):
                     continue
                 games.append({"appid": str(active_in[0]), "profile": name, "config": self._public_config(raw)})
             return self._success_response(dict, default=self._public_config(data["profiles"][DEFAULT_PROFILE_NAME]), games=games)
@@ -63,20 +79,20 @@ class ConfigurationService(BaseService):
     def get_game_config(self, appid: str) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
-            name = self._game_profile_name(appid)
-            profile = data["profiles"].get(name)
-            if profile is None:
-                profile = next((value for value in data["profiles"].values() if str(appid) in value.get("active_in", [])), None)
+            _, profile = self._profile_for_appid(data, appid)
             return self._success_response(dict, appid=str(appid), exists=profile is not None, config=self._public_config(profile or data["profiles"][DEFAULT_PROFILE_NAME]))
         except Exception as error:
             return self._error_response(dict, str(error), appid=str(appid), exists=False, config=None)
 
-    def update_game_config(self, appid: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
-            name = self._game_profile_name(appid)
+            old_name, _ = self._profile_for_appid(data, appid)
+            name = self._profile_name(data, appid, game_name)
             validated = self._public_config(config)
             validated["active_in"] = [str(appid)]
+            if old_name and old_name != name:
+                data["profiles"].pop(old_name, None)
             data["profiles"][name] = validated
             self._save_profile_data(data)
             return self._success_response(dict, appid=str(appid), config=validated)
@@ -86,11 +102,9 @@ class ConfigurationService(BaseService):
     def reset_game_config(self, appid: str) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
-            name = self._game_profile_name(appid)
-            data["profiles"].pop(name, None)
-            for profile_name, profile in list(data["profiles"].items()):
-                if profile_name != DEFAULT_PROFILE_NAME and str(appid) in profile.get("active_in", []):
-                    data["profiles"].pop(profile_name)
+            name, _ = self._profile_for_appid(data, appid)
+            if name:
+                data["profiles"].pop(name, None)
             self._save_profile_data(data)
             return self._success_response(dict, appid=str(appid), config=self._public_config(data["profiles"][DEFAULT_PROFILE_NAME]))
         except Exception as error:
@@ -116,19 +130,3 @@ class ConfigurationService(BaseService):
             return self._success_response(dict, config=validated)
         except Exception as error:
             return self._error_response(dict, str(error), config=None)
-
-    def update_lsfg_script(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        return self.update_config_from_dict(config)
-
-    def _generate_script_content_for_profile(self, profile_data: ProfileData) -> str:
-        return "#!/bin/bash\n" f"export LSFGVK_CONFIG={shlex.quote(str(self.config_file_path))}\n" 'exec "$@"\n'
-
-    def _generate_script_content(self, config: Dict[str, Any]) -> str:
-        return self._generate_script_content_for_profile(self._default_data())
-
-    def update_lsfg_script_from_profile_data(self, profile_data: ProfileData) -> Dict[str, Any]:
-        try:
-            self._write_file(self.lsfg_script_path, self._generate_script_content_for_profile(profile_data), 0o755)
-            return self._success_response(dict)
-        except Exception as error:
-            return self._error_response(dict, str(error))

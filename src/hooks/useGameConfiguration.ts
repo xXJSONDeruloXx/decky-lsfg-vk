@@ -3,7 +3,7 @@ import { Router } from "@decky/ui";
 import { getGameConfigs, getInstalledGames, updateGameConfig, updateLsfgConfig, resetGameConfig, resetAllGameConfigs, type GameConfigEntry, type InstalledGame } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 
-export interface GameTarget { appid: string; name: string; configured: boolean; }
+export interface GameTarget extends InstalledGame { configured: boolean; }
 
 export function useGameConfiguration() {
   const [defaultConfig, setDefaultConfig] = useState<ConfigurationData>(getDefaults());
@@ -26,13 +26,21 @@ export function useGameConfiguration() {
   useEffect(() => {
     const poll = () => {
       const app = Router.MainRunningApp as any;
-      if (app?.appid) setRunningGame({ appid: String(app.appid), name: app.display_name || `App ${app.appid}`, configured: games.some((game) => game.appid === String(app.appid)) });
-      else setRunningGame(null);
+      if (!app?.appid) return setRunningGame(null);
+      const appid = String(app.appid);
+      const installed = installedGames.find((game) => game.appid === appid);
+      const name = app.display_name || installed?.name;
+      if (!name) return setRunningGame(null);
+      setRunningGame({
+        ...(installed || { appid, name, nonSteam: false }),
+        name,
+        configured: games.some((game) => game.appid === appid),
+      });
     };
     poll();
     const interval = window.setInterval(poll, 2000);
     return () => window.clearInterval(interval);
-  }, [games]);
+  }, [games, installedGames]);
   useEffect(() => {
     if (!autoSelected.current && runningGame) {
       autoSelected.current = true;
@@ -41,8 +49,8 @@ export function useGameConfiguration() {
   }, [runningGame]);
 
   const targets = useMemo<GameTarget[]>(() => {
-    const configured = installedGames.map((game) => ({ appid: game.appid, name: game.name, configured: games.some((item) => item.appid === game.appid) }));
-    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: `App ${game.appid}`, configured: true });
+    const configured = installedGames.map((game) => ({ ...game, configured: games.some((item) => item.appid === game.appid) }));
+    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: game.profile, nonSteam: false, configured: true });
     if (runningGame && !configured.some((game) => game.appid === runningGame.appid)) configured.unshift(runningGame);
     return configured;
   }, [games, installedGames, runningGame]);
@@ -55,9 +63,11 @@ export function useGameConfiguration() {
       if (result.success) setDefaultConfig(next);
       return;
     }
-    const result = await updateGameConfig(selectedAppId, next);
+    const selectedTarget = targets.find((target) => target.appid === selectedAppId);
+    if (!selectedTarget?.name) return;
+    const result = await updateGameConfig(selectedAppId, selectedTarget.name, next);
     if (result.success) await load();
-  }, [load, selectedAppId]);
+  }, [load, selectedAppId, targets]);
 
   const resetSelected = useCallback(async () => {
     if (selectedAppId) { await resetGameConfig(selectedAppId); setSelectedAppId(""); await load(); }

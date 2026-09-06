@@ -13,7 +13,7 @@ interface Props {
 export function GameConfigurationSelector({ targets, runningGame, selectedAppId, onSelect, onReset, onResetAll }: Props) {
   const options: DropdownOption[] = [
     { data: "", label: runningGame ? `Default (editing template) · ${runningGame.name}` : "Default" },
-    ...targets.map((target) => ({ data: target.appid, label: `${target.name} · ${target.appid}` })),
+    ...targets.map((target) => ({ data: target.appid, label: `${target.nonSteam ? "Non-Steam · " : ""}${target.name} · ${target.appid}` })),
   ];
   return <>
     <PanelSectionRow>

@@ -1,4 +1,5 @@
 import os
+import pwd
 import shutil
 import subprocess
 from pathlib import Path
@@ -26,12 +27,19 @@ class FlatpakService(BaseService):
     def _get_clean_env(self) -> Dict[str, str]:
         env = os.environ.copy()
         env.pop("LD_LIBRARY_PATH", None)
+        env["HOME"] = str(self.user_home)
         path_entries = [entry for entry in env.get("PATH", "").split(":") if entry]
         for entry in ("/usr/bin", "/usr/local/bin", "/bin"):
             if entry not in path_entries:
                 path_entries.insert(0, entry)
         env["PATH"] = ":".join(path_entries)
         return env
+
+    def _flatpak_user(self) -> pwd.struct_passwd:
+        try:
+            return pwd.getpwuid(self.user_home.stat().st_uid)
+        except (KeyError, OSError) as error:
+            raise RuntimeError(f"Unable to resolve Flatpak user for {self.user_home}") from error
 
     def check_flatpak_available(self) -> bool:
         env = self._get_clean_env()
@@ -41,8 +49,15 @@ class FlatpakService(BaseService):
     def _run_flatpak_command(self, args: List[str], **kwargs):
         if self.flatpak_command is None and not self.check_flatpak_available():
             raise FileNotFoundError("Flatpak command not available")
+        command = [self.flatpak_command, *args]
+        target_user = self._flatpak_user()
+        if os.geteuid() != target_user.pw_uid:
+            runuser = shutil.which("runuser", path=self._get_clean_env()["PATH"])
+            if runuser is None:
+                raise FileNotFoundError("runuser command not available")
+            command = [runuser, "--user", target_user.pw_name, "--", *command]
         return subprocess.run(
-            [self.flatpak_command, *args],
+            command,
             env=self._get_clean_env(),
             **kwargs,
         )
@@ -181,7 +196,7 @@ class FlatpakService(BaseService):
                 self.user_home
                 / ".local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
             ),
-            "legacy_script": str(self.lsfg_launch_script_path),
+            "legacy_script": str(self.legacy_script_path),
         }
 
     def _check_app_override_status(self, app_id: str) -> Dict[str, bool]:
@@ -200,7 +215,7 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             result = self._run_flatpak_command(
-                ["list", "--user", "--app", "--columns=name,application"],
+                ["list", "--app", "--columns=name,application"],
                 capture_output=True,
                 text=True,
                 check=True,

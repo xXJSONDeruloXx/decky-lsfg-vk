@@ -39,7 +39,7 @@ class SteamService(BaseService):
         "1628350",  # Steam Linux Runtime 3.0
     }
 
-    def _steam_library_roots(self):
+    def _steam_roots(self):
         candidates = (
             self.user_home / ".local/share/Steam",
             self.user_home / ".steam/steam",
@@ -51,6 +51,11 @@ class SteamService(BaseService):
         for candidate in candidates:
             yield from self._unique_existing_root(candidate, seen)
 
+    def _steam_library_roots(self):
+        seen = set()
+        for candidate in self._steam_roots():
+            yield from self._unique_existing_root(candidate, seen)
+
             library_file = candidate / "steamapps/libraryfolders.vdf"
             try:
                 content = library_file.read_text(encoding="utf-8")
@@ -60,6 +65,65 @@ class SteamService(BaseService):
             for raw_path in re.findall(r'(?m)^\s*"path"\s+"((?:\\.|[^"])*)"', content):
                 path = raw_path.replace(r'\"', '"').replace(r'\\', '\\')
                 yield from self._unique_existing_root(Path(path), seen)
+
+    @staticmethod
+    def _read_shortcuts(data: bytes) -> Dict[str, object]:
+        def read_string(offset: int) -> Tuple[str, int]:
+            end = data.index(b"\0", offset)
+            return data[offset:end].decode("utf-8", errors="replace"), end + 1
+
+        def read_object(offset: int = 0) -> Tuple[Dict[str, object], int]:
+            values = {}
+            while offset < len(data):
+                value_type, offset = data[offset], offset + 1
+                if value_type == 8:
+                    return values, offset
+                key, offset = read_string(offset)
+                if value_type == 0:
+                    value, offset = read_object(offset)
+                elif value_type == 1:
+                    value, offset = read_string(offset)
+                elif value_type == 2:
+                    if offset + 4 > len(data):
+                        raise ValueError("truncated binary VDF integer")
+                    value = int.from_bytes(data[offset:offset + 4], "little", signed=True)
+                    offset += 4
+                else:
+                    raise ValueError(f"unsupported binary VDF type {value_type}")
+                values[key] = value
+            raise ValueError("unterminated binary VDF object")
+
+        values, offset = read_object()
+        if offset != len(data):
+            raise ValueError("trailing binary VDF data")
+        return values
+
+    @staticmethod
+    def _shortcut_game(shortcut: object) -> Optional[Dict[str, object]]:
+        if not isinstance(shortcut, dict):
+            return None
+        appid = shortcut.get("appid")
+        name = shortcut.get("AppName")
+        if not isinstance(appid, int) or appid == 0 or not isinstance(name, str) or not name:
+            return None
+        return {"appid": str(appid), "name": name, "nonSteam": True}
+
+    def _shortcut_games(self):
+        games = {}
+        for steam_root in self._steam_roots():
+            for shortcuts_file in sorted((steam_root / "userdata").glob("*/config/shortcuts.vdf")):
+                try:
+                    root = self._read_shortcuts(shortcuts_file.read_bytes())
+                except (OSError, ValueError):
+                    continue
+                shortcuts = root.get("shortcuts", {})
+                if not isinstance(shortcuts, dict):
+                    continue
+                for shortcut in shortcuts.values():
+                    game = self._shortcut_game(shortcut)
+                    if game and game["appid"] not in self.GAME_SELECTOR_EXCLUDED_APPIDS:
+                        games.setdefault(game["appid"], game)
+        return list(games.values())
 
     @staticmethod
     def _unique_existing_root(path: Path, seen: set[str]):
@@ -208,7 +272,7 @@ class SteamService(BaseService):
     def get_installed_games(self) -> Dict[str, object]:
         """Return installed Steam app IDs and names for the Game Mode selector."""
         try:
-            games = {}
+            games: Dict[str, Dict[str, object]] = {}
             for library_root in self._steam_library_roots():
                 for manifest in (library_root / "steamapps").glob("appmanifest_*.acf"):
                     match = re.fullmatch(r"appmanifest_(\d+)\.acf", manifest.name)
@@ -222,7 +286,12 @@ class SteamService(BaseService):
                     if appid in self.GAME_SELECTOR_EXCLUDED_APPIDS:
                         continue
                     name = self._section_value(content, "AppState", "name") or f"App {appid}"
-                    games[appid] = name
-            return self._success_response(dict, games=[{"appid": appid, "name": name} for appid, name in sorted(games.items(), key=lambda item: item[1].lower())])
+                    games[appid] = {"appid": appid, "name": name, "nonSteam": False}
+            for game in self._shortcut_games():
+                games.setdefault(str(game["appid"]), game)
+            return self._success_response(
+                dict,
+                games=sorted(games.values(), key=lambda game: str(game["name"]).lower()),
+            )
         except Exception as error:
             return self._error_response(dict, str(error), games=[])

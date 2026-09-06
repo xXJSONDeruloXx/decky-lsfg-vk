@@ -103,8 +103,8 @@ class Plugin:
     async def get_game_config(self, appid: str) -> Dict[str, Any]:
         return self.configuration_service.get_game_config(appid)
 
-    async def update_game_config(self, appid: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        return self.configuration_service.update_game_config(appid, config)
+    async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        return self.configuration_service.update_game_config(appid, game_name, config)
 
     async def reset_game_config(self, appid: str) -> Dict[str, Any]:
         return self.configuration_service.reset_game_config(appid)
@@ -178,18 +178,6 @@ class Plugin:
         """
         return {"success": False, "error": "Use update_game_config with a Steam AppID"}
 
-    async def get_launch_option(self) -> Dict[str, Any]:
-        """Get the launch option that users need to set for their games
-        
-        Returns:
-            Dict containing the launch option string and instructions
-        """
-        return {
-            "launch_option": "~/lsfg %command%",
-            "instructions": "Add this to your game's launch options in Steam Properties",
-            "explanation": "The lsfg script points games at the upstream configuration; profiles are selected by Steam AppID"
-        }
-
     async def get_config_file_content(self) -> Dict[str, Any]:
         """Get the current config file content
         
@@ -219,38 +207,6 @@ class Plugin:
                 "content": None,
                 "path": str(config_path) if 'config_path' in locals() else "unknown",
                 "error": f"Error reading config file: {str(e)}"
-            }
-
-    async def get_launch_script_content(self) -> Dict[str, Any]:
-        """Get the content of the launch script file
-        
-        Returns:
-            FileContentResponse dict with file content or error information
-        """
-        try:
-            script_path = self.installation_service.get_launch_script_path()
-            
-            if not os.path.exists(script_path):
-                return {
-                    "success": False,
-                    "error": f"Launch script not found at {script_path}",
-                    "path": str(script_path)
-                }
-            
-            with open(script_path, 'r') as file:
-                content = file.read()
-                
-            return {
-                "success": True,
-                "content": content,
-                "path": str(script_path)
-            }
-            
-        except Exception as e:
-            decky.logger.error(f"Error reading launch script: {e}")
-            return {
-                "success": False,
-                "error": str(e)
             }
 
     async def check_fgmod_directory(self) -> Dict[str, Any]:

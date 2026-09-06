@@ -49,7 +49,7 @@ export interface GameConfigEntry {
   profile: string;
   config: LsfgConfig;
 }
-export interface InstalledGame { appid: string; name: string; }
+export interface InstalledGame { appid: string; name: string; nonSteam: boolean; }
 export interface InstalledGamesResult { success: boolean; games?: InstalledGame[]; error?: string; }
 
 export interface GameConfigsResult {
@@ -69,12 +69,6 @@ export interface ConfigSchemaResult {
   field_names: string[];
   field_types: Record<string, string>;
   defaults: ConfigurationData;
-}
-
-export interface LaunchOptionResult {
-  launch_option: string;
-  instructions: string;
-  explanation: string;
 }
 
 export interface FileContentResult {
@@ -131,9 +125,7 @@ export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
-export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
 export const checkFgmodDirectory = callable<[], FgmodCheckResult>("check_fgmod_directory");
 
 // Flatpak management API functions
@@ -152,7 +144,7 @@ export const updateLsfgConfig = callable<
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const getGameConfig = callable<[string], GameConfigResult>("get_game_config");
-export const updateGameConfig = callable<[string, LsfgConfig], GameConfigResult>("update_game_config");
+export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
 export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
 export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
 

@@ -63,7 +63,6 @@ class InstallationService(BaseService):
                 config_content,
                 0o644,
             )
-            self._create_lsfg_launch_script(profile_data)
             self._remove_legacy_layer_files()
             return self._success_response(InstallationResponse, "lsfg-vk 2.0.0 installed successfully")
         except Exception as error:
@@ -170,20 +169,6 @@ class InstallationService(BaseService):
             return True
         return False
 
-    def _create_lsfg_launch_script(self, profile_data: ProfileData) -> None:
-        from .configuration import ConfigurationService
-
-        configuration_service = ConfigurationService(logger=self.log)
-        configuration_service.user_home = self.user_home
-        configuration_service.config_dir = self.config_dir
-        configuration_service.config_file_path = self.config_file_path
-        configuration_service.lsfg_script_path = self.lsfg_launch_script_path
-        self._write_file(
-            self.lsfg_launch_script_path,
-            configuration_service._generate_script_content_for_profile(profile_data),
-            0o755,
-        )
-
     def _remove_legacy_layer_files(self) -> None:
         for path in (self.legacy_lib_file, self.legacy_json_file):
             self._remove_if_exists(path)
@@ -212,15 +197,11 @@ class InstallationService(BaseService):
         except Exception:
             return True
 
-    def get_launch_script_path(self) -> str:
-        return str(self.lsfg_launch_script_path)
-
     def check_installation(self) -> InstallationCheckResponse:
         try:
-            script_exists = self.lsfg_launch_script_path.exists()
             installation_error = None
             try:
-                installed = script_exists and self.runtime_service.is_healthy()
+                installed = self.runtime_service.is_healthy()
             except Exception as error:
                 installed = False
                 installation_error = str(error)
@@ -254,7 +235,7 @@ class InstallationService(BaseService):
                 self.user_home / LOCAL_SHARE / "icons" / "hicolor" / "256x256" / "apps" / UI_ICON_FILENAME,
                 self.legacy_lib_file,
                 self.legacy_json_file,
-                self.lsfg_launch_script_path,
+                self.legacy_script_path,
             ):
                 if self._remove_if_exists(path):
                     removed.append(str(path))

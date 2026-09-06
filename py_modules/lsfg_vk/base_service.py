@@ -13,12 +13,12 @@ ResponseType = TypeVar("ResponseType", bound=Dict[str, Any])
 class BaseService:
     def __init__(self, logger: Optional[Any] = None):
         self.log = decky.logger if logger is None else logger
-        self.user_home = Path.home()
+        decky_user_home = getattr(decky, "DECKY_USER_HOME", None)
+        self.user_home = Path(decky_user_home) if decky_user_home else Path.home()
         self.local_bin_dir = self.user_home / LOCAL_BIN
         self.local_lib_dir = self.user_home / LOCAL_LIB
         self.local_share_dir = self.user_home / VULKAN_LAYER_DIR
-        self.lsfg_script_path = self.user_home / SCRIPT_NAME
-        self.lsfg_launch_script_path = self.user_home / SCRIPT_NAME
+        self.legacy_script_path = self.user_home / SCRIPT_NAME
         self.config_dir = self.user_home / CONFIG_DIR
         self.config_file_path = self.config_dir / CONFIG_FILENAME
 
