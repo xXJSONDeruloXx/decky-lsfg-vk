@@ -9,6 +9,35 @@ from .constants import STEAM_LOSSLESS_SCALING_APP_ID, STEAM_LOSSLESS_SCALING_BRA
 class SteamService(BaseService):
     DEFAULT_BRANCH = "public"
     MANIFEST_FILENAME = f"appmanifest_{STEAM_LOSSLESS_SCALING_APP_ID}.acf"
+    # Valve compatibility tools, runtimes, Steamworks redistributables, and LSFG.
+    GAME_SELECTOR_EXCLUDED_APPIDS = {
+        "858280",   # Proton 3.7
+        "961940",   # Proton 3.16
+        "1054830",  # Proton 4.2
+        "1113280",  # Proton 4.11
+        "1245040",  # Proton 5.0
+        "1420170",  # Proton 5.13
+        "1493710",  # Proton Experimental
+        "1580130",  # Proton 6.3
+        "1887720",  # Proton 7
+        "2180100",  # Proton Hotfix
+        "228980",   # Steamworks Common Redistributables
+        "2348590",  # Proton 8
+        "2805730",  # Proton 9
+        "3029110",  # Lepton
+        "3127680",  # fex
+        "3658110",  # Proton 10
+        "4183110",  # Steam Linux Runtime 4.0
+        "4185400",  # Steam Linux Runtime 4.0 for arm64
+        "4427310",  # Proton Experimental (ARM64)
+        "4628710",  # Proton 11 / Proton Next
+        "4628740",  # Proton 11 (ARM64)
+        "4690330",  # Legacy Steam Runtime
+        "993090",   # Lossless Scaling
+        "1070560",  # Steam Linux Runtime 1.0
+        "1391110",  # Steam Linux Runtime 2.0
+        "1628350",  # Steam Linux Runtime 3.0
+    }
 
     def _steam_library_roots(self):
         candidates = (
@@ -190,6 +219,8 @@ class SteamService(BaseService):
                     except OSError:
                         continue
                     appid = match.group(1)
+                    if appid in self.GAME_SELECTOR_EXCLUDED_APPIDS:
+                        continue
                     name = self._section_value(content, "AppState", "name") or f"App {appid}"
                     games[appid] = name
             return self._success_response(dict, games=[{"appid": appid, "name": name} for appid, name in sorted(games.items(), key=lambda item: item[1].lower())])
