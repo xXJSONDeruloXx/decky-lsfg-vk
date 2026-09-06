@@ -28,6 +28,7 @@ import {
   FlatpakAppInfo
 } from '../api/lsfgApi';
 import t from '../i18n/i18n';
+import { showErrorToast } from '../utils/toastUtils';
 
 interface FlatpaksModalProps {
   closeModal?: () => void;
@@ -38,6 +39,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
   const [flatpakApps, setFlatpakApps] = useState<FlatpakAppInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [operationInProgress, setOperationInProgress] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -63,6 +65,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
   const handleExtensionOperation = async (operation: 'install' | 'uninstall', version: string) => {
     const operationId = `${operation}-${version}`;
     setOperationInProgress(operationId);
+    setOperationError(null);
 
     try {
       const result = operation === 'install' 
@@ -73,9 +76,16 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
         // Reload status after operation
         const newStatus = await checkFlatpakExtensionStatus();
         setExtensionStatus(newStatus);
+      } else {
+        const message = result.error || result.message || 'Flatpak operation failed';
+        setOperationError(message);
+        showErrorToast('Flatpak operation failed', message);
       }
     } catch (error) {
       console.error(`Error ${operation}ing extension:`, error);
+      const message = String(error);
+      setOperationError(message);
+      showErrorToast('Flatpak operation failed', message);
     } finally {
       setOperationInProgress(null);
     }
@@ -85,6 +95,7 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
     const hasOverrides = app.has_filesystem_override && app.has_env_override;
     const operationId = `app-${app.app_id}`;
     setOperationInProgress(operationId);
+    setOperationError(null);
 
     try {
       const result = hasOverrides 
@@ -95,9 +106,16 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
         // Reload apps data after operation
         const newApps = await getFlatpakApps();
         setFlatpakApps(newApps);
+      } else {
+        const message = result.error || result.message || 'Flatpak override failed';
+        setOperationError(message);
+        showErrorToast('Flatpak override failed', message);
       }
     } catch (error) {
       console.error('Error toggling app override:', error);
+      const message = String(error);
+      setOperationError(message);
+      showErrorToast('Flatpak override failed', message);
     } finally {
       setOperationInProgress(null);
     }
@@ -170,8 +188,57 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
           <DialogControlsSection>
             <DialogControlsSectionHeader>{t('FLATPAK_RUNTIME_INSTALLER', 'Runtime Extension Installer')}</DialogControlsSectionHeader>
 
+            {operationError && (
+              <PanelSectionRow>
+                <Field
+                  label={t('FLATPAK_OPERATION_ERROR', 'Operation failed')}
+                  description={operationError}
+                  icon={<FaTimes style={{color: 'red'}} />}
+                />
+              </PanelSectionRow>
+            )}
+
             {extensionStatus && extensionStatus.success ? (
               <>
+                <PanelSectionRow>
+                  <Field
+                    label={t('FLATPAK_RUNTIME_23', 'Runtime 23.08')}
+                    description={extensionStatus.installed_23_08 ? t('FLATPAK_INSTALLED', 'Installed') : t('FLATPAK_NOT_INSTALLED', 'Not installed')}
+                    icon={extensionStatus.installed_23_08 ? <FaCheck style={{color: 'green'}} /> : <FaTimes style={{color: 'red'}} />}
+                  >
+                    <ButtonItem
+                      layout="below"
+                      onClick={() => {
+                        const operation = extensionStatus.installed_23_08 ? 'uninstall' : 'install';
+                        const action = () => handleExtensionOperation(operation, '23.08');
+
+                        if (operation === 'uninstall') {
+                          confirmOperation(
+                            action,
+                            t('FLATPAK_UNINSTALL_TITLE', 'Uninstall Runtime Extension'),
+                            `${t('FLATPAK_UNINSTALL_CONFIRM_PREFIX', 'Are you sure you want to uninstall the')} 23.08 ${t('FLATPAK_UNINSTALL_CONFIRM_SUFFIX', 'runtime extension?')}`
+                          );
+                        } else {
+                          action();
+                        }
+                      }}
+                      disabled={operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08'}
+                    >
+                      {operationInProgress === 'install-23.08' || operationInProgress === 'uninstall-23.08' ? (
+                        <Spinner />
+                      ) : extensionStatus.installed_23_08 ? (
+                        <>
+                          <FaTrash /> {t('FLATPAK_UNINSTALL_BTN', 'Uninstall')}
+                        </>
+                      ) : (
+                        <>
+                          <FaDownload /> {t('FLATPAK_INSTALL_BTN', 'Install')}
+                        </>
+                      )}
+                    </ButtonItem>
+                  </Field>
+                </PanelSectionRow>
+
                 {/* 24.08 Runtime */}
                 <PanelSectionRow>
                   <Field

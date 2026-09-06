@@ -18,13 +18,19 @@ from .constants import (
     LEGACY_LIB_FILENAME,
     LIB_FILENAME,
     LIB_X86_FILENAME,
+    LOCAL_SHARE,
+    UI_DESKTOP_FILENAME,
+    UI_FILENAME,
+    UI_ICON_FILENAME,
 )
+from .runtime_service import RuntimeService
 from .types import InstallationCheckResponse, InstallationResponse, UninstallationResponse
 
 
 class InstallationService(BaseService):
-    def __init__(self, logger=None):
+    def __init__(self, logger=None, runtime_service: RuntimeService = None):
         super().__init__(logger)
+        self.runtime_service = runtime_service or RuntimeService(logger=self.log)
         self.lib_file = self.local_lib_dir / LIB_FILENAME
         self.lib_x86_file = self.local_lib_dir / LIB_X86_FILENAME
         self.json_file = self.local_share_dir / JSON_FILENAME
@@ -43,9 +49,11 @@ class InstallationService(BaseService):
             self._ensure_directories()
             profile_data = self._prepare_config()
             self._install_archive(archive_path)
+            config_content = ConfigurationManager.generate_toml_content_multi_profile(profile_data)
+            self.runtime_service.validate_config_content(config_content)
             self._write_file(
                 self.config_file_path,
-                ConfigurationManager.generate_toml_content_multi_profile(profile_data),
+                config_content,
                 0o644,
             )
             self._create_lsfg_launch_script(profile_data)
@@ -58,16 +66,25 @@ class InstallationService(BaseService):
     def _payload_destinations(self) -> Dict[str, tuple[Path, int]]:
         return {
             f"bin/{CLI_FILENAME}": (self.cli_file, 0o755),
+            f"bin/{UI_FILENAME}": (self.local_bin_dir / UI_FILENAME, 0o755),
             f"lib/{LIB_FILENAME}": (self.lib_file, 0o644),
             f"lib/{LIB_X86_FILENAME}": (self.lib_x86_file, 0o644),
             f"share/vulkan/implicit_layer.d/{JSON_FILENAME}": (self.json_file, 0o644),
             f"share/vulkan/implicit_layer.d/{JSON_X86_FILENAME}": (self.json_x86_file, 0o644),
+            f"share/applications/{UI_DESKTOP_FILENAME}": (
+                self.user_home / LOCAL_SHARE / "applications" / UI_DESKTOP_FILENAME,
+                0o644,
+            ),
+            f"share/icons/hicolor/256x256/apps/{UI_ICON_FILENAME}": (
+                self.user_home / LOCAL_SHARE / "icons" / "hicolor" / "256x256" / "apps" / UI_ICON_FILENAME,
+                0o644,
+            ),
         }
 
     def _install_archive(self, archive_path: Path) -> None:
         destinations = self._payload_destinations()
         found = set()
-        with tarfile.open(archive_path, "r:xz") as archive:
+        with tarfile.open(archive_path, "r:*") as archive:
             members = {
                 member.name.removeprefix("./"): member
                 for member in archive.getmembers()
@@ -126,13 +143,6 @@ class InstallationService(BaseService):
                 },
             )
 
-        from .dll_detection import DllDetectionService
-
-        if not profile_data["global_config"].get("dll"):
-            dll_result = DllDetectionService(self.log).check_lossless_scaling_dll()
-            if dll_result.get("detected") and dll_result.get("path"):
-                profile_data["global_config"]["dll"] = dll_result["path"]
-
         defaults = dict(ConfigurationManager.get_defaults())
         for profile_name, raw_profile in list(profile_data["profiles"].items()):
             validated = ConfigurationManager.validate_config({**defaults, **raw_profile})
@@ -189,35 +199,38 @@ class InstallationService(BaseService):
                 )
             except OSError:
                 legacy_config = False
-        return legacy_layer or legacy_config
+        if legacy_layer or legacy_config:
+            return True
+        try:
+            return not self.runtime_service.is_healthy()
+        except Exception:
+            return True
 
     def get_launch_script_path(self) -> str:
         return str(self.lsfg_launch_script_path)
 
     def check_installation(self) -> InstallationCheckResponse:
         try:
-            lib_exists = self.lib_file.exists() and self.lib_x86_file.exists()
-            json_exists = self.json_file.exists() and self.json_x86_file.exists()
             script_exists = self.lsfg_launch_script_path.exists()
+            installation_error = None
+            try:
+                installed = script_exists and self.runtime_service.is_healthy()
+            except Exception as error:
+                installed = False
+                installation_error = str(error)
+
+            lossless_scaling = self.runtime_service.check_lossless_scaling()
             return {
-                "installed": lib_exists and json_exists,
-                "lib_exists": lib_exists,
-                "json_exists": json_exists,
-                "script_exists": script_exists,
-                "lib_path": str(self.lib_file),
-                "json_path": str(self.json_file),
-                "script_path": str(self.lsfg_launch_script_path),
-                "error": None,
+                "installed": installed,
+                "lossless_scaling_installed": bool(lossless_scaling["installed"]),
+                "lossless_scaling_status": str(lossless_scaling["status"]),
+                "error": installation_error,
             }
         except Exception as error:
             return {
                 "installed": False,
-                "lib_exists": False,
-                "json_exists": False,
-                "script_exists": False,
-                "lib_path": str(self.lib_file),
-                "json_path": str(self.json_file),
-                "script_path": str(self.lsfg_launch_script_path),
+                "lossless_scaling_installed": False,
+                "lossless_scaling_status": str(error),
                 "error": str(error),
             }
 
@@ -230,6 +243,9 @@ class InstallationService(BaseService):
                 self.json_file,
                 self.json_x86_file,
                 self.cli_file,
+                self.local_bin_dir / UI_FILENAME,
+                self.user_home / LOCAL_SHARE / "applications" / UI_DESKTOP_FILENAME,
+                self.user_home / LOCAL_SHARE / "icons" / "hicolor" / "256x256" / "apps" / UI_ICON_FILENAME,
                 self.legacy_lib_file,
                 self.legacy_json_file,
                 self.lsfg_launch_script_path,

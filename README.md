@@ -57,7 +57,7 @@ For per-game feedback and community support, please join the [decky-lsfg-vk Disc
 
 **Frame generation not working?**
 - Ensure you've added `~/lsfg %command%` to your game's launch options
-- Check that the Lossless Scaling DLL was detected correctly in the plugin
+- Ensure the Lossless Scaling installation is visible to the upstream lsfg-vk search paths
 - Try enabling Performance Mode if you're experiencing crashes
 - Make sure your game is running in fullscreen mode for best results
 
@@ -73,7 +73,7 @@ The plugin:
 - Installs the pinned lsfg-vk 2.0.0 x86_64 and x86 Vulkan layers from the official upstream build
 - Configures the Vulkan layer in `~/.local/share/vulkan/implicit_layer.d/`
 - Creates and migrates the v2 TOML configuration in `~/.config/lsfg-vk/conf.toml`, preserving a one-time v1 backup during upgrade
-- Automatically detects your Lossless Scaling DLL installation
+- Delegates Lossless Scaling DLL discovery to lsfg-vk's upstream runtime search
 - Provides an easy-to-use interface to configure frame generation settings:
   - **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
   - **Flow Scale**: Adjust motion estimation quality vs performance

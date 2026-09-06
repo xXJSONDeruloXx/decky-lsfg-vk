@@ -6,13 +6,18 @@ from typing import Any, Dict, List
 
 from .base_service import BaseService
 from .config_schema import ConfigurationManager
-from .dll_detection import DllDetectionService
+from .constants import (
+    BIN_DIR,
+    FLATPAK_23_08_FILENAME,
+    FLATPAK_24_08_FILENAME,
+    FLATPAK_25_08_FILENAME,
+)
 from .types import BaseResponse
 
 
 class FlatpakService(BaseService):
     EXTENSION_ID = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
-    SUPPORTED_RUNTIMES = ("24.08", "25.08")
+    SUPPORTED_RUNTIMES = ("23.08", "24.08", "25.08")
 
     def __init__(self, logger=None):
         super().__init__(logger)
@@ -51,6 +56,18 @@ class FlatpakService(BaseService):
         if version not in cls.SUPPORTED_RUNTIMES:
             raise ValueError("Unsupported Flatpak runtime")
 
+    @classmethod
+    def _bundle_filename(cls, version: str) -> str:
+        return {
+            "23.08": FLATPAK_23_08_FILENAME,
+            "24.08": FLATPAK_24_08_FILENAME,
+            "25.08": FLATPAK_25_08_FILENAME,
+        }[version]
+
+    def _bundled_extension_path(self, version: str) -> Path:
+        self._validate_runtime(version)
+        return Path(__file__).resolve().parent.parent.parent / BIN_DIR / self._bundle_filename(version)
+
     def get_extension_status(self) -> Dict[str, Any]:
         try:
             if not self.check_flatpak_available():
@@ -70,6 +87,7 @@ class FlatpakService(BaseService):
             return self._success_response(
                 BaseResponse,
                 "Flatpak runtime status retrieved",
+                installed_23_08=(self.EXTENSION_ID, "x86_64", "23.08") in installed,
                 installed_24_08=(self.EXTENSION_ID, "x86_64", "24.08") in installed,
                 installed_25_08=(self.EXTENSION_ID, "x86_64", "25.08") in installed,
             )
@@ -77,6 +95,7 @@ class FlatpakService(BaseService):
             return self._error_response(
                 BaseResponse,
                 str(error),
+                installed_23_08=False,
                 installed_24_08=False,
                 installed_25_08=False,
             )
@@ -86,14 +105,18 @@ class FlatpakService(BaseService):
             self._validate_runtime(version)
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
+            bundle_path = self._bundled_extension_path(version)
+            if not bundle_path.is_file():
+                raise FileNotFoundError(
+                    f"Bundled Flatpak extension not found at {bundle_path}; reinstall the plugin"
+                )
             result = self._run_flatpak_command(
                 [
                     "install",
                     "--user",
                     "--noninteractive",
                     "--or-update",
-                    "flathub",
-                    f"{self.EXTENSION_ID}//{version}",
+                    str(bundle_path),
                 ],
                 capture_output=True,
                 text=True,
@@ -102,7 +125,7 @@ class FlatpakService(BaseService):
                 raise OSError(result.stderr.strip() or "Flatpak installation failed")
             return self._success_response(
                 BaseResponse,
-                f"lsfg-vk {version} runtime extension installed",
+                f"lsfg-vk {version} runtime extension installed from the bundled asset",
             )
         except Exception as error:
             return self._error_response(BaseResponse, str(error))
@@ -126,6 +149,14 @@ class FlatpakService(BaseService):
         except Exception as error:
             return self._error_response(BaseResponse, str(error))
 
+    def _override_output(self, app_id: str) -> str:
+        result = self._run_flatpak_command(
+            ["override", "--user", "--show", app_id],
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout if result.returncode == 0 else ""
+
     def _dll_directory(self) -> Path:
         if self.config_file_path.exists():
             try:
@@ -138,24 +169,14 @@ class FlatpakService(BaseService):
             except Exception:
                 pass
 
-        result = DllDetectionService(self.log).check_lossless_scaling_dll()
-        if result.get("detected") and result.get("path"):
-            return Path(result["path"]).parent
-        return self.user_home / ".local/share/Steam/steamapps/common"
-
-    def _override_output(self, app_id: str) -> str:
-        result = self._run_flatpak_command(
-            ["override", "--user", "--show", app_id],
-            capture_output=True,
-            text=True,
-        )
-        return result.stdout if result.returncode == 0 else ""
+        return self.user_home / ".local/share/Steam/steamapps/common/Lossless Scaling"
 
     def _override_paths(self) -> Dict[str, str]:
         return {
             "config_dir": str(self.config_dir),
             "config_file": str(self.config_file_path),
             "dll_dir": str(self._dll_directory()),
+            "legacy_home": str(self.user_home),
             "legacy_dll": str(
                 self.user_home
                 / ".local/share/Steam/steamapps/common/Lossless Scaling/Lossless.dll"
@@ -224,6 +245,9 @@ class FlatpakService(BaseService):
                     f"--filesystem={paths['config_dir']}:rw",
                     f"--filesystem={paths['dll_dir']}:ro",
                     f"--env=LSFGVK_CONFIG={paths['config_file']}",
+                    # Remove permissions/env from the pre-v2 plugin when an
+                    # existing app is explicitly migrated or reconfigured.
+                    f"--nofilesystem={paths['legacy_home']}",
                     f"--nofilesystem={paths['legacy_dll']}",
                     f"--nofilesystem={paths['legacy_script']}",
                     "--unset-env=LSFG_CONFIG",
@@ -259,6 +283,7 @@ class FlatpakService(BaseService):
                     "--user",
                     f"--nofilesystem={paths['config_dir']}",
                     f"--nofilesystem={paths['dll_dir']}",
+                    f"--nofilesystem={paths['legacy_home']}",
                     f"--nofilesystem={paths['legacy_dll']}",
                     f"--nofilesystem={paths['legacy_script']}",
                     "--unset-env=LSFGVK_CONFIG",
@@ -288,17 +313,6 @@ class FlatpakService(BaseService):
         if not self.check_flatpak_available():
             return
 
-        status = self.get_extension_status()
-        for version, key in (
-            ("24.08", "installed_24_08"),
-            ("25.08", "installed_25_08"),
-        ):
-            if not status.get(key):
-                continue
-            result = self.install_extension(version)
-            if not result.get("success"):
-                self.log.warning(result.get("error"))
-
         apps_result = self._run_flatpak_command(
             ["list", "--user", "--app", "--columns=application"],
             capture_output=True,
@@ -311,7 +325,15 @@ class FlatpakService(BaseService):
             app_id = app_id.strip()
             if not app_id:
                 continue
-            if "LSFG_CONFIG=" in self._override_output(app_id):
+            output = self._override_output(app_id)
+            paths = self._override_paths()
+            legacy_markers = (
+                "LSFG_CONFIG=",
+                paths["legacy_home"],
+                paths["legacy_dll"],
+                paths["legacy_script"],
+            )
+            if any(marker in output for marker in legacy_markers):
                 result = self.set_app_override(app_id)
                 if not result.get("success"):
                     self.log.warning(result.get("error"))

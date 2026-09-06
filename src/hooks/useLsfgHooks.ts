@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   checkLsfgVkInstalled,
-  checkLosslessScalingDll,
   getLsfgConfig,
   updateLsfgConfigFromObject,
   type ConfigUpdateResult
@@ -12,11 +11,15 @@ import { showErrorToast, ToastMessages } from "../utils/toastUtils";
 export function useInstallationStatus() {
   const [isInstalled, setIsInstalled] = useState<boolean>(false);
   const [installationStatus, setInstallationStatus] = useState<string>("");
+  const [losslessScalingInstalled, setLosslessScalingInstalled] = useState<boolean>(false);
+  const [losslessScalingStatus, setLosslessScalingStatus] = useState<string>("");
 
   const checkInstallation = async () => {
     try {
       const status = await checkLsfgVkInstalled();
       setIsInstalled(status.installed);
+      setLosslessScalingInstalled(status.lossless_scaling_installed);
+      setLosslessScalingStatus(status.lossless_scaling_status || "Lossless Scaling Not Installed");
       if (status.installed) {
         setInstallationStatus("lsfg-vk Installed");
       } else {
@@ -24,6 +27,8 @@ export function useInstallationStatus() {
       }
       return status.installed;
     } catch (error) {
+      setLosslessScalingInstalled(false);
+      setLosslessScalingStatus("Lossless Scaling Not Installed");
       setInstallationStatus("lsfg-vk Not Installed");
       return false;
     }
@@ -38,35 +43,9 @@ export function useInstallationStatus() {
     installationStatus,
     setIsInstalled,
     setInstallationStatus,
+    losslessScalingInstalled,
+    losslessScalingStatus,
     checkInstallation
-  };
-}
-
-export function useDllDetection() {
-  const [dllDetected, setDllDetected] = useState<boolean>(false);
-  const [dllDetectionStatus, setDllDetectionStatus] = useState<string>("");
-
-  const checkDllDetection = async () => {
-    try {
-      const result = await checkLosslessScalingDll();
-      setDllDetected(result.detected);
-      if (result.detected) {
-        setDllDetectionStatus("Lossless Scaling Installed");
-      } else {
-        setDllDetectionStatus("Lossless Scaling Not Installed");
-      }
-    } catch (error) {
-      setDllDetectionStatus("Lossless Scaling Not Installed");
-    }
-  };
-
-  useEffect(() => {
-    checkDllDetection();
-  }, []);
-
-  return {
-    dllDetected,
-    dllDetectionStatus
   };
 }
 

@@ -1,6 +1,5 @@
-from pathlib import Path
-
 LOCAL_BIN = ".local/bin"
+LOCAL_SHARE = ".local/share"
 LOCAL_LIB = ".local/lib"
 VULKAN_LAYER_DIR = ".local/share/vulkan/implicit_layer.d"
 CONFIG_DIR = ".config/lsfg-vk"
@@ -13,15 +12,14 @@ LIB_X86_FILENAME = "liblsfg-vk-layer.x86.so"
 JSON_FILENAME = "VkLayer_LSFGVK_frame_generation.json"
 JSON_X86_FILENAME = "VkLayer_LSFGVK_frame_generation.x86.json"
 CLI_FILENAME = "lsfg-vk-cli"
+UI_FILENAME = "lsfg-vk-ui"
+UI_DESKTOP_FILENAME = "gay.pancake.lsfg-vk-ui.desktop"
+UI_ICON_FILENAME = "gay.pancake.lsfg-vk-ui.png"
+FLATPAK_23_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak"
+FLATPAK_24_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak"
+FLATPAK_25_08_FILENAME = "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak"
 
 LEGACY_LIB_FILENAME = "liblsfg-vk.so"
 LEGACY_JSON_FILENAME = "VkLayer_LS_frame_generation.json"
 
 BIN_DIR = "bin"
-
-STEAM_COMMON_PATH = Path("steamapps/common/Lossless Scaling")
-LOSSLESS_DLL_NAME = "lsfg-vk.dll"
-
-ENV_LSFG_DLL_PATH = "LSFGVK_DLL_PATH"
-ENV_XDG_DATA_HOME = "XDG_DATA_HOME"
-ENV_HOME = "HOME"

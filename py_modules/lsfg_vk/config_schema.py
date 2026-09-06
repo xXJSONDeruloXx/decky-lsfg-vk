@@ -60,15 +60,6 @@ class ConfigurationManager:
         return cast(ConfigurationData, dict(get_defaults()))
 
     @staticmethod
-    def get_defaults_with_dll_detection(dll_detection_service=None) -> ConfigurationData:
-        defaults = ConfigurationManager.get_defaults()
-        if dll_detection_service is not None:
-            result = dll_detection_service.check_lossless_scaling_dll()
-            if result.get("detected") and result.get("path"):
-                defaults["dll"] = result["path"]
-        return defaults
-
-    @staticmethod
     def get_field_names() -> list[str]:
         return list(CONFIG_SCHEMA)
 

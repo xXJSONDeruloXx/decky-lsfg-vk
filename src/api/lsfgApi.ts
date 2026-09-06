@@ -11,28 +11,8 @@ export interface InstallationResult {
 
 export interface InstallationStatus {
   installed: boolean;
-  lib_exists: boolean;
-  json_exists: boolean;
-  script_exists: boolean;
-  lib_path: string;
-  json_path: string;
-  script_path: string;
-  error?: string;
-}
-
-export interface DllDetectionResult {
-  detected: boolean;
-  path?: string;
-  source?: string;
-  message?: string;
-  error?: string;
-}
-
-export interface DllStatsResult {
-  success: boolean;
-  dll_path?: string;
-  dll_sha256?: string;
-  dll_source?: string;
+  lossless_scaling_installed: boolean;
+  lossless_scaling_status: string;
   error?: string;
 }
 
@@ -84,6 +64,7 @@ export interface FlatpakExtensionStatus {
   success: boolean;
   message: string;
   error?: string;
+  installed_23_08: boolean;
   installed_24_08: boolean;
   installed_25_08: boolean;
 }
@@ -131,8 +112,6 @@ export interface ProfileResult {
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
-export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
-export const getDllStats = callable<[], DllStatsResult>("get_dll_stats");
 export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
 export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
 export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");

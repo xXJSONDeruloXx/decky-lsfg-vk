@@ -3,10 +3,15 @@ import shlex
 from .base_service import BaseService
 from .config_schema import ConfigurationManager, DEFAULT_PROFILE_NAME, ProfileData
 from .config_schema_generated import ConfigurationData, get_script_generation_logic
+from .runtime_service import RuntimeService
 from .types import ConfigurationResponse, ProfileResponse, ProfilesResponse
 
 
 class ConfigurationService(BaseService):
+    def __init__(self, logger=None, runtime_service: RuntimeService = None):
+        super().__init__(logger)
+        self.runtime_service = runtime_service or RuntimeService(logger=self.log)
+
     def get_config(self) -> ConfigurationResponse:
         try:
             profile_data = self._get_profile_data()
@@ -69,9 +74,7 @@ class ConfigurationService(BaseService):
 
     def _get_profile_data(self) -> ProfileData:
         if not self.config_file_path.exists():
-            from .dll_detection import DllDetectionService
-
-            default = ConfigurationManager.get_defaults_with_dll_detection(DllDetectionService(self.log))
+            default = ConfigurationManager.get_defaults()
             return ProfileData(
                 current_profile=DEFAULT_PROFILE_NAME,
                 profiles={DEFAULT_PROFILE_NAME: dict(default)},
@@ -97,9 +100,11 @@ class ConfigurationService(BaseService):
         return profile_data
 
     def _save_profile_data(self, profile_data: ProfileData) -> None:
+        content = ConfigurationManager.generate_toml_content_multi_profile(profile_data)
+        self.runtime_service.validate_config_content(content)
         self._write_file(
             self.config_file_path,
-            ConfigurationManager.generate_toml_content_multi_profile(profile_data),
+            content,
             0o644,
         )
 

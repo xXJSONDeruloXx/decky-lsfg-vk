@@ -6,17 +6,16 @@ Vulkan layer for frame generation on Steam Deck.
 """
 
 import os
-import hashlib
 from typing import Dict, Any
 from pathlib import Path
 
 import decky
 
 from .installation import InstallationService
-from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
 from .config_schema import ConfigurationManager
 from .flatpak_service import FlatpakService
+from .runtime_service import RuntimeService
 
 
 class Plugin:
@@ -24,15 +23,15 @@ class Plugin:
     Main plugin class for lsfg-vk management.
     
     This class provides a unified interface for installation, configuration,
-    and DLL detection services. It implements the Decky Loader plugin lifecycle
+    and Flatpak management services. It implements the Decky Loader plugin lifecycle
     methods (_main, _unload, _uninstall, _migration).
     """
     
     def __init__(self):
         """Initialize the plugin with all necessary services"""
-        self.installation_service = InstallationService()
-        self.dll_detection_service = DllDetectionService()
-        self.configuration_service = ConfigurationService()
+        self.runtime_service = RuntimeService()
+        self.installation_service = InstallationService(runtime_service=self.runtime_service)
+        self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
         self.flatpak_service = FlatpakService()
 
     async def install_lsfg_vk(self) -> Dict[str, Any]:
@@ -58,72 +57,6 @@ class Plugin:
             UninstallationResponse dict with success status and removed files
         """
         return self.installation_service.uninstall()
-
-    async def check_lossless_scaling_dll(self) -> Dict[str, Any]:
-        """Check if Lossless Scaling DLL is available at the expected paths
-        
-        Returns:
-            DllDetectionResponse dict with detection status and path info
-        """
-        return self.dll_detection_service.check_lossless_scaling_dll()
-
-    async def get_dll_stats(self) -> Dict[str, Any]:
-        """Get detailed statistics about the detected DLL
-        
-        Returns:
-            Dict containing DLL path, SHA256 hash, and other stats
-        """
-        try:
-            dll_result = self.dll_detection_service.check_lossless_scaling_dll()
-            
-            if not dll_result.get("detected") or not dll_result.get("path"):
-                return {
-                    "success": False,
-                    "error": "DLL not detected",
-                    "dll_path": None,
-                    "dll_sha256": None
-                }
-            
-            dll_path = dll_result["path"]
-            if dll_path is None:
-                return {
-                    "success": False,
-                    "error": "DLL path is None",
-                    "dll_path": None,
-                    "dll_sha256": None
-                }
-            
-            dll_path_obj = Path(dll_path)
-            
-            sha256_hash = hashlib.sha256()
-            try:
-                with open(dll_path_obj, "rb") as f:
-                    for chunk in iter(lambda: f.read(4096), b""):
-                        sha256_hash.update(chunk)
-                dll_sha256 = sha256_hash.hexdigest()
-            except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"Failed to calculate SHA256: {str(e)}",
-                    "dll_path": dll_path,
-                    "dll_sha256": None
-                }
-            
-            return {
-                "success": True,
-                "dll_path": dll_path,
-                "dll_sha256": dll_sha256,
-                "dll_source": dll_result.get("source"),
-                "error": None
-            }
-            
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Failed to get DLL stats: {str(e)}",
-                "dll_path": None,
-                "dll_sha256": None
-            }
 
     async def get_lsfg_config(self) -> Dict[str, Any]:
         """Read current lsfg script configuration
@@ -353,7 +286,7 @@ class Plugin:
         """Check status of lsfg-vk Flatpak runtime extensions
         
         Returns:
-            FlatpakExtensionStatus dict with installation status for both runtime versions
+            FlatpakExtensionStatus dict with installation status for all supported runtime versions
         """
         return self.flatpak_service.get_extension_status()
 
@@ -361,7 +294,7 @@ class Plugin:
         """Install lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to install ("24.08" or "25.08")
+            version: Runtime version to install ("23.08", "24.08", or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
@@ -372,7 +305,7 @@ class Plugin:
         """Uninstall lsfg-vk Flatpak runtime extension
         
         Args:
-            version: Runtime version to uninstall ("24.08" or "25.08")
+            version: Runtime version to uninstall ("23.08", "24.08", or "25.08")
             
         Returns:
             BaseResponse dict with success status and message/error
@@ -442,6 +375,7 @@ class Plugin:
         try:
             extension_status = self.flatpak_service.get_extension_status()
             for version, key in (
+                ("23.08", "installed_23_08"),
                 ("24.08", "installed_24_08"),
                 ("25.08", "installed_25_08"),
             ):
@@ -479,10 +413,9 @@ class Plugin:
             if not result.get("success"):
                 decky.logger.warning(f"Native v2 migration failed: {result.get('error')}")
 
-        if self.installation_service.check_installation().get("installed"):
-            try:
-                self.flatpak_service.migrate_v2()
-            except Exception as error:
-                decky.logger.warning(f"Flatpak v2 migration skipped: {error}")
+        try:
+            self.flatpak_service.migrate_v2()
+        except Exception as error:
+            decky.logger.warning(f"Flatpak v2 migration skipped: {error}")
 
         decky.logger.info("decky-lsfg-vk plugin migrations completed")

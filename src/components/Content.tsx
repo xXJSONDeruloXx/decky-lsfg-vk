@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { PanelSection, showModal, ButtonItem, PanelSectionRow } from "@decky/ui";
-import { useInstallationStatus, useDllDetection, useLsfgConfig } from "../hooks/useLsfgHooks";
+import { useInstallationStatus, useLsfgConfig } from "../hooks/useLsfgHooks";
 import { useProfileManagement } from "../hooks/useProfileManagement";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { StatusDisplay } from "./StatusDisplay";
@@ -21,10 +21,11 @@ export function Content() {
     isInstalled,
     installationStatus,
     setIsInstalled,
-    setInstallationStatus
+    setInstallationStatus,
+    losslessScalingInstalled,
+    losslessScalingStatus,
+    checkInstallation
   } = useInstallationStatus();
-
-  const { dllDetected, dllDetectionStatus } = useDllDetection();
 
   const {
     config,
@@ -59,11 +60,11 @@ export function Content() {
   };
 
   const onInstall = () => {
-    handleInstall(setIsInstalled, setInstallationStatus, loadLsfgConfig);
+    handleInstall(setIsInstalled, setInstallationStatus, loadLsfgConfig, checkInstallation);
   };
 
   const onUninstall = () => {
-    handleUninstall(setIsInstalled, setInstallationStatus);
+    handleUninstall(setIsInstalled, setInstallationStatus, checkInstallation);
   };
 
   const handleShowNerdStuff = () => {
@@ -87,10 +88,10 @@ export function Content() {
           />
 
           <StatusDisplay
-            dllDetected={dllDetected}
-            dllDetectionStatus={dllDetectionStatus}
             isInstalled={isInstalled}
             installationStatus={installationStatus}
+            losslessScalingInstalled={losslessScalingInstalled}
+            losslessScalingStatus={losslessScalingStatus}
           />
         </>
       )}
@@ -167,10 +168,10 @@ export function Content() {
       {isInstalled && (
         <>
           <StatusDisplay
-            dllDetected={dllDetected}
-            dllDetectionStatus={dllDetectionStatus}
             isInstalled={isInstalled}
             installationStatus={installationStatus}
+            losslessScalingInstalled={losslessScalingInstalled}
+            losslessScalingStatus={losslessScalingStatus}
           />
 
           <InstallationButton

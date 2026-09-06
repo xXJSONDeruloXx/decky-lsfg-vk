@@ -37,21 +37,8 @@ class UninstallationResponse(BaseResponse):
 class InstallationCheckResponse(TypedDict):
     """Response for installation check"""
     installed: bool
-    lib_exists: bool
-    json_exists: bool
-    script_exists: bool
-    lib_path: str
-    json_path: str
-    script_path: str
-    error: Optional[str]
-
-
-class DllDetectionResponse(TypedDict):
-    """Response for DLL detection"""
-    detected: bool
-    path: Optional[str]
-    source: Optional[str]
-    message: Optional[str]
+    lossless_scaling_installed: bool
+    lossless_scaling_status: str
     error: Optional[str]
 
 

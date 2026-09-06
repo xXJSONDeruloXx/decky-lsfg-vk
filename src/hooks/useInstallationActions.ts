@@ -14,7 +14,8 @@ export function useInstallationActions() {
   const handleInstall = async (
     setIsInstalled: (value: boolean) => void,
     setInstallationStatus: (value: string) => void,
-    reloadConfig?: () => Promise<void>
+    reloadConfig?: () => Promise<void>,
+    reloadStatus?: () => Promise<boolean>
   ) => {
     setIsInstalling(true);
     setInstallationStatus("Installing lsfg-vk...");
@@ -30,6 +31,9 @@ export function useInstallationActions() {
         if (reloadConfig) {
           await reloadConfig();
         }
+        if (reloadStatus) {
+          await reloadStatus();
+        }
       } else {
         setInstallationStatus(`Installation failed: ${result.error}`);
         showInstallErrorToast(result.error);
@@ -44,7 +48,8 @@ export function useInstallationActions() {
 
   const handleUninstall = async (
     setIsInstalled: (value: boolean) => void,
-    setInstallationStatus: (value: string) => void
+    setInstallationStatus: (value: string) => void,
+    reloadStatus?: () => Promise<boolean>
   ) => {
     setIsUninstalling(true);
     setInstallationStatus("Uninstalling lsfg-vk...");
@@ -54,6 +59,9 @@ export function useInstallationActions() {
       if (result.success) {
         setIsInstalled(false);
         setInstallationStatus("lsfg-vk uninstalled successfully!");
+        if (reloadStatus) {
+          await reloadStatus();
+        }
         showUninstallSuccessToast();
       } else {
         setInstallationStatus(`Uninstallation failed: ${result.error}`);

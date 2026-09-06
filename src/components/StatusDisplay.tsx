@@ -1,24 +1,24 @@
 import { PanelSectionRow } from "@decky/ui";
 
 interface StatusDisplayProps {
-  dllDetected: boolean;
-  dllDetectionStatus: string;
   isInstalled: boolean;
   installationStatus: string;
+  losslessScalingInstalled: boolean;
+  losslessScalingStatus: string;
 }
 
 export function StatusDisplay({
-  dllDetected,
-  dllDetectionStatus,
   isInstalled,
-  installationStatus
+  installationStatus,
+  losslessScalingInstalled,
+  losslessScalingStatus
 }: StatusDisplayProps) {
   return (
     <PanelSectionRow>
       <div style={{ marginBottom: "8px", fontSize: "14px" }}>
         <div
           style={{
-            color: dllDetected ? "#4CAF50" : "#F44336",
+            color: losslessScalingInstalled ? "#4CAF50" : "#F44336",
             fontWeight: "600",
             marginBottom: "6px",
             display: "flex",
@@ -27,10 +27,15 @@ export function StatusDisplay({
           }}
         >
           <span style={{ fontSize: "16px" }}>
-            {dllDetected ? "✅" : "❌"}
+            {losslessScalingInstalled ? "✅" : "❌"}
           </span>
-          {dllDetectionStatus}
+          {losslessScalingInstalled ? "Lossless Scaling Installed" : "Lossless Scaling Not Installed"}
         </div>
+        {!losslessScalingInstalled && losslessScalingStatus && (
+          <div style={{ color: "#B8B8B8", fontSize: "12px", margin: "0 0 6px 22px" }}>
+            {losslessScalingStatus}
+          </div>
+        )}
         <div
           style={{
             color: isInstalled ? "#4CAF50" : "#FF9800",

@@ -7,7 +7,11 @@ import {
   PanelSectionRow,
   ButtonItem
 } from "@decky/ui";
-import { getDllStats, DllStatsResult, getConfigFileContent, getLaunchScriptContent, FileContentResult } from "../api/lsfgApi";
+import {
+  getConfigFileContent,
+  getLaunchScriptContent,
+  FileContentResult,
+} from "../api/lsfgApi";
 import t from '../i18n/i18n';
 
 interface NerdStuffModalProps {
@@ -15,7 +19,6 @@ interface NerdStuffModalProps {
 }
 
 export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
-  const [dllStats, setDllStats] = useState<DllStatsResult | null>(null);
   const [configContent, setConfigContent] = useState<FileContentResult | null>(null);
   const [scriptContent, setScriptContent] = useState<FileContentResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,13 +31,11 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
         setError(null);
         
         // Load all data in parallel
-        const [dllResult, configResult, scriptResult] = await Promise.all([
-          getDllStats(),
+        const [configResult, scriptResult] = await Promise.all([
           getConfigFileContent(),
-          getLaunchScriptContent()
+          getLaunchScriptContent(),
         ]);
         
-        setDllStats(dllResult);
         setConfigContent(configResult);
         setScriptContent(scriptResult);
       } catch (err) {
@@ -46,11 +47,6 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
 
     loadData();
   }, []);
-
-  const formatSHA256 = (hash: string) => {
-    // Format SHA256 hash for better readability (add spaces every 8 characters)
-    return hash.replace(/(.{8})/g, '$1 ').trim();
-  };
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -73,41 +69,6 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
       
       {!loading && !error && (
         <>
-          {/* DLL Stats Section */}
-          {dllStats && (
-            <>
-              {!dllStats.success ? (
-                <div>{dllStats.error || "Failed to get DLL stats"}</div>
-              ) : (
-                <div>
-                  <Field label={t('NERD_DLL_PATH', 'DLL Path')}>
-                    <Focusable
-                      onClick={() => dllStats.dll_path && copyToClipboard(dllStats.dll_path)}
-                      onActivate={() => dllStats.dll_path && copyToClipboard(dllStats.dll_path)}
-                    >
-                      {dllStats.dll_path || t('NERD_NOT_AVAILABLE', 'Not available')}
-                    </Focusable>
-                  </Field>
-                  
-                  <Field label={t('NERD_DLL_HASH', 'DLL SHA256 Hash')}>
-                    <Focusable
-                      onClick={() => dllStats.dll_sha256 && copyToClipboard(dllStats.dll_sha256)}
-                      onActivate={() => dllStats.dll_sha256 && copyToClipboard(dllStats.dll_sha256)}
-                    >
-                      {dllStats.dll_sha256 ? formatSHA256(dllStats.dll_sha256) : t('NERD_NOT_AVAILABLE', 'Not available')}
-                    </Focusable>
-                  </Field>
-                  
-                  {dllStats.dll_source && (
-                    <Field label={t('NERD_DETECTION_SOURCE', 'Detection Source')}>
-                      <div>{dllStats.dll_source}</div>
-                    </Field>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
           {/* Launch Script Section */}
           {scriptContent && (
             <Field label={t('NERD_LAUNCH_SCRIPT', 'Launch Script')}>
@@ -168,7 +129,7 @@ export function NerdStuffModal({ closeModal }: NerdStuffModalProps) {
               )}
             </Field>
           )}
-          
+
           {/* Close Button */}
           <DialogControlsSection>
             <PanelSectionRow>
