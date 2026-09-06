@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
 import {
-  ButtonItem,
   ConfirmModal,
   Field,
   PanelSection,
   PanelSectionRow,
-  Spinner,
-  Toggle,
+  ToggleField,
   showModal,
 } from "@decky/ui";
-import { FaCheck, FaCog, FaDownload, FaTimes, FaTrash } from "react-icons/fa";
 import {
   checkFlatpakExtensionStatus,
   FlatpakApp,
@@ -40,15 +37,13 @@ interface RuntimeRowProps {
 function RuntimeRow({ version, installed, busy, onAction }: RuntimeRowProps) {
   return (
     <PanelSectionRow>
-      <Field
+      <ToggleField
         label={`Runtime ${version}`}
-        description={installed ? t("FLATPAK_INSTALLED", "Installed") : t("FLATPAK_NOT_INSTALLED", "Not installed")}
-        icon={installed ? <FaCheck style={{ color: "green" }} /> : <FaTimes style={{ color: "red" }} />}
-      >
-        <ButtonItem layout="below" onClick={onAction} disabled={busy}>
-          {busy ? <Spinner /> : installed ? <><FaTrash /> {t("FLATPAK_UNINSTALL_BTN", "Uninstall")}</> : <><FaDownload /> {t("FLATPAK_INSTALL_BTN", "Install")}</>}
-        </ButtonItem>
-      </Field>
+        description={busy ? "Updating..." : installed ? t("FLATPAK_INSTALLED", "Installed") : t("FLATPAK_NOT_INSTALLED", "Not installed")}
+        checked={installed}
+        onChange={() => onAction()}
+        disabled={busy}
+      />
     </PanelSectionRow>
   );
 }
@@ -70,13 +65,13 @@ function AppRow({ app, busy, onToggle }: AppRowProps) {
 
   return (
     <PanelSectionRow>
-      <Field
+      <ToggleField
         label={app.app_name || app.app_id}
         description={`${app.app_id} - ${status}`}
-        icon={<FaCog style={{ color: configured ? "green" : partial ? "orange" : "red" }} />}
-      >
-        <Toggle value={configured} onChange={onToggle} disabled={busy} />
-      </Field>
+        checked={configured}
+        onChange={onToggle}
+        disabled={busy}
+      />
     </PanelSectionRow>
   );
 }
@@ -162,13 +157,13 @@ export function FlatpaksTab() {
   };
 
   if (loading) {
-    return <PanelSection title={t("FLATPAK_MODAL_TITLE", "Flatpak Extensions")}><PanelSectionRow><Spinner /></PanelSectionRow></PanelSection>;
+    return <PanelSection title="Runtimes" spinner />;
   }
 
   return (
     <>
-      <PanelSection title={t("FLATPAK_RUNTIME_INSTALLER", "Runtime Extension Installer")}>
-        {error && <PanelSectionRow><Field label={t("FLATPAK_OPERATION_ERROR", "Operation failed")} description={error} icon={<FaTimes style={{ color: "red" }} />} /></PanelSectionRow>}
+      <PanelSection title="Runtimes">
+        {error && <PanelSectionRow><Field label={t("FLATPAK_OPERATION_ERROR", "Operation failed")} description={error} /></PanelSectionRow>}
         {extensionStatus?.success ? runtimeVersions.map(({ version, key }) => (
           <RuntimeRow
             key={version}
@@ -180,7 +175,7 @@ export function FlatpaksTab() {
         )) : <PanelSectionRow><Field label={t("FLATPAK_ERROR", "Error")} description={extensionStatus?.error || error || t("FLATPAK_ERROR_STATUS", "Failed to check extension status")} /></PanelSectionRow>}
       </PanelSection>
 
-      <PanelSection title={t("FLATPAK_APPS_TITLE", "Flatpak Applications")}>
+      <PanelSection title="Applications">
         {apps?.success ? apps.apps.length ? apps.apps.map((app) => (
           <AppRow
             key={app.app_id}

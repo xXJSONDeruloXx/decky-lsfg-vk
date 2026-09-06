@@ -1,8 +1,7 @@
-import { PanelSectionRow } from "@decky/ui";
+import { Field, PanelSectionRow } from "@decky/ui";
 import type { SteamBranchStatus } from "../api/lsfgApi";
 
 interface StatusDisplayProps {
-  isInstalled: boolean;
   installationStatus: string;
   losslessScalingInstalled: boolean;
   losslessScalingStatus: string;
@@ -10,7 +9,6 @@ interface StatusDisplayProps {
 }
 
 export function StatusDisplay({
-  isInstalled,
   installationStatus,
   losslessScalingInstalled,
   losslessScalingStatus,
@@ -21,56 +19,21 @@ export function StatusDisplay({
   return (
     <>
       <PanelSectionRow>
-        <div style={{ marginBottom: "8px", fontSize: "14px" }}>
-          <div
-            style={{
-              color: losslessScalingAppInstalled ? "#4CAF50" : "#F44336",
-              fontWeight: "600",
-              marginBottom: "6px",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            {losslessScalingAppInstalled ? "Lossless Scaling Installed" : "Lossless Scaling Not Installed"}
-          </div>
-          {!losslessScalingAppInstalled && losslessScalingStatus && (
-            <div style={{ color: "#B8B8B8", fontSize: "12px", margin: "0 0 6px 22px" }}>
-              {losslessScalingStatus}
-            </div>
-          )}
-          <div
-            style={{
-              color: isInstalled ? "#4CAF50" : "#FF9800",
-              fontWeight: "600",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px"
-            }}
-          >
-            {installationStatus}
-          </div>
-        </div>
+        <Field
+          label="Lossless Scaling"
+          description={losslessScalingAppInstalled ? "Installed" : losslessScalingStatus || "Not installed"}
+        />
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <Field label="LSFG-VK" description={installationStatus} />
       </PanelSectionRow>
 
       {steamBranchStatus?.installed && (
         <PanelSectionRow>
-          <div style={{ width: "100%" }}>
-            <div
-              style={{
-                color: steamBranchStatus.needs_switch ? "#FF9800" : "#4CAF50",
-                fontSize: "12px",
-                margin: "0 0 6px 22px"
-              }}
-            >
-              Steam branch: {steamBranchStatus.current_branch || "public"}
-              {steamBranchStatus.needs_switch && (
-                <div style={{ color: "#B8B8B8", marginTop: "3px" }}>
-                  {steamBranchStatus.message}
-                </div>
-              )}
-            </div>
-          </div>
+          <Field
+            label="Steam branch"
+            description={`${steamBranchStatus.current_branch || "public"}${steamBranchStatus.needs_switch ? ` - ${steamBranchStatus.message}` : ""}`}
+          />
         </PanelSectionRow>
       )}
     </>

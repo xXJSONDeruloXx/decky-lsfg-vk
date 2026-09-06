@@ -29,7 +29,6 @@ export function SetupTab({
   return (
     <PanelSection title="Setup">
       <StatusDisplay
-        isInstalled={isInstalled}
         installationStatus={installationStatus}
         losslessScalingInstalled={losslessScalingInstalled}
         losslessScalingStatus={losslessScalingStatus}
