@@ -53,7 +53,7 @@ export function useDllDetection() {
       if (result.detected) {
         setDllDetectionStatus("Lossless Scaling Installed");
       } else {
-        setDllDetectionStatus("Lossless Scaling Not Installed");
+        setDllDetectionStatus(result.message || "Lossless Scaling Not Installed");
       }
     } catch (error) {
       setDllDetectionStatus("Lossless Scaling Not Installed");
