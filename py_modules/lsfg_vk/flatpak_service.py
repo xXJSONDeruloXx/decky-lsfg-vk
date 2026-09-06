@@ -70,6 +70,7 @@ class FlatpakService(BaseService):
             return self._success_response(
                 BaseResponse,
                 "Flatpak runtime status retrieved",
+                installed_23_08=(self.EXTENSION_ID, "x86_64", "23.08") in installed,
                 installed_24_08=(self.EXTENSION_ID, "x86_64", "24.08") in installed,
                 installed_25_08=(self.EXTENSION_ID, "x86_64", "25.08") in installed,
             )
@@ -77,6 +78,7 @@ class FlatpakService(BaseService):
             return self._error_response(
                 BaseResponse,
                 str(error),
+                installed_23_08=False,
                 installed_24_08=False,
                 installed_25_08=False,
             )
@@ -109,7 +111,8 @@ class FlatpakService(BaseService):
 
     def uninstall_extension(self, version: str) -> Dict[str, Any]:
         try:
-            self._validate_runtime(version)
+            if version not in ("23.08", *self.SUPPORTED_RUNTIMES):
+                raise ValueError("Unsupported Flatpak runtime")
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             result = self._run_flatpak_command(
@@ -289,6 +292,11 @@ class FlatpakService(BaseService):
             return
 
         status = self.get_extension_status()
+        if status.get("installed_23_08"):
+            result = self.uninstall_extension("23.08")
+            if not result.get("success"):
+                self.log.warning(result.get("error"))
+
         for version, key in (
             ("24.08", "installed_24_08"),
             ("25.08", "installed_25_08"),
