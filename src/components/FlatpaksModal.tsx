@@ -169,6 +169,12 @@ export const FlatpaksModal: FC<FlatpaksModalProps> = ({ closeModal }) => {
           {/* Extension Status Section */}
           <DialogControlsSection>
             <DialogControlsSectionHeader>{t('FLATPAK_RUNTIME_INSTALLER', 'Runtime Extension Installer')}</DialogControlsSectionHeader>
+            <PanelSectionRow>
+              <Field
+                label="Runtime 23.08"
+                description="No longer supported; use 24.08 or 25.08."
+              />
+            </PanelSectionRow>
 
             {extensionStatus && extensionStatus.success ? (
               <>
