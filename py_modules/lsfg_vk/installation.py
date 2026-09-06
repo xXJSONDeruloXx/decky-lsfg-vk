@@ -200,7 +200,7 @@ class InstallationService(BaseService):
             json_exists = self.json_file.exists() and self.json_x86_file.exists()
             script_exists = self.lsfg_launch_script_path.exists()
             return {
-                "installed": lib_exists and json_exists,
+                "installed": lib_exists and json_exists and script_exists and self.cli_file.exists(),
                 "lib_exists": lib_exists,
                 "json_exists": json_exists,
                 "script_exists": script_exists,
