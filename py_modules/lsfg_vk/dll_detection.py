@@ -46,6 +46,16 @@ class DllDetectionService(BaseService):
             steam_libraries_path = self._check_steam_library_folders()
             if steam_libraries_path:
                 return steam_libraries_path
+
+            legacy_dll = self._check_legacy_dll()
+            if legacy_dll:
+                return {
+                    "detected": False,
+                    "path": None,
+                    "source": str(legacy_dll),
+                    "message": "Lossless Scaling found. Switch it to the \"lsfg-vk\" branch in Steam.",
+                    "error": None
+                }
             
             return {
                 "detected": False,
@@ -66,6 +76,13 @@ class DllDetectionService(BaseService):
                 "error": str(e)
             }
     
+    def _check_legacy_dll(self) -> Path | None:
+        for library_path in self._get_steam_library_paths():
+            dll_path = Path(library_path) / STEAM_COMMON_PATH / "Lossless.dll"
+            if dll_path.exists():
+                return dll_path
+        return None
+
     def _check_env_dll_path(self) -> DllDetectionResponse | None:
         """Check LSFG_DLL_PATH environment variable
         
