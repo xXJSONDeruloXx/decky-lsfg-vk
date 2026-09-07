@@ -17,7 +17,7 @@ export function NowPlayingTab({ game, config, onConfigChange, onRemove }: Props)
         <PanelSectionRow>
           <Field
             label={game.name}
-            description={`${game.nonSteam ? "Non-Steam" : "Steam"} · App ID ${game.appid} · Profile active`}
+            description={`${game.nonSteam ? "Non-Steam" : "Steam"} · App ID ${game.appid} · Configured`}
           />
         </PanelSectionRow>
       </PanelSection>
