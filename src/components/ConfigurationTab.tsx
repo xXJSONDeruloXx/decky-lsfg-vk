@@ -28,12 +28,24 @@ export function ConfigurationTab({
 }: ConfigurationTabProps) {
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
+  const [focusBackToGames, setFocusBackToGames] = useState(false);
+  const backToGamesRef = useRef<HTMLDivElement>(null);
   const promptedRunningAppId = useRef<string | null>(null);
   const closeDetails = useCallback(() => {
     setFocusFpsMultiplier(false);
+    setFocusBackToGames(false);
     setDetailAppId(null);
   }, []);
   const clearFpsFocusRequest = useCallback(() => setFocusFpsMultiplier(false), []);
+
+  useEffect(() => {
+    if (!focusBackToGames) return;
+    const frame = requestAnimationFrame(() => {
+      backToGamesRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+      setFocusBackToGames(false);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focusBackToGames]);
 
   useEffect(() => {
     if (!runningGame || runningGame.configured) {
@@ -55,6 +67,7 @@ export function ConfigurationTab({
           targets={targets}
           runningGame={runningGame}
           onSelect={(appid) => {
+            setFocusBackToGames(true);
             onSelect(appid);
             setDetailAppId(appid);
           }}
@@ -76,7 +89,9 @@ export function ConfigurationTab({
           <Field label={profileLabel} description={profileDescription} />
         </PanelSectionRow>
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={closeDetails}>Back to games</ButtonItem>
+          <Focusable ref={backToGamesRef} noFocusRing>
+            <ButtonItem layout="below" onClick={closeDetails}>Back to games</ButtonItem>
+          </Focusable>
         </PanelSectionRow>
       </PanelSection>
       {selectedTarget?.configured && (

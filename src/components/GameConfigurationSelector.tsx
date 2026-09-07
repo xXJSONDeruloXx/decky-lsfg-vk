@@ -1,4 +1,4 @@
-import { ButtonItem, Field, PanelSectionRow } from "@decky/ui";
+import { ButtonItem, ConfirmModal, Field, PanelSectionRow, showModal } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { GameTarget } from "../hooks/useGameConfiguration";
@@ -83,6 +83,17 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onRe
   const availableGames = sortGames(targets.filter((game) => !game.configured));
   const [configuredCollapsed, toggleConfigured] = usePersistentCollapsed(CONFIGURED_COLLAPSED_KEY);
   const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(AVAILABLE_COLLAPSED_KEY);
+  const confirmResetAll = () => {
+    showModal(
+      <ConfirmModal
+        strTitle="Remove all profiles?"
+        strOKButtonText="Remove all"
+        strCancelButtonText="Cancel"
+        onOK={() => void onResetAll()}
+        onCancel={() => {}}
+      />,
+    );
+  };
 
   return (
     <>
@@ -108,7 +119,7 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onRe
       <PanelSectionRow>
         <ButtonItem
           layout="below"
-          onClick={() => void onResetAll()}
+          onClick={confirmResetAll}
           disabled={!targets.some((target) => target.configured)}
         >
           Remove all profiles
