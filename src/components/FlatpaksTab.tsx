@@ -157,12 +157,12 @@ export function FlatpaksTab() {
   };
 
   if (loading) {
-    return <PanelSection title="Runtimes" spinner />;
+    return <PanelSection title="Flatpak Runtimes" spinner />;
   }
 
   return (
     <>
-      <PanelSection title="Runtimes">
+      <PanelSection title="Flatpak Runtimes">
         {error && <PanelSectionRow><Field label={t("FLATPAK_OPERATION_ERROR", "Operation failed")} description={error} /></PanelSectionRow>}
         {extensionStatus?.success ? runtimeVersions.map(({ version, key }) => (
           <RuntimeRow

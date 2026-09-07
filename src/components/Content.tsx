@@ -6,7 +6,7 @@ import { tabStyles } from "../styles";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { useInstallationStatus } from "../hooks/useLsfgHooks";
-import { ConfigFileTab } from "./ConfigFileTab";
+// import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpaksTab } from "./FlatpaksTab";
 import { NowPlayingTab } from "./NowPlayingTab";
@@ -136,7 +136,8 @@ export function Content() {
           ),
         },
         { id: "Flatpak", title: tabIcons.flatpak, content: <FlatpaksTab /> },
-        { id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> },
+        // Keep the configuration-file view available for future use without exposing it in the UI.
+        // { id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> },
         { id: "Setup", title: tabIcons.setup, content: setupContent },
       ]
     : [
