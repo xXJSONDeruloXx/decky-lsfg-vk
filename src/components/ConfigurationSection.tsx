@@ -10,19 +10,19 @@ interface ConfigurationSectionProps {
 export function ConfigurationSection({ config, onConfigChange }: ConfigurationSectionProps) {
   return <>
     <PanelSectionRow>
-      <SliderField label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`} description="Motion estimation resolution scale" value={config.flow_scale} min={0.25} max={1} step={0.01} onChange={(value) => onConfigChange(FLOW_SCALE, value)} />
+      <SliderField label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`} value={config.flow_scale} min={0.25} max={1} step={0.01} onChange={(value) => onConfigChange(FLOW_SCALE, value)} />
     </PanelSectionRow>
     <PanelSectionRow>
-      <ToggleField label="FP16 Acceleration" description="Use FP16 shaders when supported" checked={!config.no_fp16} onChange={(value) => onConfigChange(NO_FP16, !value)} />
+      <ToggleField label="FP16 Acceleration" checked={!config.no_fp16} onChange={(value) => onConfigChange(NO_FP16, !value)} />
     </PanelSectionRow>
     <PanelSectionRow>
-      <ToggleField label="Performance Mode" description="Use the lighter frame generation model" checked={config.performance_mode} onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)} />
+      <ToggleField label="Performance Mode" checked={config.performance_mode} onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)} />
     </PanelSectionRow>
     <PanelSectionRow>
-      <ToggleField label="Present Mode Override" description="Force FIFO/VSync pacing" checked={config.override_present_mode} onChange={(value) => onConfigChange(OVERRIDE_PRESENT_MODE, value)} />
+      <ToggleField label="Present Mode Override" checked={config.override_present_mode} onChange={(value) => onConfigChange(OVERRIDE_PRESENT_MODE, value)} />
     </PanelSectionRow>
     <PanelSectionRow>
-      <ToggleField label="Preserve Swapchain Image Count" description="Do not change the application's swapchain image count" checked={config.preserve_swapchain_image_count} onChange={(value) => onConfigChange(PRESERVE_SWAPCHAIN_IMAGE_COUNT, value)} />
+      <ToggleField label="Preserve Swapchain Image Count" checked={config.preserve_swapchain_image_count} onChange={(value) => onConfigChange(PRESERVE_SWAPCHAIN_IMAGE_COUNT, value)} />
     </PanelSectionRow>
   </>;
 }

@@ -2,8 +2,7 @@
 Type definitions for the lsfg-vk plugin responses.
 """
 
-from typing import TypedDict, Optional, List, Dict, Any
-from .config_schema import ConfigurationData
+from typing import TypedDict, Optional, List
 
 
 class BaseResponse(TypedDict):
@@ -53,31 +52,3 @@ class SteamBranchStatusResponse(TypedDict):
     target_branch: str
     needs_switch: bool
     restart_required: bool
-
-class ConfigurationResponse(BaseResponse):
-    """Response for configuration operations"""
-    config: Optional[ConfigurationData]
-    message: Optional[str]
-    error: Optional[str]
-
-
-class ProfileConfig(TypedDict):
-    """Configuration for a single profile"""
-    exe: str
-    config: ConfigurationData
-
-
-class ProfilesResponse(BaseResponse):
-    """Response for per-game upstream profiles"""
-    default: Optional[ConfigurationData]
-    games: Optional[List[Dict[str, Any]]]
-    message: Optional[str]
-    error: Optional[str]
-
-
-class ProfileResponse(BaseResponse):
-    """Response for a per-game upstream profile"""
-    appid: Optional[str]
-    config: Optional[ConfigurationData]
-    message: Optional[str]
-    error: Optional[str]

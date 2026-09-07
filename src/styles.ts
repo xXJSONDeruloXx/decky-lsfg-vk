@@ -1,5 +1,5 @@
 export const tabStyles = `
-  .lsfg-vk-tabs > div > div:first-child::before {
+  .lsfg-vk-tabs > div > div:first-child {
     background: #0D141C;
     box-shadow: none;
     backdrop-filter: none;

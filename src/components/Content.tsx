@@ -1,6 +1,6 @@
 import { Tabs } from "@decky/ui";
-import { useEffect, useState } from "react";
-import { FaFileAlt, FaGamepad, FaLayerGroup, FaTools } from "react-icons/fa";
+import { useEffect, useRef, useState } from "react";
+import { FaFileAlt, FaGamepad, FaLayerGroup, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { tabStyles } from "../styles";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
@@ -9,10 +9,12 @@ import { useInstallationStatus } from "../hooks/useLsfgHooks";
 import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpaksTab } from "./FlatpaksTab";
+import { NowPlayingTab } from "./NowPlayingTab";
 import { SetupTab } from "./SetupTab";
 
 const tabIcons = {
-  configuration: <FaGamepad size={18} />,
+  nowPlaying: <FaGamepad size={18} />,
+  configuration: <FaList size={18} />,
   flatpak: <FaLayerGroup size={18} />,
   configFile: <FaFileAlt size={18} />,
   setup: <FaTools size={18} />,
@@ -33,9 +35,9 @@ export function Content() {
     config,
     targets,
     runningGame,
-    selectedAppId,
     setSelectedAppId,
     save,
+    enable,
     resetSelected,
     resetAll,
     reload,
@@ -48,10 +50,27 @@ export function Content() {
     steamBranchStatus?.success === true &&
     steamBranchStatus.installed &&
     !steamBranchStatus.needs_switch;
+  const previousRunningState = useRef<{ appid: string; configured: boolean } | null>(null);
 
   useEffect(() => {
-    setTab(setupComplete ? "Configuration" : "Setup");
-  }, [setupComplete]);
+    if (!setupComplete) {
+      setTab("Setup");
+      return;
+    }
+    setTab((current) => current === "Setup" ? (runningGame?.configured ? "NowPlaying" : "Configuration") : current);
+  }, [runningGame?.configured, setupComplete]);
+
+  useEffect(() => {
+    if (!setupComplete) return;
+    const current = runningGame ? { appid: runningGame.appid, configured: runningGame.configured } : null;
+    const previous = previousRunningState.current;
+    previousRunningState.current = current;
+    if (current?.appid && (current.appid !== previous?.appid || current.configured !== previous?.configured)) {
+      setTab(current.configured ? "NowPlaying" : "Configuration");
+    } else if (!current && previous) {
+      setTab((currentTab) => currentTab === "NowPlaying" ? "Configuration" : currentTab);
+    }
+  }, [runningGame?.appid, runningGame?.configured, setupComplete]);
 
   useEffect(() => {
     if (isInstalled) void reload();
@@ -88,6 +107,18 @@ export function Content() {
 
   const tabs = setupComplete
     ? [
+        ...(runningGame?.configured ? [{
+          id: "NowPlaying",
+          title: tabIcons.nowPlaying,
+          content: (
+            <NowPlayingTab
+              game={runningGame}
+              config={config}
+              onConfigChange={handleConfigChange}
+              onRemove={resetSelected}
+            />
+          ),
+        }] : []),
         {
           id: "Configuration",
           title: tabIcons.configuration,
@@ -96,9 +127,9 @@ export function Content() {
               config={config}
               targets={targets}
               runningGame={runningGame}
-              selectedAppId={selectedAppId}
               onSelect={setSelectedAppId}
               onConfigChange={handleConfigChange}
+              onEnable={enable}
               onReset={resetSelected}
               onResetAll={resetAll}
             />

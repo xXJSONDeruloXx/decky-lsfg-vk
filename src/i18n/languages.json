@@ -88,10 +88,7 @@
     "PROFILE_DELETE_DESC_SUFFIX": "この操作は取り消せません。",
     "PROFILE_DELETE_BTN": "削除",
     "PROFILE_CANNOT_RENAME_TITLE": "デフォルトプロファイルの名前は変更できません",
-    "PROFILE_CANNOT_RENAME_MSG": "デフォルトプロファイルの名前は変更できません",
-    "CLIPBOARD_COPIED": "クリップボードにコピーしました",
-    "CLIPBOARD_COPYING": "コピー中...",
-    "CLIPBOARD_LSFG_FGMOD": "LSFG + DeckyFG"
+    "PROFILE_CANNOT_RENAME_MSG": "デフォルトプロファイルの名前は変更できません"
   },
   "ko": {
     "CONTENT_FPS_MULTIPLIER": "FPS 배율",
@@ -182,10 +179,7 @@
     "PROFILE_DELETE_DESC_SUFFIX": "이 작업은 취소할 수 없습니다.",
     "PROFILE_DELETE_BTN": "삭제",
     "PROFILE_CANNOT_RENAME_TITLE": "기본 프로필 이름 변경 불가",
-    "PROFILE_CANNOT_RENAME_MSG": "기본 프로필의 이름은 변경할 수 없습니다",
-    "CLIPBOARD_COPIED": "클립보드에 복사됨",
-    "CLIPBOARD_COPYING": "복사 중...",
-    "CLIPBOARD_LSFG_FGMOD": "LSFG + DeckyFG"
+    "PROFILE_CANNOT_RENAME_MSG": "기본 프로필의 이름은 변경할 수 없습니다"
   },
   "language_metadata": {
     "ko": {
@@ -304,9 +298,6 @@
     "PROFILE_DELETE_DESC_SUFFIX": "? This action cannot be undone.",
     "PROFILE_DELETE_BTN": "Delete",
     "PROFILE_CANNOT_RENAME_TITLE": "Cannot rename default profile",
-    "PROFILE_CANNOT_RENAME_MSG": "The default profile cannot be renamed",
-    "CLIPBOARD_COPIED": "Copied to clipboard",
-    "CLIPBOARD_COPYING": "Copying...",
-    "CLIPBOARD_LSFG_FGMOD": "LSFG + DeckyFG"
+    "PROFILE_CANNOT_RENAME_MSG": "The default profile cannot be renamed"
   }
 }

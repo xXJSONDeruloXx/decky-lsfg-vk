@@ -1,19 +1,17 @@
-import { PanelSection } from "@decky/ui";
+import { ButtonItem, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
+import { useEffect, useRef, useState } from "react";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
-import { ConfigurationSection } from "./ConfigurationSection";
-import { FgmodClipboardButton } from "./FgmodClipboardButton";
-import { FpsMultiplierControl } from "./FpsMultiplierControl";
+import { GameConfigurationControls } from "./GameConfigurationControls";
 import { GameConfigurationSelector } from "./GameConfigurationSelector";
-import t from "../i18n/i18n";
 
 interface ConfigurationTabProps {
   config: ConfigurationData;
   targets: GameTarget[];
   runningGame: GameTarget | null;
-  selectedAppId: string;
   onSelect: (appid: string) => void;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
+  onEnable: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
   onResetAll: () => Promise<void>;
 }
@@ -22,33 +20,77 @@ export function ConfigurationTab({
   config,
   targets,
   runningGame,
-  selectedAppId,
   onSelect,
   onConfigChange,
+  onEnable,
   onReset,
   onResetAll,
 }: ConfigurationTabProps) {
-  return (
-    <>
-      <PanelSection title={t("CONTENT_FPS_MULTIPLIER", "FPS Multiplier")}>
-        <FpsMultiplierControl config={config} onConfigChange={onConfigChange} />
-      </PanelSection>
-      <PanelSection title="Game Profile">
+  const [detailAppId, setDetailAppId] = useState<string | null>(null);
+  const promptedRunningAppId = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!runningGame || runningGame.configured) {
+      promptedRunningAppId.current = null;
+      return;
+    }
+    if (promptedRunningAppId.current !== runningGame.appid && detailAppId === null) {
+      promptedRunningAppId.current = runningGame.appid;
+      setDetailAppId(runningGame.appid);
+    }
+  }, [detailAppId, runningGame?.appid, runningGame?.configured]);
+
+  const selectedTarget = detailAppId ? targets.find((target) => target.appid === detailAppId) : null;
+
+  if (detailAppId === null) {
+    return (
+      <PanelSection title="Games">
         <GameConfigurationSelector
           targets={targets}
           runningGame={runningGame}
-          selectedAppId={selectedAppId}
-          onSelect={onSelect}
-          onReset={onReset}
+          onSelect={(appid) => {
+            onSelect(appid);
+            setDetailAppId(appid);
+          }}
           onResetAll={onResetAll}
         />
       </PanelSection>
-      <PanelSection title="Options">
-        <ConfigurationSection config={config} onConfigChange={onConfigChange} />
+    );
+  }
+
+  const profileLabel = selectedTarget?.name || "Game profile";
+  const running = selectedTarget?.appid === runningGame?.appid;
+  const profileDescription = selectedTarget
+    ? `${selectedTarget.nonSteam ? "Non-Steam" : "Steam"} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? running && !runningGame?.configured ? "Profile saved · applies next launch" : "Profile active" : "Not configured · changes apply next launch"}`
+    : "Game is no longer available";
+
+  return (
+    <Focusable onCancelButton={() => setDetailAppId(null)}>
+      <PanelSection title="Game Profile">
+        <PanelSectionRow>
+          <Field label={profileLabel} description={profileDescription} />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={() => setDetailAppId(null)}>Back to games</ButtonItem>
+        </PanelSectionRow>
       </PanelSection>
-      <PanelSection>
-        <FgmodClipboardButton />
-      </PanelSection>
-    </>
+      <GameConfigurationControls config={config} onConfigChange={onConfigChange} />
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          onClick={async () => {
+            if (selectedTarget?.configured) {
+              promptedRunningAppId.current = detailAppId;
+              await onReset();
+              setDetailAppId(null);
+            } else if (detailAppId) {
+              await onEnable(detailAppId);
+            }
+          }}
+        >
+          {selectedTarget?.configured ? "Remove profile" : "Enable for next launch"}
+        </ButtonItem>
+      </PanelSectionRow>
+    </Focusable>
   );
 }

@@ -4,18 +4,14 @@ import json
 import sys
 import tomllib
 from pathlib import Path
-from typing import Any, Dict, TypedDict, cast
+from typing import Any, Dict, TypedDict
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-DEFAULT_PROFILE_NAME = "default"
 ConfigurationData = Dict[str, Any]
 
 
 class ProfileData(TypedDict):
-    # Internal compatibility field; the public API no longer exposes a
-    # currently selected profile.
-    current_profile: str
     profiles: Dict[str, Dict[str, Any]]
     global_config: Dict[str, Any]
 
@@ -58,19 +54,6 @@ class ConfigurationManager:
         return {**GLOBAL_DEFAULTS, **PROFILE_DEFAULTS}
 
     @staticmethod
-    def get_field_names() -> list[str]:
-        return list(ConfigurationManager.get_defaults())
-
-    @staticmethod
-    def get_field_types() -> Dict[str, str]:
-        return {
-            "dll": "string", "no_fp16": "boolean", "active_in": "array",
-            "pacing_mode": "string", "multiplier": "integer", "flow_scale": "float",
-            "performance_mode": "boolean", "override_present_mode": "boolean",
-            "preserve_swapchain_image_count": "boolean",
-        }
-
-    @staticmethod
     def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
         result = {**PROFILE_DEFAULTS, **GLOBAL_DEFAULTS}
         result.update({key: value for key, value in config.items() if key in result})
@@ -111,15 +94,6 @@ class ConfigurationManager:
         return ConfigurationManager.validate_config(raw)
 
     @staticmethod
-    def generate_toml_content(config: Dict[str, Any]) -> str:
-        data: ProfileData = {
-            "current_profile": DEFAULT_PROFILE_NAME,
-            "profiles": {DEFAULT_PROFILE_NAME: dict(config)},
-            "global_config": {"dll": config.get("dll", ""), "no_fp16": config.get("no_fp16", False)},
-        }
-        return ConfigurationManager.generate_toml_content_multi_profile(data)
-
-    @staticmethod
     def generate_toml_content_multi_profile(profile_data: ProfileData) -> str:
         global_config = {**GLOBAL_DEFAULTS, **profile_data.get("global_config", {})}
         lines = ["version = 2", "", "[global]"]
@@ -127,7 +101,9 @@ class ConfigurationManager:
         if dll:
             lines.append(f"dll = {_toml_value(dll)}")
         lines.append(f"allow_fp16 = {_toml_value(not bool(global_config.get('no_fp16', False)))}")
-        profiles = sorted(profile_data["profiles"].items(), key=lambda item: (item[0] != DEFAULT_PROFILE_NAME, item[0]))
+        profiles = sorted(profile_data["profiles"].items())
+        if not profiles:
+            profiles = [("", {})]
         for name, raw in profiles:
             config = ConfigurationManager.validate_config({**raw, **global_config})
             lines.extend(["", "[[profile]]", f"name = {_toml_value(name)}"])
@@ -157,16 +133,11 @@ class ConfigurationManager:
         profiles: Dict[str, Dict[str, Any]] = {}
         source_profiles = data.get("game", []) if version == 1 else data.get("profile", [])
         for profile in source_profiles:
-            name = str(profile.get("exe" if version == 1 else "name", DEFAULT_PROFILE_NAME))
-            profiles[name] = ConfigurationManager._config_from_profile(profile, global_config)
-        if not profiles:
-            profiles[DEFAULT_PROFILE_NAME] = ConfigurationManager.validate_config(global_config)
-        elif DEFAULT_PROFILE_NAME not in profiles:
-            source = profiles.get("decky-lsfg-vk", next(iter(profiles.values())))
-            profiles[DEFAULT_PROFILE_NAME] = {**source, "active_in": []}
-            if profiles.get("decky-lsfg-vk", {}).get("active_in", []) == []:
-                profiles.pop("decky-lsfg-vk", None)
-        return {"current_profile": DEFAULT_PROFILE_NAME, "profiles": profiles, "global_config": global_config}
+            name = str(profile.get("exe" if version == 1 else "name", ""))
+            config = ConfigurationManager._config_from_profile(profile, global_config)
+            if config["active_in"]:
+                profiles[name] = config
+        return {"profiles": profiles, "global_config": global_config}
 
     @staticmethod
     def is_legacy_v1(content: str) -> bool:
@@ -174,8 +145,3 @@ class ConfigurationManager:
             return tomllib.loads(content).get("version") == 1
         except tomllib.TOMLDecodeError:
             return False
-
-    @staticmethod
-    def parse_toml_content(content: str) -> Dict[str, Any]:
-        data = ConfigurationManager.parse_toml_content_multi_profile(content)
-        return cast(Dict[str, Any], data["profiles"][DEFAULT_PROFILE_NAME])

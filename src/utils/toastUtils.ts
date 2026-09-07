@@ -53,14 +53,6 @@ export const ToastMessages = {
   CONFIG_UPDATE_ERROR: {
     title: "Update Failed",
     body: "Failed to update configuration"
-  },
-  CLIPBOARD_SUCCESS: {
-    title: "Copied to Clipboard!",
-    body: "Launch option ready to paste"
-  },
-  CLIPBOARD_ERROR: {
-    title: "Copy Failed",
-    body: "Unable to copy to clipboard"
   }
 } as const;
 
@@ -98,18 +90,4 @@ export function showUninstallSuccessToast(): void {
  */
 export function showUninstallErrorToast(error?: string): void {
   showErrorToast(ToastMessages.UNINSTALL_ERROR.title, error || ToastMessages.UNINSTALL_ERROR.body);
-}
-
-/**
- * Show clipboard success toast
- */
-export function showClipboardSuccessToast(): void {
-  showSuccessToast(ToastMessages.CLIPBOARD_SUCCESS.title, ToastMessages.CLIPBOARD_SUCCESS.body);
-}
-
-/**
- * Show clipboard error toast
- */
-export function showClipboardErrorToast(): void {
-  showErrorToast(ToastMessages.CLIPBOARD_ERROR.title, ToastMessages.CLIPBOARD_ERROR.body);
 }

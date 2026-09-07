@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, DEFAULT_PROFILE_NAME, ProfileData
+from .config_schema import ConfigurationManager, ProfileData
 from .constants import (
     ARCHIVE_FILENAME,
     BIN_DIR,
@@ -141,8 +141,7 @@ class InstallationService(BaseService):
         else:
             default = dict(ConfigurationManager.get_defaults())
             profile_data = ProfileData(
-                current_profile=DEFAULT_PROFILE_NAME,
-                profiles={DEFAULT_PROFILE_NAME: default},
+                profiles={},
                 global_config={
                     "dll": default.get("dll", ""),
                     "no_fp16": default.get("no_fp16", False),
@@ -155,7 +154,6 @@ class InstallationService(BaseService):
             profile_data["profiles"][profile_name] = ConfigurationManager.validate_config(
                 {**defaults, **raw_profile, **profile_data["global_config"]}
             )
-        profile_data["current_profile"] = DEFAULT_PROFILE_NAME
         return profile_data
 
     def _resolve_dll_path(self, profile_data: ProfileData) -> bool:

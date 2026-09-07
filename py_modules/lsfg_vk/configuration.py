@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, DEFAULT_PROFILE_NAME, ProfileData
+from .config_schema import ConfigurationManager, ProfileData
 from .runtime_service import RuntimeService
 
 
@@ -14,8 +14,7 @@ class ConfigurationService(BaseService):
         self.runtime_service = runtime_service or RuntimeService(logger=self.log)
 
     def _default_data(self) -> ProfileData:
-        defaults = ConfigurationManager.validate_config({})
-        return {"current_profile": DEFAULT_PROFILE_NAME, "profiles": {DEFAULT_PROFILE_NAME: defaults}, "global_config": {"dll": "", "no_fp16": False}}
+        return {"profiles": {}, "global_config": {"dll": "", "no_fp16": False}}
 
     def _get_profile_data(self) -> ProfileData:
         if not self.config_file_path.exists():
@@ -32,8 +31,6 @@ class ConfigurationService(BaseService):
         name = str(game_name).strip()
         if not name:
             raise ValueError("game name is required")
-        if name == DEFAULT_PROFILE_NAME:
-            name = f"{name} ({appid})"
         existing = data["profiles"].get(name)
         if existing is not None and str(appid) not in existing.get("active_in", []):
             name = f"{name} ({appid})"
@@ -54,14 +51,6 @@ class ConfigurationService(BaseService):
     def _public_config(config: Dict[str, Any]) -> Dict[str, Any]:
         return ConfigurationManager.validate_config(config)
 
-    def get_config(self) -> Dict[str, Any]:
-        try:
-            data = self._get_profile_data()
-            return self._success_response(dict, config=self._public_config(data["profiles"][DEFAULT_PROFILE_NAME]))
-        except Exception as error:
-            self.log.error(f"Error reading lsfg config: {error}")
-            return self._error_response(dict, str(error), config=None)
-
     def get_game_configs(self) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
@@ -71,26 +60,25 @@ class ConfigurationService(BaseService):
                 if len(active_in) != 1 or not re.fullmatch(r"-?[0-9]+", str(active_in[0])):
                     continue
                 games.append({"appid": str(active_in[0]), "profile": name, "config": self._public_config(raw)})
-            return self._success_response(dict, default=self._public_config(data["profiles"][DEFAULT_PROFILE_NAME]), games=games)
+            return self._success_response(dict, global_config=dict(data["global_config"]), games=games)
         except Exception as error:
             self.log.error(f"Error reading game configs: {error}")
-            return self._error_response(dict, str(error), default=None, games=[])
-
-    def get_game_config(self, appid: str) -> Dict[str, Any]:
-        try:
-            data = self._get_profile_data()
-            _, profile = self._profile_for_appid(data, appid)
-            return self._success_response(dict, appid=str(appid), exists=profile is not None, config=self._public_config(profile or data["profiles"][DEFAULT_PROFILE_NAME]))
-        except Exception as error:
-            return self._error_response(dict, str(error), appid=str(appid), exists=False, config=None)
+            return self._error_response(dict, str(error), games=[])
 
     def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
             old_name, _ = self._profile_for_appid(data, appid)
             name = self._profile_name(data, appid, game_name)
-            validated = self._public_config(config)
+            merged_config = {**data["global_config"], **config}
+            if not config.get("dll"):
+                merged_config["dll"] = data["global_config"].get("dll", "")
+            validated = self._public_config(merged_config)
             validated["active_in"] = [str(appid)]
+            data["global_config"] = {
+                "dll": validated["dll"],
+                "no_fp16": validated["no_fp16"],
+            }
             if old_name and old_name != name:
                 data["profiles"].pop(old_name, None)
             data["profiles"][name] = validated
@@ -106,27 +94,15 @@ class ConfigurationService(BaseService):
             if name:
                 data["profiles"].pop(name, None)
             self._save_profile_data(data)
-            return self._success_response(dict, appid=str(appid), config=self._public_config(data["profiles"][DEFAULT_PROFILE_NAME]))
+            return self._success_response(dict, appid=str(appid), exists=False)
         except Exception as error:
             return self._error_response(dict, str(error), appid=str(appid), config=None)
 
     def reset_all_game_configs(self) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
-            data["profiles"] = {DEFAULT_PROFILE_NAME: data["profiles"][DEFAULT_PROFILE_NAME]}
+            data["profiles"] = {}
             self._save_profile_data(data)
-            return self._success_response(dict, default=self._public_config(data["profiles"][DEFAULT_PROFILE_NAME]), games=[])
+            return self._success_response(dict, global_config=dict(data["global_config"]), games=[])
         except Exception as error:
-            return self._error_response(dict, str(error), default=None, games=[])
-
-    def update_config_from_dict(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            data = self._get_profile_data()
-            validated = self._public_config(config)
-            validated["active_in"] = []
-            data["profiles"][DEFAULT_PROFILE_NAME] = validated
-            data["global_config"] = {"dll": validated.get("dll", ""), "no_fp16": validated.get("no_fp16", False)}
-            self._save_profile_data(data)
-            return self._success_response(dict, config=validated)
-        except Exception as error:
-            return self._error_response(dict, str(error), config=None)
+            return self._error_response(dict, str(error), games=[])

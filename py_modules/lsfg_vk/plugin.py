@@ -7,13 +7,11 @@ Vulkan layer for frame generation on Steam Deck.
 
 import os
 from typing import Dict, Any
-from pathlib import Path
 
 import decky
 
 from .installation import InstallationService
 from .configuration import ConfigurationService
-from .config_schema import ConfigurationManager
 from .flatpak_service import FlatpakService
 from .runtime_service import RuntimeService
 from .steam_service import SteamService
@@ -63,45 +61,11 @@ class Plugin:
         """
         return self.installation_service.uninstall()
 
-    async def get_lsfg_config(self) -> Dict[str, Any]:
-        """Read current lsfg script configuration
-        
-        Returns:
-            ConfigurationResponse dict with current configuration or error
-        """
-        return self.configuration_service.get_config()
-
-    async def get_config_schema(self) -> Dict[str, Any]:
-        """Get configuration schema information for frontend
-        
-        Returns:
-            Dict with field names, types, defaults, and profile information
-        """
-        return {
-            "field_names": ConfigurationManager.get_field_names(),
-            "field_types": ConfigurationManager.get_field_types(),
-            "defaults": ConfigurationManager.get_defaults(),
-        }
-
-    async def update_lsfg_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Update lsfg TOML configuration using object-based API (single source of truth)
-        
-        Args:
-            config: Configuration data dictionary containing all settings
-            
-        Returns:
-            ConfigurationResponse dict with success status
-        """
-        return self.configuration_service.update_config_from_dict(config)
-
     async def get_game_configs(self) -> Dict[str, Any]:
         return self.configuration_service.get_game_configs()
 
     async def get_installed_games(self) -> Dict[str, Any]:
         return self.steam_service.get_installed_games()
-
-    async def get_game_config(self, appid: str) -> Dict[str, Any]:
-        return self.configuration_service.get_game_config(appid)
 
     async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         return self.configuration_service.update_game_config(appid, game_name, config)
@@ -111,72 +75,6 @@ class Plugin:
 
     async def reset_all_game_configs(self) -> Dict[str, Any]:
         return self.configuration_service.reset_all_game_configs()
-
-    async def _legacy_get_profiles(self) -> Dict[str, Any]:
-        """Get list of all profiles and current profile
-        
-        Returns:
-            ProfilesResponse dict with profile list and current profile
-        """
-        return self.configuration_service.get_game_configs()
-
-    async def _legacy_create_profile(self, profile_name: str, source_profile: str = None) -> Dict[str, Any]:
-        """Create a new profile
-        
-        Args:
-            profile_name: Name for the new profile
-            source_profile: Optional source profile to copy from (default: current profile)
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return {"success": False, "error": "Named profiles were replaced by per-game AppID profiles"}
-
-    async def _legacy_delete_profile(self, profile_name: str) -> Dict[str, Any]:
-        """Delete a profile
-        
-        Args:
-            profile_name: Name of the profile to delete
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return {"success": False, "error": "Named profiles were replaced by per-game AppID profiles"}
-
-    async def _legacy_rename_profile(self, old_name: str, new_name: str) -> Dict[str, Any]:
-        """Rename a profile
-        
-        Args:
-            old_name: Current profile name
-            new_name: New profile name
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return {"success": False, "error": "Named profiles were replaced by per-game AppID profiles"}
-
-    async def _legacy_set_current_profile(self, profile_name: str) -> Dict[str, Any]:
-        """Set the current active profile
-        
-        Args:
-            profile_name: Name of the profile to set as current
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return {"success": False, "error": "There is no globally selected profile"}
-
-    async def _legacy_update_profile_config(self, profile_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Update configuration for a specific profile
-        
-        Args:
-            profile_name: Name of the profile to update
-            config: Configuration data dictionary containing settings
-            
-        Returns:
-            ConfigurationResponse dict with success status
-        """
-        return {"success": False, "error": "Use update_game_config with a Steam AppID"}
 
     async def get_config_file_content(self) -> Dict[str, Any]:
         """Get the current config file content
@@ -207,32 +105,6 @@ class Plugin:
                 "content": None,
                 "path": str(config_path) if 'config_path' in locals() else "unknown",
                 "error": f"Error reading config file: {str(e)}"
-            }
-
-    async def check_fgmod_directory(self) -> Dict[str, Any]:
-        """Check if the fgmod directory exists in the home directory
-        
-        Returns:
-            Dict with exists status and directory path
-        """
-        try:
-            home_path = Path(decky.DECKY_USER_HOME)
-            fgmod_path = home_path / "fgmod"
-            
-            exists = fgmod_path.exists() and fgmod_path.is_dir()
-            
-            return {
-                "success": True,
-                "exists": exists,
-                "path": str(fgmod_path)
-            }
-            
-        except Exception as e:
-            decky.logger.error(f"Error checking fgmod directory: {e}")
-            return {
-                "success": False,
-                "exists": False,
-                "error": str(e)
             }
 
     async def check_flatpak_extension_status(self) -> Dict[str, Any]:

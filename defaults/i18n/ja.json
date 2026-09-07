@@ -87,8 +87,5 @@
   "PROFILE_DELETE_DESC_SUFFIX": "この操作は取り消せません。",
   "PROFILE_DELETE_BTN": "削除",
   "PROFILE_CANNOT_RENAME_TITLE": "デフォルトプロファイルの名前は変更できません",
-  "PROFILE_CANNOT_RENAME_MSG": "デフォルトプロファイルの名前は変更できません",
-  "CLIPBOARD_COPIED": "クリップボードにコピーしました",
-  "CLIPBOARD_COPYING": "コピー中...",
-  "CLIPBOARD_LSFG_FGMOD": "LSFG + DeckyFG"
+  "PROFILE_CANNOT_RENAME_MSG": "デフォルトプロファイルの名前は変更できません"
 }

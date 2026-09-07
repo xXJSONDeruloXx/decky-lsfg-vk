@@ -32,12 +32,6 @@ export interface SteamBranchStatus {
 // Use centralized configuration data type
 export type LsfgConfig = ConfigurationData;
 
-export interface ConfigResult {
-  success: boolean;
-  config?: LsfgConfig;
-  error?: string;
-}
-
 export interface ConfigUpdateResult {
   success: boolean;
   message?: string;
@@ -51,10 +45,11 @@ export interface GameConfigEntry {
 }
 export interface InstalledGame { appid: string; name: string; nonSteam: boolean; }
 export interface InstalledGamesResult { success: boolean; games?: InstalledGame[]; error?: string; }
+export interface GlobalConfig { dll: string; no_fp16: boolean; }
 
 export interface GameConfigsResult {
   success: boolean;
-  default?: LsfgConfig;
+  global_config?: GlobalConfig;
   games?: GameConfigEntry[];
   error?: string;
 }
@@ -65,22 +60,9 @@ export interface GameConfigResult extends ConfigUpdateResult {
   config?: LsfgConfig;
 }
 
-export interface ConfigSchemaResult {
-  field_names: string[];
-  field_types: Record<string, string>;
-  defaults: ConfigurationData;
-}
-
 export interface FileContentResult {
   success: boolean;
   content?: string;
-  path?: string;
-  error?: string;
-}
-
-export interface FgmodCheckResult {
-  success: boolean;
-  exists: boolean;
   path?: string;
   error?: string;
 }
@@ -123,10 +105,7 @@ export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk")
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
-export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
-export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-export const checkFgmodDirectory = callable<[], FgmodCheckResult>("check_fgmod_directory");
 
 // Flatpak management API functions
 export const checkFlatpakExtensionStatus = callable<[], FlatpakExtensionStatus>("check_flatpak_extension_status");
@@ -136,19 +115,8 @@ export const getFlatpakApps = callable<[], FlatpakAppInfo>("get_flatpak_apps");
 export const setFlatpakAppOverride = callable<[string], FlatpakOperationResult>("set_flatpak_app_override");
 export const removeFlatpakAppOverride = callable<[string], FlatpakOperationResult>("remove_flatpak_app_override");
 
-// Updated config function using object-based configuration (single source of truth)
-export const updateLsfgConfig = callable<
-  [ConfigurationData],
-  ConfigUpdateResult
->("update_lsfg_config");
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
-export const getGameConfig = callable<[string], GameConfigResult>("get_game_config");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
 export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
 export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
-
-// Legacy helper function for backward compatibility
-export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
-  return updateLsfgConfig(config);
-};

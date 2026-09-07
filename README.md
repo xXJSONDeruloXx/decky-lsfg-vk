@@ -34,55 +34,18 @@ A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scali
 2. **Open the plugin** from the Decky menu
 3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
 4. **Configure settings** using the plugin's UI - select Default or a running/configured game and adjust the upstream lsfg-vk settings
-5. **Apply launch option** to games you want to use frame generation with:
-   - Add `~/lsfg %command%` to your game's launch options in Steam Properties
-   - Or use the "Launch Option Clipboard" button in the plugin to copy the command
 6. **Launch your game** - frame generation activates when the game's Steam AppID matches an assigned upstream profile
 
-## Configuration Options
-
-The plugin edits upstream lsfg-vk v2 profiles directly. Unassigned games leave the layer unloaded.
-
 ### Core Settings
+
 - **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
 - **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
-- **Performance Mode**: Uses a lighter processing model - recommended for most games
+- **Performance Mode**: Uses a lighter processing model (recommended for most games)
 - **FP16 Acceleration**: Use half-precision acceleration when supported
 
 ## Feedback and Support
 
 For per-game feedback and community support, please join the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3)
-
-## Troubleshooting
-
-**Frame generation not working?**
-- Ensure you've added `~/lsfg %command%` to your game's launch options
-- Ensure the Lossless Scaling installation is visible to the upstream lsfg-vk search paths
-- Try enabling Performance Mode if you're experiencing crashes
-- Make sure your game is running in fullscreen mode for best results
-
-**Performance issues?**
-- Lower the Flow Scale setting for better performance
-- Enable Performance Mode (recommended for most games)
-- Try reducing the FPS multiplier from 4x to 2x or 3x
-- Consider using the experimental FPS limit feature for DirectX games
-
-## What it does
-
-The plugin:
-- Installs the pinned lsfg-vk 2.0.0 x86_64 and x86 Vulkan layers from the official upstream build
-- Configures the Vulkan layer in `~/.local/share/vulkan/implicit_layer.d/`
-- Creates and migrates the v2 TOML configuration in `~/.config/lsfg-vk/conf.toml`, preserving a one-time v1 backup during upgrade
-- Delegates Lossless Scaling DLL discovery to lsfg-vk's upstream runtime search
-- Provides an easy-to-use interface to configure frame generation settings:
-  - **FPS Multiplier**: Use OFF/1x bypass or choose 2x, 3x, or 4x frame generation
-  - **Flow Scale**: Adjust motion estimation quality vs performance
-  - **Performance Mode**: Use lighter processing for better performance
-  - **FP16 Acceleration**: Use half-precision acceleration when supported
-- **Present Mode**: Override FIFO/VSync behavior
-- **Swapchain Image Count**: Preserve the application's swapchain image count
-- **Hot-reloading**: Upstream reloads settings for the active profile; profile assignment itself applies on the next launch
-- Easy uninstallation that removes all installed files when no longer needed
 
 ## Credits
 

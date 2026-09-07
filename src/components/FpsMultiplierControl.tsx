@@ -1,4 +1,4 @@
-import { PanelSectionRow, DialogButton, Focusable } from "@decky/ui";
+import { PanelSectionRow, SliderField } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import { MULTIPLIER } from "../config/generatedConfigSchema";
 import t from "../i18n/i18n";
@@ -12,62 +12,22 @@ export function FpsMultiplierControl({
   config,
   onConfigChange
 }: FpsMultiplierControlProps) {
+  const multiplierLabel = config.multiplier === 1
+    ? t("MULTIPLIER_OFF", "Off")
+    : `${config.multiplier}x`;
+
   return (
     <PanelSectionRow>
-      <Focusable
-        style={{
-          marginTop: "6px",
-          marginBottom: "6px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center"
-        }}
-        flow-children="horizontal"
-      >
-        <DialogButton
-          style={{
-            marginLeft: "0px",
-            height: "30px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "5px 0px 0px 0px",
-            minWidth: "40px",
-          }}
-          onClick={() => onConfigChange(MULTIPLIER, Math.max(1, config.multiplier - 1))}
-          disabled={config.multiplier <= 1}
-        >
-          −
-        </DialogButton>
-        <div
-          style={{
-            marginLeft: "20px",
-            marginRight: "20px",
-            fontSize: "16px",
-            fontWeight: "bold",
-            color: config.multiplier > 4 ? "red" : "white",
-            minWidth: "60px",
-            textAlign: "center"
-          }}
-        >
-          {config.multiplier === 1 ? t('MULTIPLIER_OFF', 'OFF') : `${config.multiplier}X`}
-        </div>
-        <DialogButton
-          style={{
-            marginLeft: "0px",
-            height: "30px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "5px 0px 0px 0px",
-            minWidth: "40px",
-          }}
-          onClick={() => onConfigChange(MULTIPLIER, Math.min(4, config.multiplier + 1))}
-          disabled={config.multiplier >= 4}
-        >
-          +
-        </DialogButton>
-      </Focusable>
+      <SliderField
+        label={`FPS multiplier · ${multiplierLabel}`}
+        value={config.multiplier}
+        min={1}
+        max={4}
+        step={1}
+        notchCount={4}
+        showValue={false}
+        onChange={(value) => void onConfigChange(MULTIPLIER, value)}
+      />
     </PanelSectionRow>
   );
 }

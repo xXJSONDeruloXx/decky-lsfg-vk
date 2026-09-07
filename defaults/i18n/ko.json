@@ -87,8 +87,5 @@
   "PROFILE_DELETE_DESC_SUFFIX": "이 작업은 취소할 수 없습니다.",
   "PROFILE_DELETE_BTN": "삭제",
   "PROFILE_CANNOT_RENAME_TITLE": "기본 프로필 이름 변경 불가",
-  "PROFILE_CANNOT_RENAME_MSG": "기본 프로필의 이름은 변경할 수 없습니다",
-  "CLIPBOARD_COPIED": "클립보드에 복사됨",
-  "CLIPBOARD_COPYING": "복사 중...",
-  "CLIPBOARD_LSFG_FGMOD": "LSFG + DeckyFG"
+  "PROFILE_CANNOT_RENAME_MSG": "기본 프로필의 이름은 변경할 수 없습니다"
 }
