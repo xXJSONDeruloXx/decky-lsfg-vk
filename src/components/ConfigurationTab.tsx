@@ -12,6 +12,7 @@ interface ConfigurationTabProps {
   onSelect: (appid: string) => void;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
+  onEnableAll: () => Promise<void>;
   onReset: () => Promise<void>;
   onResetAll: () => Promise<void>;
 }
@@ -23,29 +24,32 @@ export function ConfigurationTab({
   onSelect,
   onConfigChange,
   onEnable,
+  onEnableAll,
   onReset,
   onResetAll,
 }: ConfigurationTabProps) {
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
-  const [focusBackToGames, setFocusBackToGames] = useState(false);
+  const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "back" | null>(null);
   const backToGamesRef = useRef<HTMLDivElement>(null);
+  const enableRef = useRef<HTMLDivElement>(null);
   const promptedRunningAppId = useRef<string | null>(null);
   const closeDetails = useCallback(() => {
     setFocusFpsMultiplier(false);
-    setFocusBackToGames(false);
+    setFocusDetailAction(null);
     setDetailAppId(null);
   }, []);
   const clearFpsFocusRequest = useCallback(() => setFocusFpsMultiplier(false), []);
 
   useEffect(() => {
-    if (!focusBackToGames) return;
+    if (!focusDetailAction) return;
     const frame = requestAnimationFrame(() => {
-      backToGamesRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
-      setFocusBackToGames(false);
+      const ref = focusDetailAction === "enable" ? enableRef : backToGamesRef;
+      ref.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+      setFocusDetailAction(null);
     });
     return () => cancelAnimationFrame(frame);
-  }, [focusBackToGames]);
+  }, [focusDetailAction]);
 
   useEffect(() => {
     if (!runningGame || runningGame.configured) {
@@ -54,6 +58,7 @@ export function ConfigurationTab({
     }
     if (promptedRunningAppId.current !== runningGame.appid && detailAppId === null) {
       promptedRunningAppId.current = runningGame.appid;
+      setFocusDetailAction(runningGame.configured ? "back" : "enable");
       setDetailAppId(runningGame.appid);
     }
   }, [detailAppId, runningGame?.appid, runningGame?.configured]);
@@ -67,10 +72,11 @@ export function ConfigurationTab({
           targets={targets}
           runningGame={runningGame}
           onSelect={(appid) => {
-            setFocusBackToGames(true);
+            setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "back" : "enable");
             onSelect(appid);
             setDetailAppId(appid);
           }}
+          onEnableAll={onEnableAll}
           onResetAll={onResetAll}
         />
       </PanelSection>
@@ -79,8 +85,17 @@ export function ConfigurationTab({
 
   const profileLabel = selectedTarget?.name || "Game profile";
   const profileDescription = selectedTarget
-    ? `${selectedTarget.nonSteam ? "Non-Steam" : "Steam"} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "Configured" : "Not configured"}`
+    ? `${selectedTarget.nonSteam ? "Non-Steam" : "Steam"} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
     : "Game is no longer available";
+  const handleProfileAction = async () => {
+    if (selectedTarget?.configured) {
+      promptedRunningAppId.current = detailAppId;
+      await onReset();
+      closeDetails();
+    } else if (detailAppId && await onEnable(detailAppId)) {
+      setFocusFpsMultiplier(true);
+    }
+  };
 
   return (
     <Focusable onCancelButton={closeDetails}>
@@ -88,6 +103,13 @@ export function ConfigurationTab({
         <PanelSectionRow>
           <Field label={profileLabel} description={profileDescription} />
         </PanelSectionRow>
+        {!selectedTarget?.configured && selectedTarget && (
+          <PanelSectionRow>
+            <Focusable ref={enableRef} noFocusRing>
+              <ButtonItem layout="below" onClick={handleProfileAction}>Enable for next launch</ButtonItem>
+            </Focusable>
+          </PanelSectionRow>
+        )}
         <PanelSectionRow>
           <Focusable ref={backToGamesRef} noFocusRing>
             <ButtonItem layout="below" onClick={closeDetails}>Back to games</ButtonItem>
@@ -102,22 +124,11 @@ export function ConfigurationTab({
           onFpsMultiplierFocused={clearFpsFocusRequest}
         />
       )}
-      <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          onClick={async () => {
-            if (selectedTarget?.configured) {
-              promptedRunningAppId.current = detailAppId;
-              await onReset();
-              closeDetails();
-            } else if (detailAppId) {
-              if (await onEnable(detailAppId)) setFocusFpsMultiplier(true);
-            }
-          }}
-        >
-          {selectedTarget?.configured ? "Remove profile" : "Enable for next launch"}
-        </ButtonItem>
-      </PanelSectionRow>
+      {selectedTarget?.configured && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={handleProfileAction}>Remove profile</ButtonItem>
+        </PanelSectionRow>
+      )}
     </Focusable>
   );
 }

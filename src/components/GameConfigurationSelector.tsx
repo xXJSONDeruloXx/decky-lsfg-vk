@@ -7,10 +7,11 @@ interface Props {
   targets: GameTarget[];
   runningGame: GameTarget | null;
   onSelect: (appid: string) => void;
+  onEnableAll: () => Promise<void>;
   onResetAll: () => Promise<void>;
 }
 
-const CONFIGURED_COLLAPSED_KEY = "lsfg-configured-games-collapsed";
+const CONFIGURED_COLLAPSED_KEY = "lsfg-configured-games-collapsed-v2";
 const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed";
 
 function usePersistentCollapsed(key: string) {
@@ -73,7 +74,7 @@ function GameGroup({
   );
 }
 
-export function GameConfigurationSelector({ targets, runningGame, onSelect, onResetAll }: Props) {
+export function GameConfigurationSelector({ targets, runningGame, onSelect, onEnableAll, onResetAll }: Props) {
   const sortGames = (games: GameTarget[]) => [...games].sort((a, b) => {
     if (a.appid === runningGame?.appid) return -1;
     if (b.appid === runningGame?.appid) return 1;
@@ -81,8 +82,14 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onRe
   });
   const configuredGames = sortGames(targets.filter((game) => game.configured));
   const availableGames = sortGames(targets.filter((game) => !game.configured));
+  const configuredSteamGames = configuredGames.filter((game) => !game.nonSteam);
+  const configuredNonSteamGames = configuredGames.filter((game) => game.nonSteam);
+  const availableSteamGames = availableGames.filter((game) => !game.nonSteam);
+  const availableNonSteamGames = availableGames.filter((game) => game.nonSteam);
   const [configuredCollapsed, toggleConfigured] = usePersistentCollapsed(CONFIGURED_COLLAPSED_KEY);
+  const [configuredNonSteamCollapsed, toggleConfiguredNonSteam] = usePersistentCollapsed(`${CONFIGURED_COLLAPSED_KEY}-non-steam`);
   const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(AVAILABLE_COLLAPSED_KEY);
+  const [availableNonSteamCollapsed, toggleAvailableNonSteam] = usePersistentCollapsed(`${AVAILABLE_COLLAPSED_KEY}-non-steam`);
   const confirmResetAll = () => {
     showModal(
       <ConfirmModal
@@ -90,6 +97,18 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onRe
         strOKButtonText="Remove all"
         strCancelButtonText="Cancel"
         onOK={() => void onResetAll()}
+        onCancel={() => {}}
+      />,
+    );
+  };
+  const confirmEnableAll = () => {
+    showModal(
+      <ConfirmModal
+        strTitle="Enable all available games?"
+        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults."
+        strOKButtonText="Enable all"
+        strCancelButtonText="Cancel"
+        onOK={() => void onEnableAll()}
         onCancel={() => {}}
       />,
     );
@@ -102,18 +121,39 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onRe
           <Field label="No installed games" description="Steam has not reported any eligible games" />
         </PanelSectionRow>
       )}
+      {availableGames.length > 0 && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={confirmEnableAll}>
+            Enable all available games
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
       <GameGroup
-        title="Configured"
-        games={configuredGames}
+        title="LSFG-VK Enabled"
+        games={configuredSteamGames}
         collapsed={configuredCollapsed}
         onToggle={toggleConfigured}
         onSelect={onSelect}
       />
       <GameGroup
+        title="LSFG-VK Enabled (Non-Steam)"
+        games={configuredNonSteamGames}
+        collapsed={configuredNonSteamCollapsed}
+        onToggle={toggleConfiguredNonSteam}
+        onSelect={onSelect}
+      />
+      <GameGroup
         title="Available games"
-        games={availableGames}
+        games={availableSteamGames}
         collapsed={availableCollapsed}
         onToggle={toggleAvailable}
+        onSelect={onSelect}
+      />
+      <GameGroup
+        title="Available games (Non-Steam)"
+        games={availableNonSteamGames}
+        collapsed={availableNonSteamCollapsed}
+        onToggle={toggleAvailableNonSteam}
         onSelect={onSelect}
       />
       <PanelSectionRow>

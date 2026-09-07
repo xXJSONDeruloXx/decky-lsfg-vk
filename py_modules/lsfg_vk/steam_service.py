@@ -56,15 +56,18 @@ class SteamService(BaseService):
         for candidate in self._steam_roots():
             yield from self._unique_existing_root(candidate, seen)
 
-            library_file = candidate / "steamapps/libraryfolders.vdf"
-            try:
-                content = library_file.read_text(encoding="utf-8")
-            except OSError:
-                continue
+            for library_file in (
+                candidate / "steamapps/libraryfolders.vdf",
+                candidate / "config/libraryfolders.vdf",
+            ):
+                try:
+                    content = library_file.read_text(encoding="utf-8")
+                except OSError:
+                    continue
 
-            for raw_path in re.findall(r'(?m)^\s*"path"\s+"((?:\\.|[^"])*)"', content):
-                path = raw_path.replace(r'\"', '"').replace(r'\\', '\\')
-                yield from self._unique_existing_root(Path(path), seen)
+                for raw_path in re.findall(r'(?m)^\s*"path"\s+"((?:\\.|[^"])*)"', content):
+                    path = raw_path.replace(r'\"', '"').replace(r'\\', '\\')
+                    yield from self._unique_existing_root(Path(path), seen)
 
     @staticmethod
     def _read_shortcuts(data: bytes) -> Dict[str, object]:
@@ -88,6 +91,11 @@ class SteamService(BaseService):
                         raise ValueError("truncated binary VDF integer")
                     value = int.from_bytes(data[offset:offset + 4], "little", signed=True)
                     offset += 4
+                elif value_type == 7:
+                    if offset + 8 > len(data):
+                        raise ValueError("truncated binary VDF 64-bit integer")
+                    value = int.from_bytes(data[offset:offset + 8], "little", signed=True)
+                    offset += 8
                 else:
                     raise ValueError(f"unsupported binary VDF type {value_type}")
                 values[key] = value
@@ -254,7 +262,7 @@ class SteamService(BaseService):
             elif fields["restart_required"]:
                 message = "lsfg-vk is selected; restart Steam to finish the branch switch"
             else:
-                message = "Lossless Scaling is not using the lsfg-vk Steam branch"
+                message = "Select lsfg-vk in Lossless Scaling's Steam Properties > Betas"
             return self._success_response(dict, message, **fields)
         except Exception as error:
             return self._error_response(

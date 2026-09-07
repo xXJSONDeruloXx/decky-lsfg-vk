@@ -20,7 +20,7 @@ PROFILE_DEFAULTS: Dict[str, Any] = {
     "active_in": [],
     "pacing_mode": "vsync",
     "multiplier": 2,
-    "flow_scale": 1.0,
+    "flow_scale": 0.8,
     "performance_mode": False,
     "override_present_mode": True,
     "preserve_swapchain_image_count": False,
@@ -78,7 +78,7 @@ class ConfigurationManager:
         if not path_value:
             return ""
         path = Path(path_value)
-        if path.name.lower() in {"lossless.dll", "losslessscaling.dll"}:
+        if path.name.lower() in {"lossless.dll"}:
             return str(path.with_name("lsfg-vk.dll"))
         return path_value
 

@@ -6,7 +6,7 @@ import { tabStyles } from "../styles";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { useInstallationStatus } from "../hooks/useLsfgHooks";
-// import { ConfigFileTab } from "./ConfigFileTab";
+import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpaksTab } from "./FlatpaksTab";
 import { NowPlayingTab } from "./NowPlayingTab";
@@ -38,6 +38,7 @@ export function Content() {
     setSelectedAppId,
     save,
     enable,
+    enableAll,
     resetSelected,
     resetAll,
     reload,
@@ -115,7 +116,6 @@ export function Content() {
               game={runningGame}
               config={config}
               onConfigChange={handleConfigChange}
-              onRemove={resetSelected}
             />
           ),
         }] : []),
@@ -130,14 +130,14 @@ export function Content() {
               onSelect={setSelectedAppId}
               onConfigChange={handleConfigChange}
               onEnable={enable}
+              onEnableAll={enableAll}
               onReset={resetSelected}
               onResetAll={resetAll}
             />
           ),
         },
         { id: "Flatpak", title: tabIcons.flatpak, content: <FlatpaksTab /> },
-        // Keep the configuration-file view available for future use without exposing it in the UI.
-        // { id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> },
+        { id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> }, // comment out for prod
         { id: "Setup", title: tabIcons.setup, content: setupContent },
       ]
     : [

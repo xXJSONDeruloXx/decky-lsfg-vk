@@ -1,9 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
 import { getGameConfigs, getInstalledGames, updateGameConfig, resetGameConfig, resetAllGameConfigs, type GameConfigEntry, type GlobalConfig, type InstalledGame } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
+import { showErrorToast } from "../utils/toastUtils";
 
 export interface GameTarget extends InstalledGame { configured: boolean; }
+
+async function getSteamShortcuts(): Promise<InstalledGame[]> {
+  const apps = (globalThis as any).SteamClient?.Apps;
+  if (typeof apps?.GetAllShortcuts !== "function") return [];
+
+  try {
+    const shortcuts = await apps.GetAllShortcuts();
+    if (!Array.isArray(shortcuts)) return [];
+    return shortcuts.flatMap((shortcut: any) => {
+      const appid = Number(shortcut?.appid);
+      const name = shortcut?.data?.strAppName;
+      if (!Number.isInteger(appid) || appid === 0 || typeof name !== "string" || !name) return [];
+      return [{ appid: String(appid >>> 0), name, nonSteam: true }];
+    });
+  } catch {
+    return [];
+  }
+}
+
+function mergeInstalledGames(backendGames: InstalledGame[], shortcutGames: InstalledGame[]) {
+  const games = new Map(backendGames.map((game) => [game.appid, game]));
+  for (const game of shortcutGames) games.set(game.appid, game);
+  return Array.from(games.values());
+}
 
 export function useGameConfiguration() {
   const [games, setGames] = useState<GameConfigEntry[]>([]);
@@ -13,18 +39,25 @@ export function useGameConfiguration() {
   const [selectedAppId, setSelectedAppId] = useState("");
   const [runningGame, setRunningGame] = useState<GameTarget | null>(null);
   const previousRunningAppId = useRef<string | null>(null);
+  const previousQuickAccessVisible = useRef<boolean | null>(null);
+  const quickAccessVisible = useQuickAccessVisible();
 
   const load = useCallback(async () => {
-    const [result, installed] = await Promise.all([getGameConfigs(), getInstalledGames()]);
+    const [result, installed, shortcuts] = await Promise.all([getGameConfigs(), getInstalledGames(), getSteamShortcuts()]);
     if (result.success) {
       setGlobalConfig(result.global_config || { dll: "", no_fp16: false });
       setGames(result.games || []);
     }
-    if (installed.success) setInstalledGames(installed.games || []);
+    setInstalledGames(mergeInstalledGames(installed.success ? installed.games || [] : [], shortcuts));
     setConfigsLoaded(true);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const initialLoad = previousQuickAccessVisible.current === null;
+    const becameVisible = quickAccessVisible && previousQuickAccessVisible.current === false;
+    previousQuickAccessVisible.current = quickAccessVisible;
+    if (initialLoad || becameVisible) void load();
+  }, [load, quickAccessVisible]);
   useEffect(() => {
     const poll = () => {
       if (!configsLoaded) return;
@@ -75,6 +108,18 @@ export function useGameConfiguration() {
     if (result.success) await load();
     return result.success;
   }, [load, targets, template]);
+  const enableAll = useCallback(async (): Promise<void> => {
+    const available = targets.filter((target) => !target.configured && target.name);
+    if (available.length === 0) return;
+    for (const target of available) {
+      const result = await updateGameConfig(target.appid, target.name, template);
+      if (!result.success) {
+        showErrorToast("Could not enable all games", result.error || "A game profile could not be created");
+        return;
+      }
+    }
+    await load();
+  }, [load, targets, template]);
 
   const resetSelected = useCallback(async () => {
     if (selectedAppId) {
@@ -95,5 +140,5 @@ export function useGameConfiguration() {
     }
   }, [load]);
 
-  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, resetSelected, resetAll, reload: load };
+  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, resetSelected, resetAll, reload: load };
 }

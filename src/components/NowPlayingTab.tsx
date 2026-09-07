@@ -1,4 +1,4 @@
-import { ButtonItem, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
+import { Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
 import { GameConfigurationControls } from "./GameConfigurationControls";
@@ -7,26 +7,20 @@ interface Props {
   game: GameTarget;
   config: ConfigurationData;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
-  onRemove: () => Promise<void>;
 }
 
-export function NowPlayingTab({ game, config, onConfigChange, onRemove }: Props) {
+export function NowPlayingTab({ game, config, onConfigChange }: Props) {
   return (
     <Focusable>
-      <PanelSection title="Now Playing">
+      <PanelSection>
         <PanelSectionRow>
           <Field
             label={game.name}
-            description={`${game.nonSteam ? "Non-Steam" : "Steam"} · App ID ${game.appid} · Configured`}
+            description={`${game.nonSteam ? "Non-Steam" : "Steam"} | App ID ${game.appid}`}
           />
         </PanelSectionRow>
       </PanelSection>
       <GameConfigurationControls config={config} onConfigChange={onConfigChange} />
-      <PanelSectionRow>
-        <ButtonItem layout="below" onClick={() => void onRemove()}>
-          Remove profile
-        </ButtonItem>
-      </PanelSectionRow>
     </Focusable>
   );
 }
