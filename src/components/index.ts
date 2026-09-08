@@ -10,3 +10,4 @@ export { FlatpaksTab } from "./FlatpaksTab";
 export { GameConfigurationSelector } from "./GameConfigurationSelector";
 export { GameConfigurationControls } from "./GameConfigurationControls";
 export { NowPlayingTab } from "./NowPlayingTab";
+export { WorkaroundsSection } from "./WorkaroundsSection";

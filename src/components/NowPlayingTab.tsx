@@ -19,7 +19,7 @@ export function NowPlayingTab({ game, config, onConfigChange }: Props) {
           />
         </PanelSectionRow>
       </PanelSection>
-      <GameConfigurationControls config={config} onConfigChange={onConfigChange} />
+      <GameConfigurationControls config={config} onConfigChange={onConfigChange} showWorkarounds={false} />
     </Focusable>
   );
 }

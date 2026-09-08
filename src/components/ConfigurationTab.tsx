@@ -149,6 +149,8 @@ export function ConfigurationTab({
           onConfigChange={onConfigChange}
           autoFocusFpsMultiplier={focusFpsMultiplier}
           onFpsMultiplierFocused={clearFpsFocusRequest}
+          showWorkarounds
+          workaroundTarget={selectedTarget || undefined}
         />
       )}
       {selectedTarget?.configured && (
