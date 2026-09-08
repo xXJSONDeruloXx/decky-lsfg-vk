@@ -1,7 +1,6 @@
 import { ButtonItem, DialogButton, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
-import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
 import { GameConfigurationControls } from "./GameConfigurationControls";
@@ -31,10 +30,8 @@ export function ConfigurationTab({
   onResetAll,
 }: ConfigurationTabProps) {
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
-  const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "back" | null>(null);
-  const backToGamesRef = useRef<HTMLDivElement>(null);
+  const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "fps" | null>(null);
   const enableRef = useRef<HTMLDivElement>(null);
   const promptedRunningAppId = useRef<string | null>(null);
   const closeDetails = useCallback(() => {
@@ -44,13 +41,15 @@ export function ConfigurationTab({
   }, []);
   const clearFpsFocusRequest = useCallback(() => setFocusFpsMultiplier(false), []);
 
-  useEffect(() => setDetailsExpanded(false), [detailAppId]);
-
   useEffect(() => {
     if (!focusDetailAction) return;
+    if (focusDetailAction === "fps") {
+      setFocusFpsMultiplier(true);
+      setFocusDetailAction(null);
+      return;
+    }
     const frame = requestAnimationFrame(() => {
-      const ref = focusDetailAction === "enable" ? enableRef : backToGamesRef;
-      ref.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
+      enableRef.current?.querySelector<HTMLElement>('[role="button"]')?.focus();
       setFocusDetailAction(null);
     });
     return () => cancelAnimationFrame(frame);
@@ -63,7 +62,7 @@ export function ConfigurationTab({
     }
     if (promptedRunningAppId.current !== runningGame.appid && detailAppId === null) {
       promptedRunningAppId.current = runningGame.appid;
-      setFocusDetailAction(runningGame.configured ? "back" : "enable");
+      setFocusDetailAction("enable");
       setDetailAppId(runningGame.appid);
     }
   }, [detailAppId, runningGame?.appid, runningGame?.configured]);
@@ -77,7 +76,7 @@ export function ConfigurationTab({
           targets={targets}
           runningGame={runningGame}
           onSelect={(appid) => {
-            setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "back" : "enable");
+            setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
             onSelect(appid);
             setDetailAppId(appid);
           }}
@@ -104,7 +103,20 @@ export function ConfigurationTab({
 
   return (
     <Focusable onCancelButton={closeDetails}>
-      <PanelSection title="Game Profile">
+      <PanelSection>
+        <PanelSectionRow>
+          <Focusable noFocusRing>
+            <DialogButton
+              aria-label="Back to games"
+              onClick={closeDetails}
+              style={{ width: "48px", minWidth: "48px", height: "24px", minHeight: "24px", padding: "0 10px" }}
+            >
+              <FaArrowLeft />
+            </DialogButton>
+          </Focusable>
+        </PanelSectionRow>
+      </PanelSection>
+      <PanelSection>
         <PanelSectionRow>
           <Field label={profileLabel} />
         </PanelSectionRow>
@@ -115,17 +127,6 @@ export function ConfigurationTab({
             </Focusable>
           </PanelSectionRow>
         )}
-        <PanelSectionRow>
-          <Focusable ref={backToGamesRef} noFocusRing>
-            <DialogButton
-              aria-label="Back to games"
-              onClick={closeDetails}
-              style={{ width: "48px", minWidth: "48px", height: "48px", padding: "10px" }}
-            >
-              <FaArrowLeft />
-            </DialogButton>
-          </Focusable>
-        </PanelSectionRow>
       </PanelSection>
       {selectedTarget?.configured && (
         <GameConfigurationControls
@@ -141,19 +142,8 @@ export function ConfigurationTab({
         </PanelSectionRow>
       )}
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          bottomSeparator={detailsExpanded ? "none" : "standard"}
-          onClick={() => setDetailsExpanded((expanded) => !expanded)}
-        >
-          {detailsExpanded ? <RiArrowUpSFill /> : <RiArrowDownSFill />} Details
-        </ButtonItem>
+        <Field focusable highlightOnFocus label="Details" description={profileDescription} />
       </PanelSectionRow>
-      {detailsExpanded && (
-        <PanelSectionRow>
-          <Field label="Details" description={profileDescription} />
-        </PanelSectionRow>
-      )}
     </Focusable>
   );
 }
