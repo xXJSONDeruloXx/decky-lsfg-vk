@@ -236,14 +236,4 @@ class Plugin:
             os.path.join(decky.DECKY_HOME, "lossless-scaling-vk"),
             os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-lossless-scaling-vk"))
         
-        if self.installation_service.needs_v2_migration():
-            result = self.installation_service.install()
-            if not result.get("success"):
-                decky.logger.warning(f"Native v2 migration failed: {result.get('error')}")
-
-        try:
-            self.flatpak_service.migrate_v2()
-        except Exception as error:
-            decky.logger.warning(f"Flatpak v2 migration skipped: {error}")
-
         decky.logger.info("decky-lsfg-vk plugin migrations completed")

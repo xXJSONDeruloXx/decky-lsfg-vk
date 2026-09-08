@@ -1,5 +1,6 @@
-import { ButtonItem, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
+import { ButtonItem, DialogButton, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FaArrowLeft } from "react-icons/fa";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
@@ -116,7 +117,13 @@ export function ConfigurationTab({
         )}
         <PanelSectionRow>
           <Focusable ref={backToGamesRef} noFocusRing>
-            <ButtonItem layout="below" onClick={closeDetails}>Back to games</ButtonItem>
+            <DialogButton
+              aria-label="Back to games"
+              onClick={closeDetails}
+              style={{ width: "48px", minWidth: "48px", height: "48px", padding: "10px" }}
+            >
+              <FaArrowLeft />
+            </DialogButton>
           </Focusable>
         </PanelSectionRow>
       </PanelSection>

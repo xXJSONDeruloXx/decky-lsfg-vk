@@ -171,30 +171,6 @@ class InstallationService(BaseService):
         for path in (self.legacy_lib_file, self.legacy_json_file):
             self._remove_if_exists(path)
 
-    def needs_v2_migration(self) -> bool:
-        legacy_layer = self.legacy_lib_file.exists() or self.legacy_json_file.exists()
-        legacy_config = False
-        if self.config_file_path.exists():
-            try:
-                legacy_config = ConfigurationManager.is_legacy_v1(
-                    self.config_file_path.read_text(encoding="utf-8")
-                )
-            except OSError:
-                legacy_config = False
-        if legacy_layer or legacy_config:
-            return True
-        try:
-            if self.config_file_path.exists():
-                data = ConfigurationManager.parse_toml_content_multi_profile(
-                    self.config_file_path.read_text(encoding="utf-8")
-                )
-                configured = str(data["global_config"].get("dll") or "")
-                if (not configured or not Path(configured).is_file()) and self.steam_service.find_lsfg_vk_dll():
-                    return True
-            return not self.runtime_service.is_healthy()
-        except Exception:
-            return True
-
     def check_installation(self) -> InstallationCheckResponse:
         try:
             installation_error = None

@@ -323,32 +323,3 @@ class FlatpakService(BaseService):
                 app_id=app_id,
                 operation="remove",
             )
-
-    def migrate_v2(self) -> None:
-        if not self.check_flatpak_available():
-            return
-
-        apps_result = self._run_flatpak_command(
-            ["list", "--user", "--app", "--columns=application"],
-            capture_output=True,
-            text=True,
-        )
-        if apps_result.returncode != 0:
-            return
-
-        for app_id in apps_result.stdout.splitlines():
-            app_id = app_id.strip()
-            if not app_id:
-                continue
-            output = self._override_output(app_id)
-            paths = self._override_paths()
-            legacy_markers = (
-                "LSFG_CONFIG=",
-                paths["legacy_home"],
-                paths["legacy_dll"],
-                paths["legacy_script"],
-            )
-            if any(marker in output for marker in legacy_markers):
-                result = self.set_app_override(app_id)
-                if not result.get("success"):
-                    self.log.warning(result.get("error"))
