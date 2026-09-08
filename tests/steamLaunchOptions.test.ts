@@ -3,9 +3,11 @@ import test from "node:test";
 import {
   applyWorkaroundChange,
   applyWorkaroundState,
+  cleanupLegacyLaunchOptions,
   cleanupLegacyWrapper,
   getDefaultWorkaroundState,
   isLegacyWrapperToken,
+  normalizeLaunchOptions,
   parseWorkaroundOptions,
   readSteamLaunchOptions,
   updateSteamLaunchOptions,
@@ -45,7 +47,7 @@ test("uses SteamDeck=0 before %command% without a wrapper", () => {
 
 test("keeps WSI disable opt-in and does not add HDR assignments", () => {
   const defaults = getDefaultWorkaroundState();
-  assert.equal(applyWorkaroundState("%command%", defaults), "%command%");
+  assert.equal(applyWorkaroundState("%command%", defaults), "");
   assert.equal(parseWorkaroundOptions("%command%").state.disableGamescopeWsi, false);
   assert.equal(
     applyWorkaroundChange("%command%", "disableGamescopeWsi", true),
@@ -53,7 +55,7 @@ test("keeps WSI disable opt-in and does not add HDR assignments", () => {
   );
   assert.equal(
     applyWorkaroundChange("ENABLE_GAMESCOPE_WSI=0 %command%", "disableGamescopeWsi", false),
-    "%command%",
+    "",
   );
 
   const legacy = parseWorkaroundOptions("ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%");
@@ -61,7 +63,7 @@ test("keeps WSI disable opt-in and does not add HDR assignments", () => {
   assert.deepEqual(legacy.issues, []);
   assert.equal(
     applyWorkaroundChange("ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%", "disableGamescopeWsi", false),
-    "%command%",
+    "",
   );
 
   const invalid = parseWorkaroundOptions("ENABLE_GAMESCOPE_WSI=maybe %command%");
@@ -123,7 +125,7 @@ test("uses DXVK_CONFIG for the base cap and preserves other DXVK settings", () =
   );
   assert.equal(
     applyWorkaroundChange("DXVK_FRAME_RATE=30 %command%", "dxvkFrameRate", 0),
-    "%command%",
+    "",
   );
 
   const apiSpecific = parseWorkaroundOptions(
@@ -164,7 +166,7 @@ test("keeps vkBasalt disable mutually exclusive while preserving the dropped ena
   assert.equal(disabled, "DISABLE_VKBASALT=1 %command%");
   assert.equal(
     applyWorkaroundChange(disabled, "disableVkbasalt", false),
-    "%command%",
+    "",
   );
   const conflict = parseWorkaroundOptions("ENABLE_VKBASALT=1 DISABLE_VKBASALT=1 %command%");
   assert.equal(conflict.state.disableVkbasalt, true);
@@ -191,7 +193,7 @@ test("handles current and legacy Zink forms and reports partial state", () => {
       "enableZink",
       false,
     ),
-    "%command%",
+    "",
   );
 });
 
@@ -200,7 +202,7 @@ test("cleans only the known legacy wrapper and preserves launch options", () => 
     cleanupLegacyWrapper('FOO=bar ~/lsfg %command% --arg "~/lsfg"'),
     'FOO=bar %command% --arg "~/lsfg"',
   );
-  assert.equal(cleanupLegacyWrapper("/home/deck/lsfg %command%"), "%command%");
+  assert.equal(cleanupLegacyWrapper("/home/deck/lsfg %command%"), "");
   assert.equal(
     cleanupLegacyWrapper("DXVK_FRAME_RATE=30 LSFG_PROCESS=decky-lsfg-vk %command%"),
     "DXVK_FRAME_RATE=30 LSFG_PROCESS=decky-lsfg-vk %command%",
@@ -210,6 +212,13 @@ test("cleans only the known legacy wrapper and preserves launch options", () => 
     "LSFG_PROCESS=decky-lsfg-vk %command%",
   );
   assert.equal(isLegacyWrapperToken("/home/kurt/lsfg"), false);
+});
+
+test("canonicalizes a bare command token without removing real arguments", () => {
+  assert.equal(normalizeLaunchOptions("%command%"), "");
+  assert.equal(normalizeLaunchOptions("%COMMAND%"), "");
+  assert.equal(normalizeLaunchOptions("FOO=bar %command%"), "FOO=bar %command%");
+  assert.equal(normalizeLaunchOptions("%command% --windowed"), "%command% --windowed");
 });
 
 test("is idempotent", () => {

@@ -80,8 +80,9 @@ export function Content() {
   const handleConfigChange = async (
     fieldName: keyof ConfigurationData,
     value: boolean | number | string | string[],
+    cleanupLaunchOptions = false,
   ) => {
-    await save({ ...config, [fieldName]: value });
+    await save({ ...config, [fieldName]: value }, cleanupLaunchOptions);
   };
 
   const onInstall = () => {
@@ -115,7 +116,7 @@ export function Content() {
             <NowPlayingTab
               game={runningGame}
               config={config}
-              onConfigChange={handleConfigChange}
+              onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value)}
             />
           ),
         }] : []),
@@ -128,7 +129,7 @@ export function Content() {
               targets={targets}
               runningGame={runningGame}
               onSelect={setSelectedAppId}
-              onConfigChange={handleConfigChange}
+              onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value, true)}
               onEnable={enable}
               onEnableAll={enableAll}
               onReset={resetSelected}

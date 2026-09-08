@@ -106,12 +106,13 @@ export function useGameConfiguration() {
     }
   }, [installedGames]);
 
-  const save = useCallback(async (next: ConfigurationData) => {
+  const save = useCallback(async (next: ConfigurationData, cleanupLaunchOptions = false) => {
     const selectedTarget = targets.find((target) => target.appid === selectedAppId);
     if (!selectedTarget?.name) return;
+    if (cleanupLaunchOptions && !(await cleanupTargetLaunchOptions(selectedTarget))) return;
     const result = await updateGameConfig(selectedAppId, selectedTarget.name, next);
     if (result.success) await load();
-  }, [load, selectedAppId, targets]);
+  }, [cleanupTargetLaunchOptions, load, selectedAppId, targets]);
 
   const enable = useCallback(async (appid: string) => {
     const target = targets.find((item) => item.appid === appid);

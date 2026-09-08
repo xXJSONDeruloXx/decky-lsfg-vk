@@ -1,5 +1,5 @@
 // @ts-expect-error Node's built-in TypeScript loader requires explicit source extensions in tests.
-import { cleanupLegacyWrapper, isLegacyWrapperToken, normalizeLaunchOptions } from "./steamLaunchOptionParser.ts";
+import { cleanupLegacyLaunchOptions, isLegacyWrapperToken, normalizeLaunchOptions } from "./steamLaunchOptionParser.ts";
 
 // @ts-expect-error Node's built-in TypeScript loader requires explicit source extensions in tests.
 export * from "./steamLaunchOptionParser.ts";
@@ -23,7 +23,7 @@ function getSteamApps(): Partial<SteamApps> | undefined {
 
 function snapshotFromDetails(appId: number, nonSteam: boolean, details: SteamAppDetails): SteamLaunchOptionsSnapshot {
   if (nonSteam && isLegacyWrapperToken(details.strShortcutExe || "")) {
-    throw new Error("The shortcut Target still points to the legacy ~/lsfg wrapper; restore its original executable first");
+    throw new Error("The shortcut Target still points to a legacy frame-generation wrapper; restore its original executable first");
   }
   return {
     appId,
@@ -203,7 +203,7 @@ export function cleanupSteamLaunchOptions(
 ): Promise<SteamLaunchOptionsSnapshot> {
   return queueSteamAppOperation(appId, nonSteam, async () => {
     const current = await readSteamLaunchOptions(appId, nonSteam);
-    const next = cleanupLegacyWrapper(current.options);
+    const next = cleanupLegacyLaunchOptions(current.options);
     if (next === current.options) return current;
     await setSteamLaunchOptions(appId, nonSteam, next);
     return waitForLaunchOptions(appId, nonSteam, next);

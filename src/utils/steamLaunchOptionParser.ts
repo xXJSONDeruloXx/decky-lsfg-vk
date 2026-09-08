@@ -34,6 +34,16 @@ interface WorkaroundDefinition {
 }
 
 const COMMAND_TOKEN = "%command%";
+const LEGACY_WRAPPER_TOKENS = new Set([
+  "~/lsfg",
+  "/home/deck/lsfg",
+  "~/.local/bin/lsfg-vk-experimental",
+  "/home/deck/.local/bin/lsfg-vk-experimental",
+  "~/.local/bin/mako-run",
+  "/home/deck/.local/bin/mako-run",
+  "~/.local/bin/mako-launch",
+  "/home/deck/.local/bin/mako-launch",
+]);
 const DXVK_FRAME_RATE_KEYS: readonly DxvkFrameRateKey[] = [
   "dxvk.maxFrameRate",
   "dxgi.maxFrameRate",
@@ -145,6 +155,7 @@ function tokenize(options: string): LaunchToken[] {
 }
 
 function serialize(tokens: readonly LaunchToken[]): string {
+  if (tokens.length === 1 && tokens[0].raw.toLowerCase() === COMMAND_TOKEN) return "";
   return tokens.map((token) => token.raw).join(" ");
 }
 
@@ -171,9 +182,6 @@ function leadingEnvironmentCount(tokens: readonly LaunchToken[]): number {
 }
 
 function effectivePrefixLimit(tokens: readonly LaunchToken[]): number {
-  // Only assignment words before the first command affect the launched game.
-  // Anything after a wrapper command is that command's argument, even when it
-  // happens to look like KEY=value.
   return leadingEnvironmentCount(tokens);
 }
 
@@ -223,15 +231,15 @@ function ensureCommandToken(tokens: LaunchToken[]): void {
 
 export function isLegacyWrapperToken(value: string): boolean {
   const path = decodeToken(value);
-  return path === "~/lsfg" || path === "/home/deck/lsfg";
+  return LEGACY_WRAPPER_TOKENS.has(path);
 }
 
 function removeLegacyWrapperFromTokens(tokens: LaunchToken[]): boolean {
   const commandIndex = findCommandIndex(tokens);
   const prefixEnd = commandIndex >= 0 ? commandIndex : tokens.length;
-  const wrapperIndex = leadingEnvironmentCount(tokens);
-  if (wrapperIndex >= prefixEnd || !isLegacyWrapperToken(tokens[wrapperIndex].raw)) return false;
-  tokens.splice(wrapperIndex, 1);
+  const retained = tokens.filter((token, index) => index >= prefixEnd || !isLegacyWrapperToken(token.raw));
+  if (retained.length === tokens.length) return false;
+  tokens.splice(0, tokens.length, ...retained);
   return true;
 }
 
@@ -482,8 +490,12 @@ export function applyWorkaroundChange(options: string, field: WorkaroundField, v
   return serialize(tokens);
 }
 
-export function cleanupLegacyWrapper(options: string): string {
+export function cleanupLegacyLaunchOptions(options: string): string {
   const tokens = tokenize(options);
   removeLegacyWrapperFromTokens(tokens);
   return serialize(tokens);
+}
+
+export function cleanupLegacyWrapper(options: string): string {
+  return cleanupLegacyLaunchOptions(options);
 }
