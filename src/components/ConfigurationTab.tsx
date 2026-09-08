@@ -1,5 +1,6 @@
 import { ButtonItem, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
 import { GameConfigurationControls } from "./GameConfigurationControls";
@@ -29,6 +30,7 @@ export function ConfigurationTab({
   onResetAll,
 }: ConfigurationTabProps) {
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
   const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "back" | null>(null);
   const backToGamesRef = useRef<HTMLDivElement>(null);
@@ -40,6 +42,8 @@ export function ConfigurationTab({
     setDetailAppId(null);
   }, []);
   const clearFpsFocusRequest = useCallback(() => setFocusFpsMultiplier(false), []);
+
+  useEffect(() => setDetailsExpanded(false), [detailAppId]);
 
   useEffect(() => {
     if (!focusDetailAction) return;
@@ -101,7 +105,7 @@ export function ConfigurationTab({
     <Focusable onCancelButton={closeDetails}>
       <PanelSection title="Game Profile">
         <PanelSectionRow>
-          <Field label={profileLabel} description={profileDescription} />
+          <Field label={profileLabel} />
         </PanelSectionRow>
         {!selectedTarget?.configured && selectedTarget && (
           <PanelSectionRow>
@@ -127,6 +131,20 @@ export function ConfigurationTab({
       {selectedTarget?.configured && (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={handleProfileAction}>Remove profile</ButtonItem>
+        </PanelSectionRow>
+      )}
+      <PanelSectionRow>
+        <ButtonItem
+          layout="below"
+          bottomSeparator={detailsExpanded ? "none" : "standard"}
+          onClick={() => setDetailsExpanded((expanded) => !expanded)}
+        >
+          {detailsExpanded ? <RiArrowUpSFill /> : <RiArrowDownSFill />} Details
+        </ButtonItem>
+      </PanelSectionRow>
+      {detailsExpanded && (
+        <PanelSectionRow>
+          <Field label="Details" description={profileDescription} />
         </PanelSectionRow>
       )}
     </Focusable>

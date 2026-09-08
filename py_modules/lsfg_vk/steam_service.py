@@ -111,7 +111,7 @@ class SteamService(BaseService):
         if not isinstance(shortcut, dict):
             return None
         appid = shortcut.get("appid")
-        name = shortcut.get("AppName")
+        name = shortcut.get("AppName") or shortcut.get("appname")
         if not isinstance(appid, int) or appid == 0 or not isinstance(name, str) or not name:
             return None
         return {"appid": str(appid & 0xffffffff), "name": name, "nonSteam": True}
