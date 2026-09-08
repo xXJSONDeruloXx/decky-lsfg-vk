@@ -51,7 +51,7 @@
     {
       "name": "lsfg-vk-2.0.0.tar.xz",
       "url": "https://builds.lsfg-vk.dev/lsfg-vk-2.0.0.tar.xz",
-      "sha256hash": "d8378b45d378150ea9aba803a0ba855d8ce91ad9b3366ee0eb2036b06b08380c"
+      "sha256hash": "08bdbdf373a111022df87dac7aa87e3b564bb841f961552e3ca85fea12b5aa74"
     },
     {
       "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",

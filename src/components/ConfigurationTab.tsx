@@ -1,10 +1,11 @@
-import { ButtonItem, DialogButton, Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
+import { ButtonItem, DialogButton, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
 import { GameConfigurationControls } from "./GameConfigurationControls";
 import { GameConfigurationSelector } from "./GameConfigurationSelector";
+import { ProfileDetails } from "./ProfileDetails";
 
 interface ConfigurationTabProps {
   config: ConfigurationData;
@@ -105,21 +106,35 @@ export function ConfigurationTab({
     <Focusable onCancelButton={closeDetails}>
       <PanelSection>
         <PanelSectionRow>
-          <Focusable noFocusRing>
+          <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+            <Focusable noFocusRing style={{ flex: "none" }}>
             <DialogButton
               aria-label="Back to games"
               onClick={closeDetails}
-              style={{ width: "48px", minWidth: "48px", height: "24px", minHeight: "24px", padding: "0 10px" }}
+              style={{
+                width: "48px",
+                minWidth: "48px",
+                height: "24px",
+                minHeight: "24px",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <FaArrowLeft />
             </DialogButton>
-          </Focusable>
+            </Focusable>
+            <div
+              className={gamepadDialogClasses.FieldLabel}
+              style={{ flex: 1, minWidth: 0, marginLeft: "8px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+            >
+              {profileLabel}
+            </div>
+          </div>
         </PanelSectionRow>
       </PanelSection>
       <PanelSection>
-        <PanelSectionRow>
-          <Field label={profileLabel} />
-        </PanelSectionRow>
         {!selectedTarget?.configured && selectedTarget && (
           <PanelSectionRow>
             <Focusable ref={enableRef} noFocusRing>
@@ -141,9 +156,7 @@ export function ConfigurationTab({
           <ButtonItem layout="below" onClick={handleProfileAction}>Remove profile</ButtonItem>
         </PanelSectionRow>
       )}
-      <PanelSectionRow>
-        <Field focusable highlightOnFocus label="Details" description={profileDescription} />
-      </PanelSectionRow>
+      <ProfileDetails description={profileDescription} />
     </Focusable>
   );
 }

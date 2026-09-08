@@ -11,15 +11,15 @@ interface Props {
   onResetAll: () => Promise<void>;
 }
 
-const CONFIGURED_COLLAPSED_KEY = "lsfg-configured-games-collapsed-v2";
-const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed";
+const CONFIGURED_COLLAPSED_KEY = "lsfg-configured-games-collapsed-v3";
+const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed-v2";
 
 function usePersistentCollapsed(key: string) {
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(key) === "true";
+      return localStorage.getItem(key) !== "false";
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -65,9 +65,9 @@ function GameGroup({
             onClick={onToggle}
           >
             {collapsed ? (
-              <RiArrowDownSFill style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }} />
+              <RiArrowDownSFill />
             ) : (
-              <RiArrowUpSFill style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }} />
+              <RiArrowUpSFill />
             )}
           </ButtonItem>
         </div>
@@ -132,7 +132,16 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onEn
         {`
           .LSFG_GameGroupCollapseButton_Container > div > div > div > button,
           .LSFG_GameGroupCollapseButton_Container > div > div > div > div > button {
-            height: 10px !important;
+            height: 24px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .LSFG_GameGroupCollapseButton_Container svg {
+            display: block;
+            margin: 0;
           }
         `}
       </style>
