@@ -50,18 +50,21 @@ function RuntimeRow({ version, installed, busy, onAction }: RuntimeRowProps) {
 
 interface AppRowProps {
   app: FlatpakApp;
+  runtimeReady: boolean;
   busy: boolean;
   onToggle: () => void;
 }
 
-function AppRow({ app, busy, onToggle }: AppRowProps) {
+function AppRow({ app, runtimeReady, busy, onToggle }: AppRowProps) {
   const configured = app.has_filesystem_override && app.has_env_override;
   const partial = app.has_filesystem_override || app.has_env_override;
   const status = configured
-    ? t("FLATPAK_STATUS_CONFIGURED", "Configured")
+    ? runtimeReady
+      ? t("FLATPAK_STATUS_READY", "Ready")
+      : t("FLATPAK_STATUS_RUNTIME_MISSING", "Runtime missing")
     : partial
       ? t("FLATPAK_STATUS_PARTIAL", "Partial")
-      : t("FLATPAK_STATUS_NO_OVERRIDES", "No overrides");
+      : t("FLATPAK_STATUS_NOT_ENABLED", "Not enabled");
 
   return (
     <PanelSectionRow>
@@ -82,6 +85,8 @@ export function FlatpaksTab() {
   const [loading, setLoading] = useState(true);
   const [operation, setOperation] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const runtimeReady = extensionStatus?.success === true
+    && runtimeVersions.some(({ key }) => extensionStatus[key]);
 
   const load = async () => {
     setLoading(true);
@@ -180,6 +185,7 @@ export function FlatpaksTab() {
           <AppRow
             key={app.app_id}
             app={app}
+            runtimeReady={runtimeReady}
             busy={operation === `app-${app.app_id}`}
             onToggle={() => void toggleApp(app)}
           />
