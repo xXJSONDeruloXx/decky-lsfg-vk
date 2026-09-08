@@ -52,13 +52,25 @@ function GameGroup({
   return (
     <>
       <PanelSectionRow>
-        <ButtonItem
-          layout="below"
-          bottomSeparator={collapsed ? "standard" : "none"}
-          onClick={onToggle}
+        <Field label={`${title} (${games.length})`} bottomSeparator="none" />
+      </PanelSectionRow>
+      <PanelSectionRow>
+        <div
+          className="LSFG_GameGroupCollapseButton_Container"
+          style={{ marginTop: "-2px", marginBottom: "4px" }}
         >
-          {collapsed ? <RiArrowDownSFill /> : <RiArrowUpSFill />} {title} ({games.length})
-        </ButtonItem>
+          <ButtonItem
+            layout="below"
+            bottomSeparator={collapsed ? "standard" : "none"}
+            onClick={onToggle}
+          >
+            {collapsed ? (
+              <RiArrowDownSFill style={{ transform: "translate(0, -13px)", fontSize: "1.5em" }} />
+            ) : (
+              <RiArrowUpSFill style={{ transform: "translate(0, -12px)", fontSize: "1.5em" }} />
+            )}
+          </ButtonItem>
+        </div>
       </PanelSectionRow>
       {!collapsed && games.map((game) => (
         <PanelSectionRow key={game.appid}>
@@ -116,6 +128,14 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onEn
 
   return (
     <>
+      <style>
+        {`
+          .LSFG_GameGroupCollapseButton_Container > div > div > div > button,
+          .LSFG_GameGroupCollapseButton_Container > div > div > div > div > button {
+            height: 10px !important;
+          }
+        `}
+      </style>
       {targets.length === 0 && (
         <PanelSectionRow>
           <Field label="No installed games" description="Steam has not reported any eligible games" />
