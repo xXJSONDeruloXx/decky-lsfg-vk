@@ -174,13 +174,6 @@ export function GameConfigurationSelector({
           <Field label="No installed games" description="Steam has not reported any eligible games" />
         </PanelSectionRow>
       )}
-      {availableGames.length > 0 && (
-        <PanelSectionRow>
-          <ButtonItem layout="below" onClick={confirmEnableAll}>
-            Enable all available games
-          </ButtonItem>
-        </PanelSectionRow>
-      )}
       <GameGroup
         title="LSFG-VK Enabled"
         games={configuredSteamGames}
@@ -210,6 +203,13 @@ export function GameConfigurationSelector({
         onToggle={toggleAvailableNonSteam}
         onSelect={onSelect}
       />
+      {availableGames.length > 0 && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={confirmEnableAll}>
+            Enable all available games
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
       <PanelSectionRow>
         <ButtonItem
           layout="below"
