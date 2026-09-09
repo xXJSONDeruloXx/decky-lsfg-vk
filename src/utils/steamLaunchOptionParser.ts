@@ -1,6 +1,7 @@
 export interface WorkaroundState {
   dxvkFrameRate: number;
   disableGamescopeWsi: boolean;
+  disableHdr: boolean;
   disableSteamdeckMode: boolean;
   disableVkbasalt: boolean;
   enableZink: boolean;
@@ -41,8 +42,10 @@ const LEGACY_WRAPPER_TOKENS = new Set([
   "/home/deck/.local/bin/lsfg-vk-experimental",
   "~/.local/bin/mako-run",
   "/home/deck/.local/bin/mako-run",
+  "mako-run",
   "~/.local/bin/mako-launch",
   "/home/deck/.local/bin/mako-launch",
+  "mako-launch",
 ]);
 const DXVK_FRAME_RATE_KEYS: readonly DxvkFrameRateKey[] = [
   "dxvk.maxFrameRate",
@@ -53,7 +56,12 @@ const DXVK_MANAGED_KEYS = new Set(["DXVK_CONFIG", "DXVK_FRAME_RATE"]);
 const WORKAROUND_DEFINITIONS = {
   disableGamescopeWsi: {
     spec: ["ENABLE_GAMESCOPE_WSI", "0"],
-    clear: ["DISABLE_GAMESCOPE_WSI", "ENABLE_GAMESCOPE_WSI", "DXVK_HDR"],
+    clear: ["DISABLE_GAMESCOPE_WSI", "ENABLE_GAMESCOPE_WSI"],
+  },
+  disableHdr: {
+    spec: ["DXVK_HDR", "0"],
+    clear: ["DXVK_HDR"],
+    label: "Disable HDR",
   },
   disableSteamdeckMode: {
     spec: ["SteamDeck", "0"],
@@ -72,23 +80,33 @@ const WORKAROUND_DEFINITIONS = {
 } as const satisfies Record<BooleanWorkaroundField, WorkaroundDefinition>;
 const BOOLEAN_WORKAROUND_FIELDS: readonly BooleanWorkaroundField[] = [
   "disableGamescopeWsi",
+  "disableHdr",
   "disableSteamdeckMode",
   "disableVkbasalt",
   "enableZink",
 ];
 const WSI_DISABLE_KEY = "DISABLE_GAMESCOPE_WSI";
 const WSI_ENABLE_KEY = "ENABLE_GAMESCOPE_WSI";
+const WORKAROUND_ENV_KEYS = new Set(
+  BOOLEAN_WORKAROUND_FIELDS.flatMap((field) => WORKAROUND_DEFINITIONS[field].clear),
+);
 const MANAGED_ENV_KEYS = new Set([
   ...DXVK_MANAGED_KEYS,
-  ...BOOLEAN_WORKAROUND_FIELDS.flatMap((field) => WORKAROUND_DEFINITIONS[field].clear),
+  ...WORKAROUND_ENV_KEYS,
 ]);
 
-const DEFAULT_WORKAROUND_STATE: WorkaroundState = {
+const EMPTY_WORKAROUND_STATE: WorkaroundState = {
   dxvkFrameRate: 0,
   disableGamescopeWsi: false,
+  disableHdr: false,
   disableSteamdeckMode: false,
   disableVkbasalt: false,
   enableZink: false,
+};
+const DEFAULT_WORKAROUND_STATE: WorkaroundState = {
+  ...EMPTY_WORKAROUND_STATE,
+  disableGamescopeWsi: true,
+  disableHdr: true,
 };
 
 export function getDefaultWorkaroundState(): WorkaroundState {
@@ -117,8 +135,6 @@ function decodeToken(raw: string): string {
   return value;
 }
 
-// Steam stores one shell-like line. Keep each token's raw spelling beside its
-// decoded value so managed edits leave unrelated quoting and arguments alone.
 function tokenize(options: string): LaunchToken[] {
   const tokens: LaunchToken[] = [];
   let start = -1;
@@ -358,7 +374,7 @@ function readBoolean(
 export function parseWorkaroundOptions(options: string): ParsedWorkaroundOptions {
   const tokens = tokenize(options);
   const entries = effectiveEnvironmentEntries(tokens);
-  const state = getDefaultWorkaroundState();
+  const state = { ...EMPTY_WORKAROUND_STATE };
   const issues: string[] = [];
 
   for (const [key, entry] of entries) {
@@ -418,7 +434,7 @@ export function parseWorkaroundOptions(options: string): ParsedWorkaroundOptions
     state.disableGamescopeWsi = wsiSignals.some(Boolean);
   }
 
-  for (const field of ["disableSteamdeckMode", "disableVkbasalt"] as const) {
+  for (const field of ["disableHdr", "disableSteamdeckMode", "disableVkbasalt"] as const) {
     const { spec, label } = WORKAROUND_DEFINITIONS[field];
     state[field] = readBoolean(entries, spec[0], label || field, spec[1], issues);
   }
@@ -455,7 +471,7 @@ export function applyWorkaroundState(options: string, state: WorkaroundState): s
   removeLegacyWrapperFromTokens(tokens);
   rewriteDxvkFrameRate(tokens, state.dxvkFrameRate);
   const keysToClear = new Set<string>(
-    BOOLEAN_WORKAROUND_FIELDS.flatMap((field) => WORKAROUND_DEFINITIONS[field].clear),
+    WORKAROUND_ENV_KEYS,
   );
   if (state.disableVkbasalt) keysToClear.add("ENABLE_VKBASALT");
   removeAllAssignments(tokens, keysToClear);
@@ -493,6 +509,14 @@ export function applyWorkaroundChange(options: string, field: WorkaroundField, v
 export function cleanupLegacyLaunchOptions(options: string): string {
   const tokens = tokenize(options);
   removeLegacyWrapperFromTokens(tokens);
+  return serialize(tokens);
+}
+
+export function cleanupPluginLaunchOptions(options: string): string {
+  const tokens = tokenize(options);
+  removeLegacyWrapperFromTokens(tokens);
+  rewriteDxvkFrameRate(tokens, 0);
+  removeAllAssignments(tokens, WORKAROUND_ENV_KEYS);
   return serialize(tokens);
 }
 

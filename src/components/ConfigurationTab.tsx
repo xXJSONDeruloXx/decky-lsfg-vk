@@ -33,6 +33,7 @@ export function ConfigurationTab({
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
   const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "fps" | null>(null);
+  const [focusConfiguredToggle, setFocusConfiguredToggle] = useState(false);
   const enableRef = useRef<HTMLDivElement>(null);
   const promptedRunningAppId = useRef<string | null>(null);
   const closeDetails = useCallback(() => {
@@ -41,6 +42,7 @@ export function ConfigurationTab({
     setDetailAppId(null);
   }, []);
   const clearFpsFocusRequest = useCallback(() => setFocusFpsMultiplier(false), []);
+  const clearConfiguredToggleFocusRequest = useCallback(() => setFocusConfiguredToggle(false), []);
 
   useEffect(() => {
     if (!focusDetailAction) return;
@@ -77,12 +79,15 @@ export function ConfigurationTab({
           targets={targets}
           runningGame={runningGame}
           onSelect={(appid) => {
+            setFocusConfiguredToggle(false);
             setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
             onSelect(appid);
             setDetailAppId(appid);
           }}
           onEnableAll={onEnableAll}
           onResetAll={onResetAll}
+          focusConfiguredToggle={focusConfiguredToggle}
+          onConfiguredToggleFocused={clearConfiguredToggleFocusRequest}
         />
       </PanelSection>
     );
@@ -96,6 +101,7 @@ export function ConfigurationTab({
     if (selectedTarget?.configured) {
       promptedRunningAppId.current = detailAppId;
       await onReset();
+      setFocusConfiguredToggle(true);
       closeDetails();
     } else if (detailAppId && await onEnable(detailAppId)) {
       setFocusFpsMultiplier(true);

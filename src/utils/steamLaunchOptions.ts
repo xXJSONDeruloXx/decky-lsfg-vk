@@ -1,5 +1,5 @@
 // @ts-expect-error Node's built-in TypeScript loader requires explicit source extensions in tests.
-import { cleanupLegacyLaunchOptions, isLegacyWrapperToken, normalizeLaunchOptions } from "./steamLaunchOptionParser.ts";
+import { cleanupLegacyLaunchOptions, cleanupPluginLaunchOptions, isLegacyWrapperToken, normalizeLaunchOptions } from "./steamLaunchOptionParser.ts";
 
 // @ts-expect-error Node's built-in TypeScript loader requires explicit source extensions in tests.
 export * from "./steamLaunchOptionParser.ts";
@@ -198,6 +198,19 @@ export function updateSteamLaunchOptions(
 }
 
 export function cleanupSteamLaunchOptions(
+  appId: number,
+  nonSteam: boolean,
+): Promise<SteamLaunchOptionsSnapshot> {
+  return queueSteamAppOperation(appId, nonSteam, async () => {
+    const current = await readSteamLaunchOptions(appId, nonSteam);
+    const next = cleanupPluginLaunchOptions(current.options);
+    if (next === current.options) return current;
+    await setSteamLaunchOptions(appId, nonSteam, next);
+    return waitForLaunchOptions(appId, nonSteam, next);
+  });
+}
+
+export function cleanupLegacySteamLaunchOptions(
   appId: number,
   nonSteam: boolean,
 ): Promise<SteamLaunchOptionsSnapshot> {

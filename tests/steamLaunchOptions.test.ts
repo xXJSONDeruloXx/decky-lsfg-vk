@@ -4,6 +4,7 @@ import {
   applyWorkaroundChange,
   applyWorkaroundState,
   cleanupLegacyLaunchOptions,
+  cleanupPluginLaunchOptions,
   cleanupLegacyWrapper,
   getDefaultWorkaroundState,
   isLegacyWrapperToken,
@@ -17,6 +18,7 @@ test("maps the supported workarounds to current launch variables", () => {
   const options = applyWorkaroundState('gamemoderun %command% --profile "high quality"', {
     dxvkFrameRate: 30,
     disableGamescopeWsi: true,
+    disableHdr: true,
     disableSteamdeckMode: true,
     disableVkbasalt: true,
     enableZink: true,
@@ -24,12 +26,13 @@ test("maps the supported workarounds to current launch variables", () => {
 
   assert.equal(
     options,
-    'ENABLE_GAMESCOPE_WSI=0 SteamDeck=0 DISABLE_VKBASALT=1 MESA_LOADER_DRIVER_OVERRIDE=zink DXVK_CONFIG="dxvk.maxFrameRate = 30" gamemoderun %command% --profile "high quality"',
+    'ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 SteamDeck=0 DISABLE_VKBASALT=1 MESA_LOADER_DRIVER_OVERRIDE=zink DXVK_CONFIG="dxvk.maxFrameRate = 30" gamemoderun %command% --profile "high quality"',
   );
   assert.deepEqual(parseWorkaroundOptions(options), {
     state: {
       dxvkFrameRate: 30,
       disableGamescopeWsi: true,
+      disableHdr: true,
       disableSteamdeckMode: true,
       disableVkbasalt: true,
       enableZink: true,
@@ -45,10 +48,24 @@ test("uses SteamDeck=0 before %command% without a wrapper", () => {
   );
 });
 
-test("keeps WSI disable opt-in and does not add HDR assignments", () => {
+test("defaults new profiles to disable Gamescope WSI and HDR", () => {
   const defaults = getDefaultWorkaroundState();
-  assert.equal(applyWorkaroundState("%command%", defaults), "");
+  assert.equal(defaults.disableGamescopeWsi, true);
+  assert.equal(defaults.disableHdr, true);
+  assert.equal(
+    applyWorkaroundState("%command%", defaults),
+    "ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%",
+  );
   assert.equal(parseWorkaroundOptions("%command%").state.disableGamescopeWsi, false);
+  assert.equal(parseWorkaroundOptions("%command%").state.disableHdr, false);
+  assert.equal(
+    parseWorkaroundOptions(applyWorkaroundState("%command%", defaults)).state.disableGamescopeWsi,
+    true,
+  );
+  assert.equal(
+    parseWorkaroundOptions(applyWorkaroundState("%command%", defaults)).state.disableHdr,
+    true,
+  );
   assert.equal(
     applyWorkaroundChange("%command%", "disableGamescopeWsi", true),
     "ENABLE_GAMESCOPE_WSI=0 %command%",
@@ -58,20 +75,33 @@ test("keeps WSI disable opt-in and does not add HDR assignments", () => {
     "",
   );
 
-  const legacy = parseWorkaroundOptions("ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%");
-  assert.equal(legacy.state.disableGamescopeWsi, true);
-  assert.deepEqual(legacy.issues, []);
-  assert.equal(
-    applyWorkaroundChange("ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%", "disableGamescopeWsi", false),
-    "",
-  );
-
   const invalid = parseWorkaroundOptions("ENABLE_GAMESCOPE_WSI=maybe %command%");
   assert.equal(invalid.state.disableGamescopeWsi, false);
   assert.equal(invalid.issues.length, 1);
   const conflicting = parseWorkaroundOptions("DISABLE_GAMESCOPE_WSI=1 ENABLE_GAMESCOPE_WSI=1 %command%");
   assert.equal(conflicting.state.disableGamescopeWsi, true);
   assert.match(conflicting.issues.join(" "), /conflicting/);
+});
+
+test("manages DXVK HDR independently from Gamescope WSI", () => {
+  assert.equal(
+    applyWorkaroundChange("%command%", "disableHdr", true),
+    "DXVK_HDR=0 %command%",
+  );
+  assert.equal(parseWorkaroundOptions("DXVK_HDR=0 %command%").state.disableHdr, true);
+  assert.equal(parseWorkaroundOptions("DXVK_HDR=1 %command%").state.disableHdr, false);
+  assert.equal(
+    applyWorkaroundChange("DXVK_HDR=0 %command%", "disableHdr", false),
+    "",
+  );
+  assert.equal(
+    applyWorkaroundChange("DXVK_HDR=0 %command%", "disableGamescopeWsi", true),
+    "ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%",
+  );
+
+  const invalid = parseWorkaroundOptions("DXVK_HDR=maybe %command%");
+  assert.equal(invalid.state.disableHdr, false);
+  assert.match(invalid.issues.join(" "), /Disable HDR has an unsupported value/);
 });
 
 test("preserves unrelated prefixes, quoted tokens, suffix arguments, and dropped variables", () => {
@@ -203,6 +233,8 @@ test("cleans only the known legacy wrapper and preserves launch options", () => 
     'FOO=bar %command% --arg "~/lsfg"',
   );
   assert.equal(cleanupLegacyWrapper("/home/deck/lsfg %command%"), "");
+  assert.equal(cleanupLegacyWrapper("mako-run %command%"), "");
+  assert.equal(cleanupLegacyWrapper("mako-launch %command%"), "");
   assert.equal(
     cleanupLegacyWrapper("DXVK_FRAME_RATE=30 LSFG_PROCESS=decky-lsfg-vk %command%"),
     "DXVK_FRAME_RATE=30 LSFG_PROCESS=decky-lsfg-vk %command%",
@@ -212,6 +244,25 @@ test("cleans only the known legacy wrapper and preserves launch options", () => 
     "LSFG_PROCESS=decky-lsfg-vk %command%",
   );
   assert.equal(isLegacyWrapperToken("/home/kurt/lsfg"), false);
+});
+
+test("removes plugin-managed launch options when a profile is removed", () => {
+  assert.equal(
+    cleanupPluginLaunchOptions(
+      'FOO="keep this" ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 SteamDeck=0 DISABLE_VKBASALT=1 MESA_LOADER_DRIVER_OVERRIDE=zink DXVK_CONFIG="dxgi.syncInterval = 0; dxvk.maxFrameRate = 30" ~/lsfg %command% --windowed',
+    ),
+    'DXVK_CONFIG="dxgi.syncInterval = 0" FOO="keep this" %command% --windowed',
+  );
+  assert.equal(
+    cleanupPluginLaunchOptions(
+      'PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG="alpha=0.01" LSFG_PROCESS=decky-lsfg-vk %command%',
+    ),
+    'PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG="alpha=0.01" LSFG_PROCESS=decky-lsfg-vk %command%',
+  );
+  assert.equal(
+    cleanupPluginLaunchOptions('DXVK_CONFIG="dxvk.maxFrameRate = 30" %command%'),
+    "",
+  );
 });
 
 test("canonicalizes a bare command token without removing real arguments", () => {

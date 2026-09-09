@@ -1,5 +1,5 @@
 import { ButtonItem, ConfirmModal, Field, PanelSectionRow, showModal } from "@decky/ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { GameTarget } from "../hooks/useGameConfiguration";
 
@@ -9,6 +9,8 @@ interface Props {
   onSelect: (appid: string) => void;
   onEnableAll: () => Promise<void>;
   onResetAll: () => Promise<void>;
+  focusConfiguredToggle?: boolean;
+  onConfiguredToggleFocused?: () => void;
 }
 
 const CONFIGURED_COLLAPSED_KEY = "lsfg-configured-games-collapsed-v3";
@@ -40,12 +42,14 @@ function GameGroup({
   collapsed,
   onToggle,
   onSelect,
+  toggleRef,
 }: {
   title: string;
   games: GameTarget[];
   collapsed: boolean;
   onToggle: () => void;
   onSelect: (appid: string) => void;
+  toggleRef?: RefObject<HTMLDivElement>;
 }) {
   if (games.length === 0) return null;
 
@@ -56,6 +60,7 @@ function GameGroup({
       </PanelSectionRow>
       <PanelSectionRow>
         <div
+          ref={toggleRef}
           className="LSFG_GameGroupCollapseButton_Container"
           style={{ marginTop: "-2px", marginBottom: "4px" }}
         >
@@ -86,7 +91,15 @@ function GameGroup({
   );
 }
 
-export function GameConfigurationSelector({ targets, runningGame, onSelect, onEnableAll, onResetAll }: Props) {
+export function GameConfigurationSelector({
+  targets,
+  runningGame,
+  onSelect,
+  onEnableAll,
+  onResetAll,
+  focusConfiguredToggle = false,
+  onConfiguredToggleFocused,
+}: Props) {
   const sortGames = (games: GameTarget[]) => [...games].sort((a, b) => {
     if (a.appid === runningGame?.appid) return -1;
     if (b.appid === runningGame?.appid) return 1;
@@ -102,6 +115,17 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onEn
   const [configuredNonSteamCollapsed, toggleConfiguredNonSteam] = usePersistentCollapsed(`${CONFIGURED_COLLAPSED_KEY}-non-steam`);
   const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(AVAILABLE_COLLAPSED_KEY);
   const [availableNonSteamCollapsed, toggleAvailableNonSteam] = usePersistentCollapsed(`${AVAILABLE_COLLAPSED_KEY}-non-steam`);
+  const configuredToggleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!focusConfiguredToggle) return;
+    const frame = requestAnimationFrame(() => {
+      configuredToggleRef.current?.querySelector<HTMLElement>('[role="button"], button')?.focus();
+      onConfiguredToggleFocused?.();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [configuredGames.length, focusConfiguredToggle, onConfiguredToggleFocused]);
+
   const confirmResetAll = () => {
     showModal(
       <ConfirmModal
@@ -163,6 +187,7 @@ export function GameConfigurationSelector({ targets, runningGame, onSelect, onEn
         collapsed={configuredCollapsed}
         onToggle={toggleConfigured}
         onSelect={onSelect}
+        toggleRef={configuredToggleRef}
       />
       <GameGroup
         title="LSFG-VK Enabled (Non-Steam)"

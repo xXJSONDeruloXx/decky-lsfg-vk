@@ -24,12 +24,12 @@ export function ProfileDetails({ description }: ProfileDetailsProps) {
           bottomSeparator={expanded ? "none" : "standard"}
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? <RiArrowUpSFill /> : <RiArrowDownSFill />} Details
+          {expanded ? <RiArrowUpSFill /> : <RiArrowDownSFill />} Game Details
         </ButtonItem>
       </PanelSectionRow>
       {expanded && (
         <PanelSectionRow>
-          <Field label="Details" description={description} />
+          <Field label="Game Details" description={description} />
         </PanelSectionRow>
         )}
     </Focusable>

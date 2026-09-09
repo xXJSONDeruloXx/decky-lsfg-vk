@@ -1,5 +1,6 @@
 import os
 import pwd
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,6 +20,10 @@ from .types import BaseResponse
 class FlatpakService(BaseService):
     EXTENSION_ID = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
     SUPPORTED_RUNTIMES = ("23.08", "24.08", "25.08")
+    COMPATIBILITY_ENV = (
+        ("ENABLE_GAMESCOPE_WSI", "0"),
+        ("DXVK_HDR", "0"),
+    )
 
     def __init__(self, logger=None):
         super().__init__(logger)
@@ -170,7 +175,9 @@ class FlatpakService(BaseService):
             capture_output=True,
             text=True,
         )
-        return result.stdout if result.returncode == 0 else ""
+        if result.returncode != 0:
+            raise OSError(result.stderr.strip() or "Failed to read Flatpak overrides")
+        return result.stdout
 
     def _dll_directory(self) -> Path:
         if self.config_file_path.exists():
@@ -199,15 +206,99 @@ class FlatpakService(BaseService):
             "legacy_script": str(self.legacy_script_path),
         }
 
+    def _override_file_path(self, app_id: str) -> Path:
+        if not app_id or Path(app_id).name != app_id or app_id in {".", ".."}:
+            raise ValueError("Invalid Flatpak application ID")
+        return self.user_home / ".local/share/flatpak/overrides" / app_id
+
+    @staticmethod
+    def _filesystem_entry_path(entry: str) -> str:
+        value = entry.strip()
+        if value.startswith("!"):
+            value = value[1:]
+        for suffix in (":ro", ":rw", ":create"):
+            if value.endswith(suffix):
+                return value[: -len(suffix)]
+        return value
+
+    @staticmethod
+    def _override_value(content: str, key: str) -> str:
+        match = re.search(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=([^\r\n]*)", content)
+        return match.group(1).strip() if match else ""
+
+    def _clean_override_file(self, app_id: str, paths: Dict[str, str]) -> bool:
+        path = self._override_file_path(app_id)
+        if not path.is_file():
+            return False
+
+        owner = path.stat().st_uid, path.stat().st_gid
+        original = path.read_text(encoding="utf-8")
+        managed_paths = {
+            paths[name]
+            for name in ("config_dir", "dll_dir", "legacy_home", "legacy_dll", "legacy_script")
+        }
+        managed_env = {
+            "LSFGVK_CONFIG",
+            "LSFG_CONFIG",
+            *(name for name, _ in self.COMPATIBILITY_ENV),
+        }
+        def clean_list(match):
+            key, value, newline = match.groups()
+            is_filesystem = key.split("=", 1)[0].strip() == "filesystems"
+            keep = [item for item in value.split(";") if item and (
+                self._filesystem_entry_path(item) not in managed_paths
+                if is_filesystem else item.strip() not in managed_env
+            )]
+            return f"{key}{';'.join(keep)}{newline}" if keep else ""
+
+        updated = re.sub(
+            r"(?m)^([ \t]*(?:filesystems|unset-environment)[ \t]*=)([^\r\n]*)(\r?\n|$)",
+            clean_list,
+            original,
+        )
+        env_pattern = "|".join(re.escape(name) for name in managed_env)
+        updated = re.sub(
+            rf"(?m)^[ \t]*(?:{env_pattern})[ \t]*=[^\r\n]*(?:\r?\n|$)",
+            "",
+            updated,
+        )
+        if updated != original:
+            self._write_file(path, updated)
+            if os.geteuid() == 0:
+                os.chown(path, *owner)
+        return updated != original
+
     def _check_app_override_status(self, app_id: str) -> Dict[str, bool]:
         output = self._override_output(app_id)
         paths = self._override_paths()
+        filesystem_entries = self._override_value(output, "filesystems").split(";")
+        positive_filesystems = {
+            self._filesystem_entry_path(entry)
+            for entry in filesystem_entries
+            if not entry.strip().startswith("!")
+        }
+        blocked_filesystems = {
+            self._filesystem_entry_path(entry)
+            for entry in filesystem_entries
+            if entry.strip().startswith("!")
+        }
+        unset_environment = set(
+            item.strip()
+            for item in self._override_value(output, "unset-environment").split(";")
+            if item.strip()
+        )
         return {
-            "filesystem": (
-                paths["config_dir"] in output
-                and paths["dll_dir"] in output
+            "filesystem": all(
+                path in positive_filesystems and path not in blocked_filesystems
+                for path in (paths["config_dir"], paths["dll_dir"])
             ),
-            "env": f"LSFGVK_CONFIG={paths['config_file']}" in output,
+            "env": all(
+                self._override_value(output, name) == value and name not in unset_environment
+                for name, value in (
+                    ("LSFGVK_CONFIG", paths["config_file"]),
+                    *self.COMPATIBILITY_ENV,
+                )
+            ),
         }
 
     def get_flatpak_apps(self) -> Dict[str, Any]:
@@ -253,6 +344,7 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             paths = self._override_paths()
+            self._clean_override_file(app_id, paths)
             result = self._run_flatpak_command(
                 [
                     "override",
@@ -260,12 +352,7 @@ class FlatpakService(BaseService):
                     f"--filesystem={paths['config_dir']}:rw",
                     f"--filesystem={paths['dll_dir']}:ro",
                     f"--env=LSFGVK_CONFIG={paths['config_file']}",
-                    # Remove permissions/env from the pre-v2 plugin when an
-                    # existing app is explicitly migrated or reconfigured.
-                    f"--nofilesystem={paths['legacy_home']}",
-                    f"--nofilesystem={paths['legacy_dll']}",
-                    f"--nofilesystem={paths['legacy_script']}",
-                    "--unset-env=LSFG_CONFIG",
+                    *(f"--env={name}={value}" for name, value in self.COMPATIBILITY_ENV),
                     app_id,
                 ],
                 capture_output=True,
@@ -273,6 +360,9 @@ class FlatpakService(BaseService):
             )
             if result.returncode != 0:
                 raise OSError(result.stderr.strip() or "Failed to set Flatpak overrides")
+            status = self._check_app_override_status(app_id)
+            if not status["filesystem"] or not status["env"]:
+                raise RuntimeError("Flatpak overrides could not be verified after setting")
             return self._success_response(
                 BaseResponse,
                 f"lsfg-vk overrides set for {app_id}",
@@ -292,24 +382,10 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             paths = self._override_paths()
-            result = self._run_flatpak_command(
-                [
-                    "override",
-                    "--user",
-                    f"--nofilesystem={paths['config_dir']}",
-                    f"--nofilesystem={paths['dll_dir']}",
-                    f"--nofilesystem={paths['legacy_home']}",
-                    f"--nofilesystem={paths['legacy_dll']}",
-                    f"--nofilesystem={paths['legacy_script']}",
-                    "--unset-env=LSFGVK_CONFIG",
-                    "--unset-env=LSFG_CONFIG",
-                    app_id,
-                ],
-                capture_output=True,
-                text=True,
-            )
-            if result.returncode != 0:
-                raise OSError(result.stderr.strip() or "Failed to remove Flatpak overrides")
+            self._clean_override_file(app_id, paths)
+            status = self._check_app_override_status(app_id)
+            if status["filesystem"] or status["env"]:
+                raise RuntimeError("Flatpak overrides could not be verified after removal")
             return self._success_response(
                 BaseResponse,
                 f"lsfg-vk overrides removed for {app_id}",

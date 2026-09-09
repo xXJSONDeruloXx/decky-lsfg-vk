@@ -3,7 +3,7 @@ import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
 import { getGameConfigs, getInstalledGames, updateGameConfig, resetGameConfig, resetAllGameConfigs, type GameConfigEntry, type GlobalConfig, type InstalledGame } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
-import { cleanupSteamLaunchOptions } from "../utils/steamLaunchOptions";
+import { applyWorkaroundState, cleanupLegacySteamLaunchOptions, cleanupSteamLaunchOptions, getDefaultWorkaroundState, updateSteamLaunchOptions } from "../utils/steamLaunchOptions";
 import { showErrorToast } from "../utils/toastUtils";
 
 export interface GameTarget extends InstalledGame { configured: boolean; }
@@ -98,10 +98,36 @@ export function useGameConfiguration() {
   const cleanupTargetLaunchOptions = useCallback(async (target: GameTarget): Promise<boolean> => {
     if (!installedGames.some((game) => game.appid === target.appid)) return true;
     try {
-      await cleanupSteamLaunchOptions(Number(target.appid), target.nonSteam);
+      await cleanupLegacySteamLaunchOptions(Number(target.appid), target.nonSteam);
       return true;
     } catch (error) {
       showErrorToast("Could not update Steam launch options", error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }, [installedGames]);
+
+  const removeTargetLaunchOptions = useCallback(async (target: GameTarget): Promise<boolean> => {
+    if (!installedGames.some((game) => game.appid === target.appid)) return true;
+    try {
+      await cleanupSteamLaunchOptions(Number(target.appid), target.nonSteam);
+      return true;
+    } catch (error) {
+      showErrorToast("Could not clean up Steam launch options", error instanceof Error ? error.message : String(error));
+      return false;
+    }
+  }, [installedGames]);
+
+  const initializeTargetLaunchOptions = useCallback(async (target: GameTarget): Promise<boolean> => {
+    if (!installedGames.some((game) => game.appid === target.appid)) return true;
+    try {
+      await updateSteamLaunchOptions(
+        Number(target.appid),
+        target.nonSteam,
+        (options) => applyWorkaroundState(options, getDefaultWorkaroundState()),
+      );
+      return true;
+    } catch (error) {
+      showErrorToast("Could not initialize Steam launch options", error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [installedGames]);
@@ -117,16 +143,16 @@ export function useGameConfiguration() {
   const enable = useCallback(async (appid: string) => {
     const target = targets.find((item) => item.appid === appid);
     if (!target?.name) return false;
-    if (!(await cleanupTargetLaunchOptions(target))) return false;
+    if (!(await initializeTargetLaunchOptions(target))) return false;
     const result = await updateGameConfig(appid, target.name, template);
     if (result.success) await load();
     return result.success;
-  }, [cleanupTargetLaunchOptions, load, targets, template]);
+  }, [initializeTargetLaunchOptions, load, targets, template]);
   const enableAll = useCallback(async (): Promise<void> => {
     const available = targets.filter((target) => !target.configured && target.name);
     if (available.length === 0) return;
     for (const target of available) {
-      if (!(await cleanupTargetLaunchOptions(target))) return;
+      if (!(await initializeTargetLaunchOptions(target))) return;
       const result = await updateGameConfig(target.appid, target.name, template);
       if (!result.success) {
         showErrorToast("Could not enable all games", result.error || "A game profile could not be created");
@@ -134,12 +160,12 @@ export function useGameConfiguration() {
       }
     }
     await load();
-  }, [cleanupTargetLaunchOptions, load, targets, template]);
+  }, [initializeTargetLaunchOptions, load, targets, template]);
 
   const resetSelected = useCallback(async () => {
     if (selectedAppId) {
       const selectedTarget = targets.find((target) => target.appid === selectedAppId);
-      if (selectedTarget && !(await cleanupTargetLaunchOptions(selectedTarget))) return;
+      if (selectedTarget && !(await removeTargetLaunchOptions(selectedTarget))) return;
       const result = await resetGameConfig(selectedAppId);
       if (result.success) {
         setRunningGame((current) => current?.appid === selectedAppId ? { ...current, configured: false } : current);
@@ -147,10 +173,10 @@ export function useGameConfiguration() {
         await load();
       }
     }
-  }, [cleanupTargetLaunchOptions, load, selectedAppId, targets]);
+  }, [load, removeTargetLaunchOptions, selectedAppId, targets]);
   const resetAll = useCallback(async () => {
     for (const target of targets.filter((item) => item.configured)) {
-      if (!(await cleanupTargetLaunchOptions(target))) return;
+      if (!(await removeTargetLaunchOptions(target))) return;
     }
     const result = await resetAllGameConfigs();
     if (result.success) {
@@ -158,7 +184,7 @@ export function useGameConfiguration() {
       setSelectedAppId("");
       await load();
     }
-  }, [cleanupTargetLaunchOptions, load, targets]);
+  }, [load, removeTargetLaunchOptions, targets]);
 
   return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, resetSelected, resetAll, reload: load };
 }

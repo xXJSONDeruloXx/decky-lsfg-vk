@@ -10,7 +10,7 @@ interface WorkaroundsSectionProps {
   nonSteam: boolean;
 }
 
-const WORKAROUNDS_COLLAPSED_KEY = "lsfg-workarounds-collapsed";
+const WORKAROUNDS_COLLAPSED_KEY = "lsfg-workarounds-collapsed-v2";
 type ToggleWorkaroundField = Exclude<WorkaroundField, "dxvkFrameRate">;
 
 const TOGGLE_ROWS: readonly {
@@ -21,18 +21,25 @@ const TOGGLE_ROWS: readonly {
   description: string;
 }[] = [
   {
-    field: "disableGamescopeWsi",
-    labelKey: "CONFIG_DISABLE_GAMESCOPE_WSI",
-    label: "Disable Gamescope WSI",
-    descriptionKey: "CONFIG_DISABLE_GAMESCOPE_WSI_DESC",
-    description: "Adds ENABLE_GAMESCOPE_WSI=0 without changing HDR. Requires game restart to apply.",
-  },
-  {
     field: "disableSteamdeckMode",
     labelKey: "CONFIG_DISABLE_STEAMDECK_MODE",
     label: "Disable Steam Deck Mode",
     descriptionKey: "CONFIG_DISABLE_STEAMDECK_MODE_DESC",
     description: "Disables a game-specific Steam Deck compatibility switch. Requires game restart to apply.",
+  },
+  {
+    field: "disableGamescopeWsi",
+    labelKey: "CONFIG_DISABLE_GAMESCOPE_WSI",
+    label: "Disable Gamescope WSI",
+    descriptionKey: "CONFIG_DISABLE_GAMESCOPE_WSI_DESC",
+    description: "Adds ENABLE_GAMESCOPE_WSI=0. Requires game restart to apply.",
+  },
+  {
+    field: "disableHdr",
+    labelKey: "CONFIG_DISABLE_HDR",
+    label: "Disable HDR",
+    descriptionKey: "CONFIG_DISABLE_HDR_DESC",
+    description: "Prevents DXVK from exposing HDR to the game. Requires game restart to apply.",
   },
   {
     field: "disableVkbasalt",
