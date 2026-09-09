@@ -17,6 +17,7 @@ interface SteamAppDetails {
   strLaunchOptions?: string;
   strShortcutLaunchOptions?: string;
   strShortcutExe?: string;
+  strShortcutStartDir?: string;
 }
 
 interface SteamAppDetailsRegistration {

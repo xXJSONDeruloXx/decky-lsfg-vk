@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
-import { getGameConfigs, getInstalledGames, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
+import { ensureFlatpakSupport, getGameConfigs, getInstalledGames, getWorkaroundState, removeWorkaroundState, repairFlatpakSupport, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { cleanupLegacySteamLaunchOptions, getDefaultWrapperPath, hasWrapperLaunchIntegration, installWrapperIntegration, isLegacyWrapperToken, readSteamLaunchOptions, removeWrapperIntegration } from "../utils/steamLaunchOptions";
 import { showErrorToast } from "../utils/toastUtils";
@@ -19,7 +19,12 @@ async function getSteamShortcuts(): Promise<InstalledGame[]> {
       const appid = Number(shortcut?.appid);
       const name = shortcut?.data?.strAppName;
       if (!Number.isInteger(appid) || appid === 0 || typeof name !== "string" || !name) return [];
-      return [{ appid: String(appid >>> 0), name, nonSteam: true }];
+      return [{
+        appid: String(appid >>> 0),
+        name,
+        nonSteam: true,
+        transport: { kind: "host" },
+      }];
     });
   } catch {
     return [];
@@ -28,7 +33,10 @@ async function getSteamShortcuts(): Promise<InstalledGame[]> {
 
 function mergeInstalledGames(backendGames: InstalledGame[], shortcutGames: InstalledGame[]) {
   const games = new Map(backendGames.map((game) => [game.appid, game]));
-  for (const game of shortcutGames) games.set(game.appid, game);
+  for (const game of shortcutGames) {
+    const existing = games.get(game.appid);
+    games.set(game.appid, existing ? { ...existing, name: game.name, nonSteam: true } : game);
+  }
   return Array.from(games.values());
 }
 
@@ -82,7 +90,7 @@ export function useGameConfiguration() {
       const name = app.display_name || installed?.name;
       if (!name) return setRunningGame(null);
       setRunningGame((current) => current?.appid === appid ? current : {
-        ...(installed || { appid, name, nonSteam: false }),
+        ...(installed || { appid, name, nonSteam: false, transport: { kind: "host" } }),
         name,
         configured: games.some((game) => game.appid === appid),
       });
@@ -101,12 +109,25 @@ export function useGameConfiguration() {
 
   const targets = useMemo<GameTarget[]>(() => {
     const configured = installedGames.map((game) => ({ ...game, configured: games.some((item) => item.appid === game.appid) }));
-    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: game.profile, nonSteam: false, configured: true });
+    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: game.profile, nonSteam: false, transport: { kind: "host" }, configured: true });
     if (runningGame && !configured.some((game) => game.appid === runningGame.appid)) configured.unshift(runningGame);
     return configured;
   }, [games, installedGames, runningGame]);
   const template = useMemo(() => ({ ...getDefaults(), ...globalConfig }), [globalConfig]);
   const config = games.find((game) => game.appid === selectedAppId)?.config || template;
+
+  const ensureTargetFlatpakSupport = useCallback(async (target: GameTarget): Promise<boolean> => {
+    if (target.transport.kind !== "flatpak") return true;
+    const result = await ensureFlatpakSupport(target.transport.flatpakAppId);
+    if (!result.success || result.support_status !== "ready") {
+      showErrorToast(
+        "Flatpak support unavailable",
+        result.error || result.message || "The required Flatpak runtime extension is not ready",
+      );
+      return false;
+    }
+    return true;
+  }, []);
 
   const ensureTargetWorkarounds = useCallback(async (target: GameTarget): Promise<boolean> => {
     if (!installedGames.some((game) => game.appid === target.appid)) return true;
@@ -119,6 +140,7 @@ export function useGameConfiguration() {
       const oldState = existing.state;
       const oldShortcutExe = existing.shortcut_exe || undefined;
       const oldCommandTokenAdded = existing.command_token_added === true;
+      const oldTransport = existing.transport || target.transport;
       if (target.nonSteam && oldState && current.target === wrapperPath && !oldShortcutExe) {
         throw new Error("Managed shortcut Target has no saved original executable");
       }
@@ -138,6 +160,7 @@ export function useGameConfiguration() {
         state,
         originalExecutable || null,
         oldCommandTokenAdded,
+        target.transport,
       );
       if (!initialStateResult.success) throw new Error(initialStateResult.error || "Could not create workaround state");
 
@@ -149,6 +172,7 @@ export function useGameConfiguration() {
           state,
           target.nonSteam ? (integration.originalExecutable || originalExecutable || null) : null,
           integration.commandTokenAdded,
+          target.transport,
         );
         if (!finalStateResult.success) throw new Error(finalStateResult.error || "Could not finalize workaround state");
         return true;
@@ -170,7 +194,13 @@ export function useGameConfiguration() {
         }
         if (rollbackSucceeded) {
           const restored = oldState
-            ? await setWorkaroundState(target.appid, oldState, oldShortcutExe || null, oldCommandTokenAdded)
+            ? await setWorkaroundState(
+              target.appid,
+              oldState,
+              oldShortcutExe || null,
+              oldCommandTokenAdded,
+              oldTransport,
+            )
             : await removeWorkaroundState(target.appid);
           if (!restored.success) throw new Error(restored.error || "Could not roll back workaround state");
         }
@@ -227,30 +257,30 @@ export function useGameConfiguration() {
   const enable = useCallback(async (appid: string) => {
     const target = targets.find((item) => item.appid === appid);
     if (!target?.name) return false;
+    if (!(await ensureTargetFlatpakSupport(target))) return false;
     if (!(await ensureTargetWorkarounds(target))) return false;
     const result = await updateGameConfig(appid, target.name, template);
     if (result.success) await load();
     else await removeTargetWorkarounds(target);
     return result.success;
-  }, [ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
-  const enableAll = useCallback(async (): Promise<void> => {
-    const available = targets.filter((target) => !target.configured && target.name);
-    if (available.length === 0) return;
-    for (const target of available) {
-      if (!(await ensureTargetWorkarounds(target))) return;
-      const result = await updateGameConfig(target.appid, target.name, template);
-      if (!result.success) {
-        showErrorToast("Could not enable all games", result.error || "A game profile could not be created");
-        await removeTargetWorkarounds(target);
-        return;
-      }
-    }
-    await load();
-  }, [ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
+  }, [ensureTargetFlatpakSupport, ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
   const repair = useCallback(async (appid: string): Promise<boolean> => {
     const target = targets.find((item) => item.appid === appid);
-    return target ? ensureTargetWorkarounds(target) : false;
-  }, [ensureTargetWorkarounds, targets]);
+    if (!target) return false;
+    if (target.transport.kind === "flatpak") {
+      const support = await repairFlatpakSupport(target.transport.flatpakAppId);
+      if (!support.success || support.support_status !== "ready") {
+        showErrorToast(
+          "Flatpak support unavailable",
+          support.error || support.message || "The required Flatpak runtime extension is not ready",
+        );
+        return false;
+      }
+    }
+    const success = await ensureTargetWorkarounds(target);
+    if (success) await load();
+    return success;
+  }, [ensureTargetWorkarounds, load, targets]);
 
   const resetSelected = useCallback(async () => {
     if (selectedAppId) {
@@ -276,5 +306,5 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, targets]);
 
-  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, repair, resetSelected, resetAll, reload: load };
+  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, repair, resetSelected, resetAll, reload: load };
 }

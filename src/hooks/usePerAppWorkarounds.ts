@@ -3,6 +3,7 @@ import {
   getWorkaroundState,
   removeWorkaroundState,
   setWorkaroundState,
+  type TargetTransport,
   type WorkaroundState,
 } from "../api/lsfgApi";
 import {
@@ -45,6 +46,7 @@ export interface WorkaroundSnapshot {
   integrationInstalled: boolean;
   commandTokenAdded: boolean;
   shortcutExe?: string | null;
+  transport: TargetTransport;
 }
 
 interface PerAppWorkarounds {
@@ -85,12 +87,14 @@ function makeSnapshot(
     integrationInstalled: integrationIsInstalled(steam, nonSteam, wrapperPath),
     commandTokenAdded: result.command_token_added === true,
     shortcutExe: result.shortcut_exe,
+    transport: result.transport || { kind: "host" },
   };
 }
 
 async function adoptWorkaroundState(
   appId: string,
   nonSteam: boolean,
+  transport: TargetTransport,
   steam: SteamLaunchOptionsSnapshot,
   wrapperPath: string,
 ): Promise<WorkaroundSnapshot> {
@@ -98,7 +102,13 @@ async function adoptWorkaroundState(
     throw new Error("Shortcut Target is a wrapper but its original Target is unknown");
   }
   const originalExecutable = nonSteam ? steam.target : null;
-  const initial = await setWorkaroundState(appId, DEFAULT_WORKAROUND_STATE, originalExecutable, false);
+  const initial = await setWorkaroundState(
+    appId,
+    DEFAULT_WORKAROUND_STATE,
+    originalExecutable,
+    false,
+    transport,
+  );
   if (!initial.success) throw new Error(initial.error || "Could not create workaround state");
   let integration: Awaited<ReturnType<typeof installWrapperIntegration>> | null = null;
   try {
@@ -112,6 +122,7 @@ async function adoptWorkaroundState(
       DEFAULT_WORKAROUND_STATE,
       nonSteam ? (integration.originalExecutable || originalExecutable) : null,
       integration.commandTokenAdded,
+      transport,
     );
     if (!finalized.success) throw new Error(finalized.error || "Could not finalize workaround state");
     return makeSnapshot(integration.snapshot, finalized, nonSteam);
@@ -139,7 +150,11 @@ async function adoptWorkaroundState(
   }
 }
 
-export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWorkarounds {
+export function usePerAppWorkarounds(
+  appId: string,
+  nonSteam: boolean,
+  transport: TargetTransport = { kind: "host" },
+): PerAppWorkarounds {
   const [status, setStatus] = useState<WorkaroundLoadStatus>("loading");
   const [snapshot, setSnapshot] = useState<WorkaroundSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,12 +171,13 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
       return adoptWorkaroundState(
         appId,
         nonSteam,
+        transport,
         steam,
         result.wrapper_path || getDefaultWrapperPath(),
       );
     }
     return makeSnapshot(steam, result, nonSteam);
-  }, [appId, nonSteam, numericAppId]);
+  }, [appId, nonSteam, numericAppId, transport]);
 
   const applySnapshot = useCallback((next: WorkaroundSnapshot) => {
     setSnapshot(next);
@@ -236,6 +252,7 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
         nextState,
         current.shortcutExe ?? null,
         current.commandTokenAdded,
+        current.transport,
       );
       if (!result.success || !result.state) throw new Error(result.error || "Could not save workaround state");
       applySnapshot({
@@ -245,6 +262,7 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
         wrapperOwned: result.wrapper_owned === true,
         shortcutExe: result.shortcut_exe,
         commandTokenAdded: result.command_token_added === true,
+        transport: result.transport || current.transport,
       });
       return true;
     } catch (updateError) {

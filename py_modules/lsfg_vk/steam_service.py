@@ -1,9 +1,50 @@
 import re
+import shlex
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from .base_service import BaseService
 from .constants import STEAM_LOSSLESS_SCALING_APP_ID, STEAM_LOSSLESS_SCALING_BRANCH
+
+
+_FLATPAK_APP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+$")
+
+
+def _split_command(value: Optional[str]) -> Optional[list[str]]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    try:
+        return shlex.split(value, posix=True)
+    except ValueError:
+        return None
+
+
+def classify_shortcut_transport(
+    executable: Optional[str],
+    launch_options: Optional[str] = None,
+) -> Dict[str, object]:
+    """Classify only direct Flatpak invocations; leave shell launchers on host."""
+    executable_tokens = _split_command(executable)
+    option_tokens = _split_command(launch_options)
+    if executable_tokens is None or option_tokens is None or not executable_tokens:
+        return {"kind": "host"}
+
+    if executable_tokens[0] != "/usr/bin/flatpak":
+        return {"kind": "host"}
+
+    arguments = [*executable_tokens[1:], *option_tokens]
+    if not arguments or arguments[0] != "run":
+        return {"kind": "host"}
+
+    for argument in arguments[1:]:
+        if argument == "--":
+            continue
+        if argument.startswith("-"):
+            continue
+        if _FLATPAK_APP_ID.fullmatch(argument):
+            return {"kind": "flatpak", "flatpakAppId": argument}
+        return {"kind": "host"}
+    return {"kind": "host"}
 
 
 class SteamService(BaseService):
@@ -114,7 +155,43 @@ class SteamService(BaseService):
         name = shortcut.get("AppName") or shortcut.get("appname")
         if not isinstance(appid, int) or appid == 0 or not isinstance(name, str) or not name:
             return None
-        return {"appid": str(appid & 0xffffffff), "name": name, "nonSteam": True}
+        executable = next(
+            (
+                shortcut.get(key)
+                for key in ("Exe", "exe", "executable")
+                if isinstance(shortcut.get(key), str)
+            ),
+            None,
+        )
+        launch_options = next(
+            (
+                shortcut.get(key)
+                for key in ("LaunchOptions", "launchoptions", "launch_options", "arguments")
+                if isinstance(shortcut.get(key), str)
+            ),
+            None,
+        )
+        start_dir = next(
+            (
+                shortcut.get(key)
+                for key in ("StartDir", "startdir", "start_dir")
+                if isinstance(shortcut.get(key), str)
+            ),
+            None,
+        )
+        game: Dict[str, object] = {
+            "appid": str(appid & 0xffffffff),
+            "name": name,
+            "nonSteam": True,
+            "transport": classify_shortcut_transport(executable, launch_options),
+        }
+        if executable is not None:
+            game["executable"] = executable
+        if launch_options is not None:
+            game["arguments"] = launch_options
+        if start_dir is not None:
+            game["startDir"] = start_dir
+        return game
 
     def _shortcut_games(self):
         games = {}
@@ -294,7 +371,12 @@ class SteamService(BaseService):
                     if appid in self.GAME_SELECTOR_EXCLUDED_APPIDS:
                         continue
                     name = self._section_value(content, "AppState", "name") or f"App {appid}"
-                    games[appid] = {"appid": appid, "name": name, "nonSteam": False}
+                    games[appid] = {
+                        "appid": appid,
+                        "name": name,
+                        "nonSteam": False,
+                        "transport": {"kind": "host"},
+                    }
             for game in self._shortcut_games():
                 games.setdefault(str(game["appid"]), game)
             return self._success_response(

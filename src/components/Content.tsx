@@ -1,22 +1,18 @@
 import { Tabs } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
-import { FaFileAlt, FaGamepad, FaLayerGroup, FaList, FaTools } from "react-icons/fa";
+import { FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { tabStyles } from "../styles";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { useInstallationStatus } from "../hooks/useLsfgHooks";
-import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
-import { FlatpaksTab } from "./FlatpaksTab";
 import { NowPlayingTab } from "./NowPlayingTab";
 import { SetupTab } from "./SetupTab";
 
 const tabIcons = {
   nowPlaying: <FaGamepad size={18} />,
-  configuration: <FaList size={18} />,
-  flatpak: <FaLayerGroup size={18} />,
-  configFile: <FaFileAlt size={18} />,
+  games: <FaList size={18} />,
   setup: <FaTools size={18} />,
 };
 
@@ -38,7 +34,6 @@ export function Content() {
     setSelectedAppId,
     save,
     enable,
-    enableAll,
     repair,
     resetSelected,
     resetAll,
@@ -52,25 +47,25 @@ export function Content() {
     steamBranchStatus?.success === true &&
     steamBranchStatus.installed &&
     !steamBranchStatus.needs_switch;
-  const previousRunningState = useRef<{ appid: string; configured: boolean } | null>(null);
+  const previousRunningAppId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!setupComplete) {
       setTab("Setup");
       return;
     }
-    setTab((current) => current === "Setup" ? (runningGame?.configured ? "NowPlaying" : "Configuration") : current);
-  }, [runningGame?.configured, setupComplete]);
+    setTab((current) => current === "Setup" ? (runningGame ? "NowPlaying" : "Games") : current);
+  }, [runningGame?.appid, setupComplete]);
 
   useEffect(() => {
     if (!setupComplete) return;
-    const current = runningGame ? { appid: runningGame.appid, configured: runningGame.configured } : null;
-    const previous = previousRunningState.current;
-    previousRunningState.current = current;
-    if (current?.appid && (current.appid !== previous?.appid || current.configured !== previous?.configured)) {
-      setTab(current.configured ? "NowPlaying" : "Configuration");
-    } else if (!current && previous) {
-      setTab((currentTab) => currentTab === "NowPlaying" ? "Configuration" : currentTab);
+    const appid = runningGame?.appid || null;
+    const previous = previousRunningAppId.current;
+    previousRunningAppId.current = appid;
+    if (appid && appid !== previous) {
+      setTab("NowPlaying");
+    } else if (!appid && previous) {
+      setTab((currentTab) => currentTab === "NowPlaying" ? "Games" : currentTab);
     }
   }, [runningGame?.appid, runningGame?.configured, setupComplete]);
 
@@ -105,12 +100,13 @@ export function Content() {
       isUninstalling={isUninstalling}
       onInstall={onInstall}
       onUninstall={onUninstall}
+      flatpakRelevant={targets.some((target) => target.transport.kind === "flatpak")}
     />
   );
 
   const tabs = setupComplete
     ? [
-        ...(runningGame?.configured ? [{
+        ...(runningGame ? [{
           id: "NowPlaying",
           title: tabIcons.nowPlaying,
           content: (
@@ -118,12 +114,14 @@ export function Content() {
               game={runningGame}
               config={config}
               onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value)}
+              onEnable={enable}
+              onRepair={repair}
             />
           ),
         }] : []),
         {
-          id: "Configuration",
-          title: tabIcons.configuration,
+          id: "Games",
+          title: tabIcons.games,
           content: (
             <ConfigurationTab
               config={config}
@@ -132,15 +130,12 @@ export function Content() {
               onSelect={setSelectedAppId}
               onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value, true)}
               onEnable={enable}
-              onEnableAll={enableAll}
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
             />
           ),
         },
-        { id: "Flatpak", title: tabIcons.flatpak, content: <FlatpaksTab /> },
-        { id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> }, // comment out for prod
         { id: "Setup", title: tabIcons.setup, content: setupContent },
       ]
     : [

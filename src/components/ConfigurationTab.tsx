@@ -14,7 +14,6 @@ interface ConfigurationTabProps {
   onSelect: (appid: string) => void;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
-  onEnableAll: () => Promise<void>;
   onRepair: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
   onResetAll: () => Promise<void>;
@@ -27,7 +26,6 @@ export function ConfigurationTab({
   onSelect,
   onConfigChange,
   onEnable,
-  onEnableAll,
   onRepair,
   onReset,
   onResetAll,
@@ -86,7 +84,6 @@ export function ConfigurationTab({
             onSelect(appid);
             setDetailAppId(appid);
           }}
-          onEnableAll={onEnableAll}
           onResetAll={onResetAll}
           focusConfiguredToggle={focusConfiguredToggle}
           onConfiguredToggleFocused={clearConfiguredToggleFocusRequest}
@@ -96,8 +93,13 @@ export function ConfigurationTab({
   }
 
   const profileLabel = selectedTarget?.name || "Game profile";
+  const profileTransport = selectedTarget
+    ? selectedTarget.transport.kind === "flatpak"
+      ? "Non-Steam · Flatpak"
+      : selectedTarget.nonSteam ? "Non-Steam" : "Steam"
+    : "Game";
   const profileDescription = selectedTarget
-    ? `${selectedTarget.nonSteam ? "Non-Steam" : "Steam"} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
+    ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
     : "Game is no longer available";
   const handleProfileAction = async () => {
     if (selectedTarget?.configured) {
@@ -151,6 +153,18 @@ export function ConfigurationTab({
           </PanelSectionRow>
         )}
       </PanelSection>
+      {selectedTarget?.configured && selectedTarget.transport.kind === "flatpak" && selectedTarget.flatpakSupport?.support_status !== "ready" && (
+        <PanelSection>
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              onClick={() => void onRepair(selectedTarget.appid)}
+            >
+              Repair Flatpak support
+            </ButtonItem>
+          </PanelSectionRow>
+        </PanelSection>
+      )}
       {selectedTarget?.configured && (
         <GameConfigurationControls
           config={config}

@@ -123,10 +123,20 @@ class WrapperServiceTests(unittest.TestCase):
             encoding="utf-8",
         )
         fake_flatpak.chmod(0o755)
-        self.service.set("123", self._state(dxvkFrameRate=20, enableZink=True), str(fake_flatpak))
+        self.service.set(
+            "123",
+            self._state(dxvkFrameRate=20, enableZink=True),
+            str(fake_flatpak),
+            False,
+            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
+        )
         result = self._run(123, "run", "com.example.Game", "--windowed", env={"DXVK_CONFIG": "foo=1"})
         args = result.stdout.splitlines()
         self.assertEqual(args[0], "ARG:run")
+        self.assertIn("ARG:--filesystem=" + str(self.service.config_dir) + ":rw", args)
+        self.assertIn("ARG:--filesystem=" + str(self.home / ".local/share/Steam/steamapps/common/Lossless Scaling") + ":ro", args)
+        self.assertIn("ARG:--env=LSFGVK_CONFIG=" + str(self.service.config_file_path), args)
+        self.assertIn("ARG:--env=LSFGVK_FLATPAK=1", args)
         self.assertIn("ARG:--env=SteamAppId=123", args)
         self.assertIn("ARG:--env=ENABLE_GAMESCOPE_WSI=0", args)
         self.assertIn("ARG:--env=DXVK_HDR=0", args)
@@ -136,6 +146,73 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertIn("ARG:--env=DXVK_CONFIG=foo=1; dxvk.maxFrameRate = 20", args)
         self.assertIn("ARG:com.example.Game", args)
         self.assertIn("ARG:--windowed", args)
+
+    def test_flatpak_full_executable_form_is_preserved(self):
+        fake_flatpak = self.home / ".local/bin/flatpak"
+        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
+        fake_flatpak.write_text(
+            "#!/bin/sh\n"
+            "printf 'ARG:%s\\n' \"$@\"\n",
+            encoding="utf-8",
+        )
+        fake_flatpak.chmod(0o755)
+        response = self.service.set(
+            "123",
+            self._state(),
+            f"{fake_flatpak} run com.example.Game",
+            False,
+            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
+        )
+        self.assertTrue(response["success"])
+        result = self._run(123, "--windowed")
+        args = result.stdout.splitlines()
+        self.assertEqual(args[0], "ARG:run")
+        self.assertIn("ARG:com.example.Game", args)
+        self.assertIn("ARG:--windowed", args)
+
+    def test_flatpak_transport_rejects_non_run_invocation(self):
+        fake_flatpak = self.home / ".local/bin/flatpak"
+        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
+        fake_flatpak.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        fake_flatpak.chmod(0o755)
+        response = self.service.set(
+            "123",
+            self._state(),
+            str(fake_flatpak),
+            False,
+            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
+        )
+        self.assertTrue(response["success"])
+        result = subprocess.run(
+            [str(self.service.wrapper_path), "bash", "launch-game.sh"],
+            env={"PATH": "/usr/bin:/bin", "SteamAppId": "123"},
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 64)
+        self.assertIn("direct flatpak run", result.stderr)
+
+    def test_flatpak_transport_rejects_external_app_id_change(self):
+        fake_flatpak = self.home / ".local/bin/flatpak"
+        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
+        fake_flatpak.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        fake_flatpak.chmod(0o755)
+        response = self.service.set(
+            "123",
+            self._state(),
+            str(fake_flatpak),
+            False,
+            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
+        )
+        self.assertTrue(response["success"])
+        result = subprocess.run(
+            [str(self.service.wrapper_path), "run", "com.other.Game"],
+            env={"PATH": "/usr/bin:/bin", "SteamAppId": "123"},
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 64)
+        self.assertIn("application ID changed externally", result.stderr)
 
     def test_invalid_state_and_foreign_wrapper_fail_closed(self):
         invalid = self.service.set("0", self.service.default_state())

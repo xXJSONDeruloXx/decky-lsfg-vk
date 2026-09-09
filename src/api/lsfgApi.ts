@@ -43,7 +43,34 @@ export interface GameConfigEntry {
   profile: string;
   config: LsfgConfig;
 }
-export interface InstalledGame { appid: string; name: string; nonSteam: boolean; }
+export type TargetTransport =
+  | { kind: "host" }
+  | { kind: "flatpak"; flatpakAppId: string };
+
+export type FlatpakTargetSupportStatus = "ready" | "needs-runtime" | "unsupported" | "error";
+
+export interface FlatpakTargetSupport {
+  success: boolean;
+  message?: string;
+  error?: string | null;
+  flatpak_app_id?: string;
+  runtime?: string | null;
+  runtime_branch?: string | null;
+  support_status: FlatpakTargetSupportStatus;
+  extension_installed: boolean;
+  installed_branches: string[];
+}
+
+export interface InstalledGame {
+  appid: string;
+  name: string;
+  nonSteam: boolean;
+  transport: TargetTransport;
+  executable?: string;
+  arguments?: string;
+  startDir?: string;
+  flatpakSupport?: FlatpakTargetSupport;
+}
 export interface InstalledGamesResult { success: boolean; games?: InstalledGame[]; error?: string; }
 export interface GlobalConfig { dll: string; no_fp16: boolean; }
 
@@ -79,6 +106,7 @@ export interface WorkaroundStateResult {
   wrapper_owned?: boolean;
   shortcut_exe?: string | null;
   command_token_added?: boolean;
+  transport?: TargetTransport | null;
 }
 
 export interface FileContentResult {
@@ -88,37 +116,25 @@ export interface FileContentResult {
   error?: string;
 }
 
-// Flatpak management interfaces
 export interface FlatpakExtensionStatus {
   success: boolean;
   message: string;
-  error?: string;
-  installed_23_08: boolean;
-  installed_24_08: boolean;
-  installed_25_08: boolean;
+  error?: string | null;
+  available: boolean;
+  extension_id: string;
+  supported_branches: string[];
+  installed_branches: string[];
+  owned_branches: string[];
+  ownership_uncertain: boolean;
 }
 
-export interface FlatpakApp {
-  app_id: string;
-  app_name: string;
-  has_filesystem_override: boolean;
-  has_env_override: boolean;
-}
-
-export interface FlatpakAppInfo {
+export interface FlatpakCleanupResult {
   success: boolean;
   message: string;
-  error?: string;
-  apps: FlatpakApp[];
-  total_apps: number;
-}
-
-export interface FlatpakOperationResult {
-  success: boolean;
-  message: string;
-  error?: string;
-  app_id?: string;
-  operation?: string;
+  error?: string | null;
+  removed_branches: string[];
+  preserved_branches: string[];
+  ownership_uncertain: boolean;
 }
 
 // API functions
@@ -128,13 +144,13 @@ export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 
-// Flatpak management API functions
-export const checkFlatpakExtensionStatus = callable<[], FlatpakExtensionStatus>("check_flatpak_extension_status");
-export const installFlatpakExtension = callable<[string], FlatpakOperationResult>("install_flatpak_extension");
-export const uninstallFlatpakExtension = callable<[string], FlatpakOperationResult>("uninstall_flatpak_extension");
-export const getFlatpakApps = callable<[], FlatpakAppInfo>("get_flatpak_apps");
-export const setFlatpakAppOverride = callable<[string], FlatpakOperationResult>("set_flatpak_app_override");
-export const removeFlatpakAppOverride = callable<[string], FlatpakOperationResult>("remove_flatpak_app_override");
+export const getFlatpakSupportStatus = callable<[], FlatpakExtensionStatus>("get_flatpak_support_status");
+export const ensureFlatpakSupport = callable<[string], FlatpakTargetSupport>("ensure_flatpak_support");
+export const repairFlatpakSupport = callable<[string], FlatpakTargetSupport>("repair_flatpak_support");
+export const removePluginOwnedFlatpakExtensions = callable<
+  [],
+  FlatpakCleanupResult
+>("remove_plugin_owned_flatpak_extensions");
 
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
@@ -147,5 +163,6 @@ export const setWorkaroundState = callable<[
   WorkaroundState,
   string | null | undefined,
   boolean,
+  TargetTransport | null | undefined,
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");

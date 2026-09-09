@@ -67,7 +67,24 @@ class Plugin:
         return self.configuration_service.get_game_configs()
 
     async def get_installed_games(self) -> Dict[str, Any]:
-        return self.steam_service.get_installed_games()
+        result = self.steam_service.get_installed_games()
+        if not result.get("success"):
+            return result
+
+        support_cache: Dict[str, Dict[str, Any]] = {}
+        for game in result.get("games", []):
+            transport = game.get("transport") if isinstance(game, dict) else None
+            if not isinstance(transport, dict) or transport.get("kind") != "flatpak":
+                continue
+            flatpak_app_id = transport.get("flatpakAppId")
+            if not isinstance(flatpak_app_id, str) or not flatpak_app_id:
+                continue
+            if flatpak_app_id not in support_cache:
+                support_cache[flatpak_app_id] = self.flatpak_service.resolve_app_support(
+                    flatpak_app_id
+                )
+            game["flatpakSupport"] = support_cache[flatpak_app_id]
+        return result
 
     async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         return self.configuration_service.update_game_config(appid, game_name, config)
@@ -87,8 +104,15 @@ class Plugin:
         state: Dict[str, Any],
         shortcut_exe: Optional[str] = None,
         command_token_added: bool = False,
+        transport: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        return self.wrapper_service.set(appid, state, shortcut_exe, command_token_added)
+        return self.wrapper_service.set(
+            appid,
+            state,
+            shortcut_exe,
+            command_token_added,
+            transport,
+        )
 
     async def remove_workaround_state(self, appid: str) -> Dict[str, Any]:
         return self.wrapper_service.remove(appid)
@@ -124,68 +148,20 @@ class Plugin:
                 "error": f"Error reading config file: {str(e)}"
             }
 
-    async def check_flatpak_extension_status(self) -> Dict[str, Any]:
-        """Check status of lsfg-vk Flatpak runtime extensions
-        
-        Returns:
-            FlatpakExtensionStatus dict with installation status for all supported runtime versions
-        """
-        return self.flatpak_service.get_extension_status()
-
-    async def install_flatpak_extension(self, version: str) -> Dict[str, Any]:
-        """Install lsfg-vk Flatpak runtime extension
-        
-        Args:
-            version: Runtime version to install ("23.08", "24.08", or "25.08")
-            
-        Returns:
-            BaseResponse dict with success status and message/error
-        """
-        return self.flatpak_service.install_extension(version)
-
-    async def uninstall_flatpak_extension(self, version: str) -> Dict[str, Any]:
-        """Uninstall lsfg-vk Flatpak runtime extension
-        
-        Args:
-            version: Runtime version to uninstall ("23.08", "24.08", or "25.08")
-            
-        Returns:
-            BaseResponse dict with success status and message/error
-        """
-        return self.flatpak_service.uninstall_extension(version)
-
-    async def get_flatpak_apps(self) -> Dict[str, Any]:
-        """Get list of installed Flatpak apps and their lsfg-vk override status
-        
-        Returns:
-            FlatpakAppInfo dict with apps list and override status
-        """
-        return self.flatpak_service.get_flatpak_apps()
-
     async def get_lossless_scaling_branch_status(self) -> Dict[str, Any]:
         return self.steam_service.get_branch_status()
 
-    async def set_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
-        """Set lsfg-vk overrides for a Flatpak app
-        
-        Args:
-            app_id: Flatpak application ID
-            
-        Returns:
-            FlatpakOverrideResponse dict with operation result
-        """
-        return self.flatpak_service.set_app_override(app_id)
+    async def get_flatpak_support_status(self) -> Dict[str, Any]:
+        return self.flatpak_service.get_flatpak_support_status()
 
-    async def remove_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
-        """Remove lsfg-vk overrides for a Flatpak app
-        
-        Args:
-            app_id: Flatpak application ID
-            
-        Returns:
-            FlatpakOverrideResponse dict with operation result
-        """
-        return self.flatpak_service.remove_app_override(app_id)
+    async def ensure_flatpak_support(self, flatpak_app_id: str) -> Dict[str, Any]:
+        return self.flatpak_service.ensure_app_support(flatpak_app_id)
+
+    async def repair_flatpak_support(self, flatpak_app_id: str) -> Dict[str, Any]:
+        return self.flatpak_service.ensure_app_support(flatpak_app_id)
+
+    async def remove_plugin_owned_flatpak_extensions(self) -> Dict[str, Any]:
+        return self.flatpak_service.remove_plugin_owned_extensions()
     
     async def _main(self):
         """
@@ -224,16 +200,9 @@ class Plugin:
         self.installation_service.cleanup_on_uninstall()
         
         try:
-            extension_status = self.flatpak_service.get_extension_status()
-            for version, key in (
-                ("23.08", "installed_23_08"),
-                ("24.08", "installed_24_08"),
-                ("25.08", "installed_25_08"),
-            ):
-                if extension_status.get(key):
-                    result = self.flatpak_service.uninstall_extension(version)
-                    if not result.get("success"):
-                        decky.logger.warning(result.get("error"))
+            result = self.flatpak_service.remove_plugin_owned_extensions()
+            if not result.get("success"):
+                decky.logger.warning(result.get("error"))
         except Exception as error:
             decky.logger.error(f"Error during Flatpak cleanup: {error}")
 

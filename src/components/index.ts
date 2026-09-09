@@ -5,8 +5,6 @@ export { ConfigurationSection } from "./ConfigurationSection";
 export { FpsMultiplierControl } from "./FpsMultiplierControl";
 export { ConfigurationTab } from "./ConfigurationTab";
 export { SetupTab } from "./SetupTab";
-export { ConfigFileTab } from "./ConfigFileTab";
-export { FlatpaksTab } from "./FlatpaksTab";
 export { GameConfigurationSelector } from "./GameConfigurationSelector";
 export { GameConfigurationControls } from "./GameConfigurationControls";
 export { NowPlayingTab } from "./NowPlayingTab";
