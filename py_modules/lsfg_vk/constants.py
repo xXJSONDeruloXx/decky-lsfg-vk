@@ -5,6 +5,7 @@ VULKAN_LAYER_DIR = ".local/share/vulkan/implicit_layer.d"
 CONFIG_DIR = ".config/lsfg-vk"
 
 SCRIPT_NAME = "lsfg"
+WRAPPER_FILENAME = ".lsfg"
 CONFIG_FILENAME = "conf.toml"
 ARCHIVE_FILENAME = "lsfg-vk-2.0.0.tar.xz"
 LIB_FILENAME = "liblsfg-vk-layer.so"

@@ -39,6 +39,7 @@ export function Content() {
     save,
     enable,
     enableAll,
+    repair,
     resetSelected,
     resetAll,
     reload,
@@ -132,6 +133,7 @@ export function Content() {
               onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value, true)}
               onEnable={enable}
               onEnableAll={enableAll}
+              onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
             />

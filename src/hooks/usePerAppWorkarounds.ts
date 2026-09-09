@@ -1,19 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyWorkaroundChange,
-  parseWorkaroundOptions,
+  getWorkaroundState,
+  removeWorkaroundState,
+  setWorkaroundState,
+  type WorkaroundState,
+} from "../api/lsfgApi";
+import {
+  getDefaultWrapperPath,
+  hasWrapperLaunchIntegration,
+  installWrapperIntegration,
+  isLegacyWrapperToken,
   readSteamLaunchOptions,
+  removeWrapperIntegration,
   subscribeSteamLaunchOptions,
-  updateSteamLaunchOptions,
-  type ParsedWorkaroundOptions,
   type SteamLaunchOptionsSnapshot,
-  type WorkaroundField,
 } from "../utils/steamLaunchOptions";
 import { showErrorToast } from "../utils/toastUtils";
 
+export type WorkaroundField = keyof WorkaroundState;
 export type WorkaroundLoadStatus = "loading" | "ready" | "error";
 
 const SLIDER_DEBOUNCE_MS = 250;
+
+const DEFAULT_WORKAROUND_STATE: WorkaroundState = {
+  dxvkFrameRate: 0,
+  disableGamescopeWsi: true,
+  disableHdr: true,
+  disableSteamdeckMode: false,
+  disableVkbasalt: false,
+  enableZink: false,
+};
 
 interface PendingSliderUpdate {
   timer: number;
@@ -21,9 +37,14 @@ interface PendingSliderUpdate {
   waiters: Array<(success: boolean) => void>;
 }
 
-interface WorkaroundSnapshot {
+export interface WorkaroundSnapshot {
   steam: SteamLaunchOptionsSnapshot;
-  parsed: ParsedWorkaroundOptions;
+  state: WorkaroundState;
+  wrapperPath: string;
+  wrapperOwned: boolean;
+  integrationInstalled: boolean;
+  commandTokenAdded: boolean;
+  shortcutExe?: string | null;
 }
 
 interface PerAppWorkarounds {
@@ -38,8 +59,84 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-function makeSnapshot(steam: SteamLaunchOptionsSnapshot): WorkaroundSnapshot {
-  return { steam, parsed: parseWorkaroundOptions(steam.options) };
+function integrationIsInstalled(
+  steam: SteamLaunchOptionsSnapshot,
+  nonSteam: boolean,
+  wrapperPath: string,
+): boolean {
+  return nonSteam ? steam.target === wrapperPath : hasWrapperLaunchIntegration(steam.options, wrapperPath);
+}
+
+function makeSnapshot(
+  steam: SteamLaunchOptionsSnapshot,
+  result: Awaited<ReturnType<typeof getWorkaroundState>>,
+  nonSteam: boolean,
+): WorkaroundSnapshot {
+  if (!result.state) throw new Error("Workaround state is not initialized for this profile");
+  const wrapperPath = result.wrapper_path || getDefaultWrapperPath();
+  if (nonSteam && steam.target === wrapperPath && !result.shortcut_exe) {
+    throw new Error("Managed shortcut Target has no saved original executable");
+  }
+  return {
+    steam,
+    state: result.state,
+    wrapperPath,
+    wrapperOwned: result.wrapper_owned === true,
+    integrationInstalled: integrationIsInstalled(steam, nonSteam, wrapperPath),
+    commandTokenAdded: result.command_token_added === true,
+    shortcutExe: result.shortcut_exe,
+  };
+}
+
+async function adoptWorkaroundState(
+  appId: string,
+  nonSteam: boolean,
+  steam: SteamLaunchOptionsSnapshot,
+  wrapperPath: string,
+): Promise<WorkaroundSnapshot> {
+  if (nonSteam && (!steam.target || steam.target === wrapperPath || isLegacyWrapperToken(steam.target))) {
+    throw new Error("Shortcut Target is a wrapper but its original Target is unknown");
+  }
+  const originalExecutable = nonSteam ? steam.target : null;
+  const initial = await setWorkaroundState(appId, DEFAULT_WORKAROUND_STATE, originalExecutable, false);
+  if (!initial.success) throw new Error(initial.error || "Could not create workaround state");
+  let integration: Awaited<ReturnType<typeof installWrapperIntegration>> | null = null;
+  try {
+    integration = await installWrapperIntegration(
+      Number(appId),
+      nonSteam,
+      wrapperPath,
+    );
+    const finalized = await setWorkaroundState(
+      appId,
+      DEFAULT_WORKAROUND_STATE,
+      nonSteam ? (integration.originalExecutable || originalExecutable) : null,
+      integration.commandTokenAdded,
+    );
+    if (!finalized.success) throw new Error(finalized.error || "Could not finalize workaround state");
+    return makeSnapshot(integration.snapshot, finalized, nonSteam);
+  } catch (error) {
+    let rollbackSucceeded = true;
+    if (integration) {
+      try {
+        await removeWrapperIntegration(
+          Number(appId),
+          nonSteam,
+          wrapperPath,
+          nonSteam ? (integration?.originalExecutable || originalExecutable || undefined) : undefined,
+          integration?.commandTokenAdded ?? false,
+        );
+      } catch {
+        // Leave the owned integration in place rather than guessing at cleanup.
+        rollbackSucceeded = false;
+      }
+    }
+    if (rollbackSucceeded) {
+      const removed = await removeWorkaroundState(appId);
+      if (!removed.success) throw new Error(removed.error || "Could not roll back workaround state");
+    }
+    throw error;
+  }
 }
 
 export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWorkarounds {
@@ -49,8 +146,25 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
   const pendingSliderUpdate = useRef<PendingSliderUpdate | null>(null);
   const numericAppId = Number(appId);
 
-  const applySnapshot = useCallback((steam: SteamLaunchOptionsSnapshot) => {
-    setSnapshot(makeSnapshot(steam));
+  const loadSnapshot = useCallback(async () => {
+    const [result, steam] = await Promise.all([
+      getWorkaroundState(appId),
+      readSteamLaunchOptions(numericAppId, nonSteam),
+    ]);
+    if (!result.success) throw new Error(result.error || "Could not read workaround state");
+    if (!result.state) {
+      return adoptWorkaroundState(
+        appId,
+        nonSteam,
+        steam,
+        result.wrapper_path || getDefaultWrapperPath(),
+      );
+    }
+    return makeSnapshot(steam, result, nonSteam);
+  }, [appId, nonSteam, numericAppId]);
+
+  const applySnapshot = useCallback((next: WorkaroundSnapshot) => {
+    setSnapshot(next);
     setStatus("ready");
     setError(null);
   }, []);
@@ -59,65 +173,79 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
     setStatus("loading");
     setError(null);
     try {
-      applySnapshot(await readSteamLaunchOptions(numericAppId, nonSteam));
+      applySnapshot(await loadSnapshot());
     } catch (refreshError) {
       const nextError = asError(refreshError);
       setStatus("error");
       setError(nextError.message);
     }
-  }, [applySnapshot, nonSteam, numericAppId]);
+  }, [applySnapshot, loadSnapshot]);
 
   useEffect(() => {
     let active = true;
     setStatus("loading");
     setSnapshot(null);
     setError(null);
-
-    const handleSnapshot = (nextSnapshot: SteamLaunchOptionsSnapshot) => {
-      if (!active) return;
-      applySnapshot(nextSnapshot);
-    };
-    const handleSubscriptionError = (subscriptionError: Error) => {
-      if (!active) return;
-      setStatus("error");
-      setError(subscriptionError.message);
-    };
-
     let unsubscribe = () => {};
     try {
       unsubscribe = subscribeSteamLaunchOptions(
         numericAppId,
         nonSteam,
-        handleSnapshot,
-        handleSubscriptionError,
+        (steam) => {
+          if (!active) return;
+          setSnapshot((current) => current ? {
+            ...current,
+            steam,
+            integrationInstalled: integrationIsInstalled(steam, nonSteam, current.wrapperPath),
+          } : current);
+        },
+        (subscriptionError) => {
+          if (!active) return;
+          setStatus("error");
+          setError(subscriptionError.message);
+        },
       );
     } catch (subscriptionError) {
-      handleSubscriptionError(asError(subscriptionError));
+      if (active) {
+        setStatus("error");
+        setError(asError(subscriptionError).message);
+      }
     }
-
-    void readSteamLaunchOptions(numericAppId, nonSteam)
-      .then((nextSnapshot) => {
-        if (active) applySnapshot(nextSnapshot);
-      })
+    void loadSnapshot()
+      .then((next) => { if (active) applySnapshot(next); })
       .catch((readError) => {
-        if (active) handleSubscriptionError(asError(readError));
+        if (active) {
+          setStatus("error");
+          setError(asError(readError).message);
+        }
       });
-
     return () => {
       active = false;
       unsubscribe();
     };
-  }, [applySnapshot, nonSteam, numericAppId]);
+  }, [applySnapshot, loadSnapshot, nonSteam, numericAppId]);
 
   const persistUpdate = useCallback(async (field: WorkaroundField, value: boolean | number): Promise<boolean> => {
+    const current = snapshot;
+    if (!current) return false;
     setError(null);
+    const nextState = { ...current.state, [field]: value } as WorkaroundState;
     try {
-      const nextSnapshot = await updateSteamLaunchOptions(
-        numericAppId,
-        nonSteam,
-        (options) => applyWorkaroundChange(options, field, value),
+      const result = await setWorkaroundState(
+        appId,
+        nextState,
+        current.shortcutExe ?? null,
+        current.commandTokenAdded,
       );
-      applySnapshot(nextSnapshot);
+      if (!result.success || !result.state) throw new Error(result.error || "Could not save workaround state");
+      applySnapshot({
+        ...current,
+        state: result.state,
+        wrapperPath: result.wrapper_path || current.wrapperPath,
+        wrapperOwned: result.wrapper_owned === true,
+        shortcutExe: result.shortcut_exe,
+        commandTokenAdded: result.command_token_added === true,
+      });
       return true;
     } catch (updateError) {
       const nextError = asError(updateError);
@@ -126,14 +254,13 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
       showErrorToast("Workaround update failed", nextError.message);
       return false;
     }
-  }, [applySnapshot, nonSteam, numericAppId]);
+  }, [appId, applySnapshot, snapshot]);
 
   const flushSliderUpdate = useCallback(async (): Promise<boolean> => {
     const pending = pendingSliderUpdate.current;
     if (!pending) return true;
-
     pendingSliderUpdate.current = null;
-    window.clearTimeout(pending.timer);
+    clearTimeout(pending.timer);
     const success = await persistUpdate("dxvkFrameRate", pending.value);
     pending.waiters.forEach((resolve) => resolve(success));
     return success;
@@ -143,30 +270,25 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
     if (field === "dxvkFrameRate") {
       setError(null);
       return new Promise<boolean>((resolve) => {
-        const pending = pendingSliderUpdate.current ?? { timer: 0, value: 0, waiters: [] };
+        const pending = pendingSliderUpdate.current || { timer: 0, value: 0, waiters: [] };
         window.clearTimeout(pending.timer);
         pending.value = Number(value);
         pending.waiters.push(resolve);
-        pending.timer = window.setTimeout(() => {
-          void flushSliderUpdate();
-        }, SLIDER_DEBOUNCE_MS);
+        pending.timer = window.setTimeout(() => { void flushSliderUpdate(); }, SLIDER_DEBOUNCE_MS);
         pendingSliderUpdate.current = pending;
       });
     }
-
     const sliderSuccess = await flushSliderUpdate();
     if (!sliderSuccess) return false;
     return persistUpdate(field, value);
   }, [flushSliderUpdate, persistUpdate]);
 
-  useEffect(() => {
-    return () => {
-      const pending = pendingSliderUpdate.current;
-      if (!pending) return;
-      window.clearTimeout(pending.timer);
-      pendingSliderUpdate.current = null;
-      pending.waiters.forEach((resolve) => resolve(false));
-    };
+  useEffect(() => () => {
+    const pending = pendingSliderUpdate.current;
+    if (!pending) return;
+    window.clearTimeout(pending.timer);
+    pendingSliderUpdate.current = null;
+    pending.waiters.forEach((resolve) => resolve(false));
   }, [numericAppId, nonSteam]);
 
   return useMemo(() => ({ status, snapshot, refresh, update, error }), [error, refresh, snapshot, status, update]);

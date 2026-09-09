@@ -15,6 +15,7 @@ interface ConfigurationTabProps {
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
   onEnableAll: () => Promise<void>;
+  onRepair: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
   onResetAll: () => Promise<void>;
 }
@@ -27,6 +28,7 @@ export function ConfigurationTab({
   onConfigChange,
   onEnable,
   onEnableAll,
+  onRepair,
   onReset,
   onResetAll,
 }: ConfigurationTabProps) {
@@ -157,6 +159,7 @@ export function ConfigurationTab({
           onFpsMultiplierFocused={clearFpsFocusRequest}
           showWorkarounds
           workaroundTarget={selectedTarget || undefined}
+          onRepairWorkaround={selectedTarget ? () => onRepair(selectedTarget.appid) : undefined}
         />
       )}
       {selectedTarget?.configured && (

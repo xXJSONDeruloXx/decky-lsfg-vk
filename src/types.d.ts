@@ -30,6 +30,7 @@ interface SteamApps {
   ): SteamAppDetailsRegistration;
   SetAppLaunchOptions(appId: number, options: string): void | Promise<void>;
   SetShortcutLaunchOptions(appId: number, options: string): void | Promise<void>;
+  SetShortcutExe(appId: number, executable: string): void | Promise<void>;
   GetAllShortcuts?(): Promise<unknown[]>;
 }
 

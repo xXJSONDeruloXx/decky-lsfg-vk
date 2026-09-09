@@ -11,6 +11,7 @@ interface Props {
   onFpsMultiplierFocused?: () => void;
   showWorkarounds?: boolean;
   workaroundTarget?: Pick<GameTarget, "appid" | "nonSteam">;
+  onRepairWorkaround?: () => Promise<boolean>;
 }
 
 export function GameConfigurationControls({
@@ -20,6 +21,7 @@ export function GameConfigurationControls({
   onFpsMultiplierFocused,
   showWorkarounds = false,
   workaroundTarget,
+  onRepairWorkaround,
 }: Props) {
   return (
     <>
@@ -31,7 +33,11 @@ export function GameConfigurationControls({
       />
       <ConfigurationSection config={config} onConfigChange={onConfigChange} />
       {showWorkarounds && workaroundTarget && (
-        <WorkaroundsSection appId={workaroundTarget.appid} nonSteam={workaroundTarget.nonSteam} />
+        <WorkaroundsSection
+          appId={workaroundTarget.appid}
+          nonSteam={workaroundTarget.nonSteam}
+          onRepair={onRepairWorkaround}
+        />
       )}
     </>
   );

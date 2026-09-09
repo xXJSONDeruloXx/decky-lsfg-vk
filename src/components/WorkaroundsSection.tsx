@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { usePerAppWorkarounds } from "../hooks/usePerAppWorkarounds";
 import t from "../i18n/i18n";
-import type { WorkaroundField } from "../utils/steamLaunchOptions";
+import type { WorkaroundField } from "../hooks/usePerAppWorkarounds";
 
 interface WorkaroundsSectionProps {
   appId: string;
   nonSteam: boolean;
+  onRepair?: () => Promise<boolean>;
 }
 
 const WORKAROUNDS_COLLAPSED_KEY = "lsfg-workarounds-collapsed-v2";
@@ -78,17 +79,27 @@ function usePersistentCollapsed() {
   return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
-export function WorkaroundsSection({ appId, nonSteam }: WorkaroundsSectionProps) {
+export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSectionProps) {
   const [collapsed, toggleCollapsed] = usePersistentCollapsed();
   const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam);
-  const state = snapshot?.parsed.state;
-  const issues = snapshot?.parsed.issues || [];
-  const controlsDisabled = status !== "ready" || state === undefined;
+  const [repairing, setRepairing] = useState(false);
+  const state = snapshot?.state;
+  const controlsDisabled = status !== "ready" || state === undefined || snapshot?.wrapperOwned !== true || snapshot.integrationInstalled !== true;
   const [fpsValue, setFpsValue] = useState<number | null>(null);
   const effectiveFpsValue = fpsValue ?? state?.dxvkFrameRate ?? 0;
   const fpsLabel = effectiveFpsValue > 0
     ? `${effectiveFpsValue} FPS`
     : t("CONFIG_BASE_FPS_CAP_OFF", "Off");
+
+  const handleRepair = async () => {
+    if (!onRepair || repairing) return;
+    setRepairing(true);
+    try {
+      if (await onRepair()) await refresh();
+    } finally {
+      setRepairing(false);
+    }
+  };
 
   useEffect(() => {
     setFpsValue(state?.dxvkFrameRate ?? null);
@@ -155,13 +166,19 @@ export function WorkaroundsSection({ appId, nonSteam }: WorkaroundsSectionProps)
               </PanelSectionRow>
             </>
           )}
-          {status === "ready" && issues.length > 0 && (
-            <PanelSectionRow>
-              <Field
-                label="Launch options need attention"
-                description={`${issues.join(" ")} Adjusting a workaround will normalize its managed values.`}
-              />
-            </PanelSectionRow>
+          {status === "ready" && snapshot && (!snapshot.wrapperOwned || !snapshot.integrationInstalled) && (
+            <>
+              <PanelSectionRow>
+                <Field label="Wrapper needs to be reinstalled" />
+              </PanelSectionRow>
+              {onRepair && (
+                <PanelSectionRow>
+                  <ButtonItem layout="below" disabled={repairing} onClick={() => void handleRepair()}>
+                    {repairing ? "Reinstalling..." : "Reinstall wrapper"}
+                  </ButtonItem>
+                </PanelSectionRow>
+              )}
+            </>
           )}
 
           <PanelSectionRow>

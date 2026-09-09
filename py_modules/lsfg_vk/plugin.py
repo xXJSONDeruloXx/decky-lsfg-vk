@@ -6,7 +6,7 @@ Vulkan layer for frame generation on Steam Deck.
 """
 
 import os
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 import decky
 
@@ -15,6 +15,7 @@ from .configuration import ConfigurationService
 from .flatpak_service import FlatpakService
 from .runtime_service import RuntimeService
 from .steam_service import SteamService
+from .wrapper_service import WrapperService
 
 
 class Plugin:
@@ -36,6 +37,7 @@ class Plugin:
         )
         self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
         self.flatpak_service = FlatpakService()
+        self.wrapper_service = WrapperService()
 
     async def install_lsfg_vk(self) -> Dict[str, Any]:
         """Install the bundled lsfg-vk runtime to ~/.local
@@ -75,6 +77,21 @@ class Plugin:
 
     async def reset_all_game_configs(self) -> Dict[str, Any]:
         return self.configuration_service.reset_all_game_configs()
+
+    async def get_workaround_state(self, appid: str) -> Dict[str, Any]:
+        return self.wrapper_service.get(appid)
+
+    async def set_workaround_state(
+        self,
+        appid: str,
+        state: Dict[str, Any],
+        shortcut_exe: Optional[str] = None,
+        command_token_added: bool = False,
+    ) -> Dict[str, Any]:
+        return self.wrapper_service.set(appid, state, shortcut_exe, command_token_added)
+
+    async def remove_workaround_state(self, appid: str) -> Dict[str, Any]:
+        return self.wrapper_service.remove(appid)
 
     async def get_config_file_content(self) -> Dict[str, Any]:
         """Get the current config file content
@@ -177,6 +194,9 @@ class Plugin:
         This method is called by Decky Loader when the plugin is loaded.
         Any initialization code should go here.
         """
+        repair = self.wrapper_service.repair()
+        if not repair.get("success"):
+            decky.logger.error(f"Could not repair lsfg workaround wrapper: {repair.get('error')}")
         decky.logger.info("decky-lsfg-vk plugin loaded")
 
     async def _unload(self):
@@ -198,6 +218,9 @@ class Plugin:
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         
         # Clean up lsfg-vk files when the plugin is uninstalled
+        # Launch integrations are removed with their profiles.  Keep the
+        # generated pass-through wrapper if it is still referenced elsewhere;
+        # InstallationService only removes files owned by the runtime bundle.
         self.installation_service.cleanup_on_uninstall()
         
         try:

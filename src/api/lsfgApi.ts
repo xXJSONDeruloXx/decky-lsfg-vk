@@ -60,6 +60,27 @@ export interface GameConfigResult extends ConfigUpdateResult {
   config?: LsfgConfig;
 }
 
+export interface WorkaroundState {
+  dxvkFrameRate: number;
+  disableGamescopeWsi: boolean;
+  disableHdr: boolean;
+  disableSteamdeckMode: boolean;
+  disableVkbasalt: boolean;
+  enableZink: boolean;
+}
+
+export interface WorkaroundStateResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  appid?: string;
+  state?: WorkaroundState | null;
+  wrapper_path?: string;
+  wrapper_owned?: boolean;
+  shortcut_exe?: string | null;
+  command_token_added?: boolean;
+}
+
 export interface FileContentResult {
   success: boolean;
   content?: string;
@@ -120,3 +141,11 @@ export const getInstalledGames = callable<[], InstalledGamesResult>("get_install
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
 export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
 export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
+export const getWorkaroundState = callable<[string], WorkaroundStateResult>("get_workaround_state");
+export const setWorkaroundState = callable<[
+  string,
+  WorkaroundState,
+  string | null | undefined,
+  boolean,
+], WorkaroundStateResult>("set_workaround_state");
+export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");

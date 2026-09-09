@@ -209,7 +209,6 @@ class InstallationService(BaseService):
                 self.user_home / LOCAL_SHARE / "icons" / "hicolor" / "256x256" / "apps" / UI_ICON_FILENAME,
                 self.legacy_lib_file,
                 self.legacy_json_file,
-                self.legacy_script_path,
             ):
                 if self._remove_if_exists(path):
                     removed.append(str(path))

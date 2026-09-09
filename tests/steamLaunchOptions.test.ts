@@ -1,344 +1,206 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  applyWorkaroundChange,
-  applyWorkaroundState,
-  cleanupLegacyLaunchOptions,
+  cleanupPluginAssignments,
   cleanupPluginLaunchOptions,
   cleanupLegacyWrapper,
-  getDefaultWorkaroundState,
+  hasWrapperLaunchIntegration,
+  installWrapperIntegration,
+  installWrapperLaunchOption,
   isLegacyWrapperToken,
   normalizeLaunchOptions,
-  parseWorkaroundOptions,
   readSteamLaunchOptions,
-  updateSteamLaunchOptions,
+  removeWrapperIntegration,
+  removeWrapperLaunchOption,
 } from "../src/utils/steamLaunchOptions.ts";
 
-test("maps the supported workarounds to current launch variables", () => {
-  const options = applyWorkaroundState('gamemoderun %command% --profile "high quality"', {
-    dxvkFrameRate: 30,
-    disableGamescopeWsi: true,
-    disableHdr: true,
-    disableSteamdeckMode: true,
-    disableVkbasalt: true,
-    enableZink: true,
-  });
+const wrapper = "~/.lsfg";
 
-  assert.equal(
-    options,
-    'ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 SteamDeck=0 DISABLE_VKBASALT=1 MESA_LOADER_DRIVER_OVERRIDE=zink DXVK_CONFIG="dxvk.maxFrameRate = 30" gamemoderun %command% --profile "high quality"',
-  );
-  assert.deepEqual(parseWorkaroundOptions(options), {
-    state: {
-      dxvkFrameRate: 30,
-      disableGamescopeWsi: true,
-      disableHdr: true,
-      disableSteamdeckMode: true,
-      disableVkbasalt: true,
-      enableZink: true,
-    },
-    issues: [],
+test("inserts one wrapper immediately before an existing command macro", () => {
+  assert.deepEqual(installWrapperLaunchOption('gamemoderun %command% --profile "high quality"', wrapper), {
+    options: 'gamemoderun ~/.lsfg %command% --profile "high quality"',
+    commandTokenAdded: false,
+  });
+  assert.equal(hasWrapperLaunchIntegration(`gamemoderun ${wrapper} %command%`, wrapper), true);
+  assert.deepEqual(installWrapperLaunchOption(`gamemoderun ${wrapper} %command%`, wrapper), {
+    options: `gamemoderun ${wrapper} %command%`,
+    commandTokenAdded: false,
   });
 });
 
-test("uses SteamDeck=0 before %command% without a wrapper", () => {
-  assert.equal(
-    applyWorkaroundChange("", "disableSteamdeckMode", true),
-    "SteamDeck=0 %command%",
-  );
+test("normalizes blank and argument-only fields while refusing ambiguous launchers", () => {
+  assert.deepEqual(installWrapperLaunchOption("", wrapper), {
+    options: `${wrapper} %command%`,
+    commandTokenAdded: true,
+  });
+  assert.deepEqual(installWrapperLaunchOption("FOO=bar --windowed", wrapper), {
+    options: `FOO=bar ${wrapper} %command% --windowed`,
+    commandTokenAdded: true,
+  });
+  assert.throws(() => installWrapperLaunchOption("gamemoderun --windowed", wrapper), /refusing to guess/);
+  assert.throws(() => installWrapperLaunchOption('"%command%"', wrapper), /refusing to guess/);
 });
 
-test("defaults new profiles to disable Gamescope WSI and HDR", () => {
-  const defaults = getDefaultWorkaroundState();
-  assert.equal(defaults.disableGamescopeWsi, true);
-  assert.equal(defaults.disableHdr, true);
+test("preserves assignments, quoting, suffixes, and unrelated values", () => {
+  const options = 'FOO="hello world" VK_INSTANCE_LAYERS="one:two" gamemoderun %command% --flag "two words"';
   assert.equal(
-    applyWorkaroundState("%command%", defaults),
-    "ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%",
+    installWrapperLaunchOption(options, wrapper).options,
+    'FOO="hello world" VK_INSTANCE_LAYERS="one:two" gamemoderun ~/.lsfg %command% --flag "two words"',
   );
-  assert.equal(parseWorkaroundOptions("%command%").state.disableGamescopeWsi, false);
-  assert.equal(parseWorkaroundOptions("%command%").state.disableHdr, false);
-  assert.equal(
-    parseWorkaroundOptions(applyWorkaroundState("%command%", defaults)).state.disableGamescopeWsi,
-    true,
-  );
-  assert.equal(
-    parseWorkaroundOptions(applyWorkaroundState("%command%", defaults)).state.disableHdr,
-    true,
-  );
-  assert.equal(
-    applyWorkaroundChange("%command%", "disableGamescopeWsi", true),
-    "ENABLE_GAMESCOPE_WSI=0 %command%",
-  );
-  assert.equal(
-    applyWorkaroundChange("ENABLE_GAMESCOPE_WSI=0 %command%", "disableGamescopeWsi", false),
-    "",
-  );
-
-  const invalid = parseWorkaroundOptions("ENABLE_GAMESCOPE_WSI=maybe %command%");
-  assert.equal(invalid.state.disableGamescopeWsi, false);
-  assert.equal(invalid.issues.length, 1);
-  const conflicting = parseWorkaroundOptions("DISABLE_GAMESCOPE_WSI=1 ENABLE_GAMESCOPE_WSI=1 %command%");
-  assert.equal(conflicting.state.disableGamescopeWsi, true);
-  assert.match(conflicting.issues.join(" "), /conflicting/);
+  assert.equal(removeWrapperLaunchOption(`${wrapper} %command% --arg "${wrapper}"`, wrapper, true), `--arg "${wrapper}"`);
+  assert.equal(normalizeLaunchOptions("  FOO=bar   %COMMAND%  --flag "), "FOO=bar %COMMAND% --flag");
 });
 
-test("manages DXVK HDR independently from Gamescope WSI", () => {
-  assert.equal(
-    applyWorkaroundChange("%command%", "disableHdr", true),
-    "DXVK_HDR=0 %command%",
-  );
-  assert.equal(parseWorkaroundOptions("DXVK_HDR=0 %command%").state.disableHdr, true);
-  assert.equal(parseWorkaroundOptions("DXVK_HDR=1 %command%").state.disableHdr, false);
-  assert.equal(
-    applyWorkaroundChange("DXVK_HDR=0 %command%", "disableHdr", false),
-    "",
-  );
-  assert.equal(
-    applyWorkaroundChange("DXVK_HDR=0 %command%", "disableGamescopeWsi", true),
-    "ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 %command%",
-  );
-
-  const invalid = parseWorkaroundOptions("DXVK_HDR=maybe %command%");
-  assert.equal(invalid.state.disableHdr, false);
-  assert.match(invalid.issues.join(" "), /Disable HDR has an unsupported value/);
+test("cleans current, legacy, and bare Mako wrappers without touching suffix arguments", () => {
+  for (const token of ["~/lsfg", "/home/deck/lsfg", "mako-run", "mako-launch"]) {
+    assert.equal(cleanupLegacyWrapper(`FOO=bar ${token} %command% --arg "${token}"`), `FOO=bar %command% --arg "${token}"`);
+  }
+  assert.equal(cleanupLegacyWrapper(`FOO=bar ${wrapper} %command%`), "FOO=bar %command%");
+  assert.equal(isLegacyWrapperToken("/home/kurt/lsfg"), true);
+  assert.equal(isLegacyWrapperToken("/opt/tools/lsfg"), false);
+  assert.equal(removeWrapperLaunchOption(`FOO=bar ${wrapper} %command% --arg`, wrapper), "FOO=bar %command% --arg");
 });
 
-test("preserves unrelated prefixes, quoted tokens, suffix arguments, and dropped variables", () => {
-  const options = applyWorkaroundChange(
-    'PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG="alpha=0.01" ENABLE_VKBASALT=1 VK_INSTANCE_LAYERS="one:two" FOO="hello world" gamemoderun %command% --flag "two words"',
-    "disableSteamdeckMode",
-    true,
-  );
+test("removes only old plugin assignments and preserves DXVK settings", () => {
   assert.equal(
-    options,
-    'SteamDeck=0 PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG="alpha=0.01" ENABLE_VKBASALT=1 VK_INSTANCE_LAYERS="one:two" FOO="hello world" gamemoderun %command% --flag "two words"',
-  );
-  assert.deepEqual(parseWorkaroundOptions(options).issues, []);
-
-  assert.equal(
-    applyWorkaroundChange("FOO=bar --flag", "disableSteamdeckMode", true),
-    "SteamDeck=0 FOO=bar %command% --flag",
-  );
-  assert.equal(
-    applyWorkaroundChange("FOO=1 %command% MANGOHUD=1", "disableSteamdeckMode", false),
-    "FOO=1 %command% MANGOHUD=1",
-  );
-  assert.equal(
-    applyWorkaroundChange('FOO=bar --literal "%command%"', "disableSteamdeckMode", true),
-    'SteamDeck=0 FOO=bar %command% --literal "%command%"',
-  );
-  assert.equal(
-    applyWorkaroundChange("gamemoderun SteamDeck=1 %command%", "disableSteamdeckMode", true),
-    "SteamDeck=0 gamemoderun SteamDeck=1 %command%",
-  );
-  assert.equal(parseWorkaroundOptions("gamemoderun SteamDeck=0 %command%").state.disableSteamdeckMode, false);
-});
-
-test("uses DXVK_CONFIG for the base cap and preserves other DXVK settings", () => {
-  assert.equal(
-    applyWorkaroundChange("%command%", "dxvkFrameRate", 60),
-    'DXVK_CONFIG="dxvk.maxFrameRate = 60" %command%',
-  );
-  assert.equal(parseWorkaroundOptions('DXVK_CONFIG="dxvk.maxFrameRate = 60" %command%').state.dxvkFrameRate, 60);
-  assert.equal(
-    applyWorkaroundChange(
-      'DXVK_CONFIG="dxgi.syncInterval = 0; dxvk.maxFrameRate = 30" %command%',
-      "dxvkFrameRate",
-      0,
+    cleanupPluginAssignments(
+      'FOO="keep this" ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 SteamDeck=0 DISABLE_VKBASALT=1 MESA_LOADER_DRIVER_OVERRIDE=zink DXVK_CONFIG="dxgi.syncInterval = 0; dxvk.maxFrameRate = 30" %command%',
     ),
-    'DXVK_CONFIG="dxgi.syncInterval = 0" %command%',
+    'FOO="keep this" DXVK_CONFIG="dxgi.syncInterval = 0" %command%',
   );
   assert.equal(
-    applyWorkaroundChange("DXVK_FRAME_RATE=30 %command%", "dxvkFrameRate", 45),
-    'DXVK_CONFIG="dxvk.maxFrameRate = 45" %command%',
+    cleanupPluginLaunchOptions(`DXVK_FRAME_RATE=30 ${wrapper} %command%`, wrapper),
+    "%command%",
   );
   assert.equal(
-    applyWorkaroundChange("DXVK_FRAME_RATE=30 %command%", "dxvkFrameRate", 0),
-    "",
-  );
-
-  const apiSpecific = parseWorkaroundOptions(
-    'DXVK_CONFIG="dxgi.maxFrameRate = 30; d3d9.maxFrameRate = 30" %command%',
-  );
-  assert.equal(apiSpecific.state.dxvkFrameRate, 30);
-  assert.deepEqual(apiSpecific.issues, []);
-  const partial = parseWorkaroundOptions('DXVK_CONFIG="dxgi.maxFrameRate = 30" %command%');
-  assert.equal(partial.state.dxvkFrameRate, 30);
-  assert.match(partial.issues.join(" "), /only caps one DirectX API/);
-  const conflicting = parseWorkaroundOptions(
-    'DXVK_CONFIG="dxgi.maxFrameRate = 30; d3d9.maxFrameRate = 60" %command%',
-  );
-  assert.equal(conflicting.state.dxvkFrameRate, 0);
-  assert.match(conflicting.issues.join(" "), /conflicting/);
-});
-
-test("reports invalid and malformed FPS values instead of treating them as off", () => {
-  const invalid = parseWorkaroundOptions('DXVK_CONFIG="dxvk.maxFrameRate = 61" %command%');
-  assert.equal(invalid.state.dxvkFrameRate, 0);
-  assert.match(invalid.issues.join(" "), /outside the supported 0-60 range/);
-  const malformed = parseWorkaroundOptions('DXVK_CONFIG="dxvk.maxFrameRate" %command%');
-  assert.equal(malformed.state.dxvkFrameRate, 0);
-  assert.match(malformed.issues.join(" "), /malformed/);
-  const obsolete = parseWorkaroundOptions("DXVK_FRAME_RATE=wat %command%");
-  assert.equal(obsolete.state.dxvkFrameRate, 0);
-  assert.match(obsolete.issues.join(" "), /obsolete/);
-  assert.throws(() => applyWorkaroundChange("%command%", "dxvkFrameRate", 61), /0 to 60/);
-  assert.throws(() => applyWorkaroundChange("%command%", "dxvkFrameRate", 1.5), /0 to 60/);
-});
-
-test("keeps vkBasalt disable mutually exclusive while preserving the dropped enable flag otherwise", () => {
-  assert.equal(
-    applyWorkaroundChange("ENABLE_VKBASALT=1 %command%", "disableSteamdeckMode", true),
-    "SteamDeck=0 ENABLE_VKBASALT=1 %command%",
-  );
-  const disabled = applyWorkaroundChange("ENABLE_VKBASALT=1 %command%", "disableVkbasalt", true);
-  assert.equal(disabled, "DISABLE_VKBASALT=1 %command%");
-  assert.equal(
-    applyWorkaroundChange(disabled, "disableVkbasalt", false),
-    "",
-  );
-  const conflict = parseWorkaroundOptions("ENABLE_VKBASALT=1 DISABLE_VKBASALT=1 %command%");
-  assert.equal(conflict.state.disableVkbasalt, true);
-  assert.match(conflict.issues.join(" "), /conflicting/);
-});
-
-test("handles current and legacy Zink forms and reports partial state", () => {
-  const enabled = applyWorkaroundChange("%command%", "enableZink", true);
-  assert.equal(enabled, "MESA_LOADER_DRIVER_OVERRIDE=zink %command%");
-  assert.equal(parseWorkaroundOptions(enabled).state.enableZink, true);
-
-  const legacy = parseWorkaroundOptions(
-    "__GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink %command%",
-  );
-  assert.equal(legacy.state.enableZink, true);
-  assert.deepEqual(legacy.issues, []);
-
-  const partial = parseWorkaroundOptions("__GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink %command%");
-  assert.equal(partial.state.enableZink, true);
-  assert.match(partial.issues.join(" "), /partially configured/);
-  assert.equal(
-    applyWorkaroundChange(
-      "__GLX_VENDOR_LIBRARY_NAME=mesa MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink %command%",
-      "enableZink",
-      false,
-    ),
-    "",
+    cleanupPluginAssignments("PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG=alpha %command%"),
+    "PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG=alpha %command%",
   );
 });
 
-test("cleans only the known legacy wrapper and preserves launch options", () => {
-  assert.equal(
-    cleanupLegacyWrapper('FOO=bar ~/lsfg %command% --arg "~/lsfg"'),
-    'FOO=bar %command% --arg "~/lsfg"',
-  );
-  assert.equal(cleanupLegacyWrapper("/home/deck/lsfg %command%"), "");
-  assert.equal(cleanupLegacyWrapper("mako-run %command%"), "");
-  assert.equal(cleanupLegacyWrapper("mako-launch %command%"), "");
-  assert.equal(
-    cleanupLegacyWrapper("DXVK_FRAME_RATE=30 LSFG_PROCESS=decky-lsfg-vk %command%"),
-    "DXVK_FRAME_RATE=30 LSFG_PROCESS=decky-lsfg-vk %command%",
-  );
-  assert.equal(
-    cleanupLegacyWrapper("LSFG_PROCESS=decky-lsfg-vk %command%"),
-    "LSFG_PROCESS=decky-lsfg-vk %command%",
-  );
-  assert.equal(isLegacyWrapperToken("/home/kurt/lsfg"), false);
-});
-
-test("removes plugin-managed launch options when a profile is removed", () => {
-  assert.equal(
-    cleanupPluginLaunchOptions(
-      'FOO="keep this" ENABLE_GAMESCOPE_WSI=0 DXVK_HDR=0 SteamDeck=0 DISABLE_VKBASALT=1 MESA_LOADER_DRIVER_OVERRIDE=zink DXVK_CONFIG="dxgi.syncInterval = 0; dxvk.maxFrameRate = 30" ~/lsfg %command% --windowed',
-    ),
-    'DXVK_CONFIG="dxgi.syncInterval = 0" FOO="keep this" %command% --windowed',
-  );
-  assert.equal(
-    cleanupPluginLaunchOptions(
-      'PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG="alpha=0.01" LSFG_PROCESS=decky-lsfg-vk %command%',
-    ),
-    'PROTON_USE_WOW64=1 MANGOHUD=1 MANGOHUD_CONFIG="alpha=0.01" LSFG_PROCESS=decky-lsfg-vk %command%',
-  );
-  assert.equal(
-    cleanupPluginLaunchOptions('DXVK_CONFIG="dxvk.maxFrameRate = 30" %command%'),
-    "",
-  );
-});
-
-test("canonicalizes a bare command token without removing real arguments", () => {
-  assert.equal(normalizeLaunchOptions("%command%"), "");
-  assert.equal(normalizeLaunchOptions("%COMMAND%"), "");
-  assert.equal(normalizeLaunchOptions("FOO=bar %command%"), "FOO=bar %command%");
-  assert.equal(normalizeLaunchOptions("%command% --windowed"), "%command% --windowed");
-});
-
-test("is idempotent", () => {
-  const first = applyWorkaroundChange("gamemoderun %command%", "enableZink", true);
-  assert.equal(applyWorkaroundState(first, parseWorkaroundOptions(first).state), first);
-  assert.equal(applyWorkaroundChange(first, "enableZink", true), first);
-  const capped = applyWorkaroundChange(first, "dxvkFrameRate", 30);
-  assert.equal(applyWorkaroundChange(capped, "dxvkFrameRate", 30), capped);
-});
-
-test("reads and writes the matching Steam app-details launch-option field", async () => {
+test("reads the matching app-details field and installs/removes Steam integration", async () => {
   const previousWindow = (globalThis as Record<string, unknown>).window;
   const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
-  let normalOptions = "FOO=bar    %command%";
+  let appOptions = "FOO=bar %command%";
   let shortcutOptions = "--windowed";
-  const normalWrites: string[] = [];
+  let shortcutTarget = "/usr/bin/example-game";
+  const appWrites: string[] = [];
   const shortcutWrites: string[] = [];
+  const targetWrites: string[] = [];
   const unregisters: number[] = [];
-
-  const windowShim = { setTimeout, clearTimeout };
   const apps = {
     RegisterForAppDetails(appId: number, callback: (details: SteamAppDetails) => void) {
-      if (appId === 42) {
-        callback({ strLaunchOptions: normalOptions, strShortcutLaunchOptions: "must-not-be-read" });
-      } else {
-        callback({
-          strShortcutExe: "/usr/bin/example-game",
-          strShortcutLaunchOptions: shortcutOptions,
-          strLaunchOptions: "must-not-be-read",
-        });
-      }
+      callback(appId === 42
+        ? { strLaunchOptions: appOptions, strShortcutLaunchOptions: "wrong-field" }
+        : { strShortcutExe: shortcutTarget, strShortcutLaunchOptions: shortcutOptions, strLaunchOptions: "wrong-field" });
       return { unregister: () => unregisters.push(appId) };
     },
     SetAppLaunchOptions(appId: number, options: string) {
       assert.equal(appId, 42);
-      normalWrites.push(options);
-      normalOptions = options.replaceAll(" ", "  ");
+      appWrites.push(options);
+      appOptions = options.replaceAll(" ", "  ");
     },
     SetShortcutLaunchOptions(appId: number, options: string) {
       assert.equal(appId, 43);
       shortcutWrites.push(options);
       shortcutOptions = options;
     },
+    SetShortcutExe(appId: number, executable: string) {
+      assert.equal(appId, 43);
+      targetWrites.push(executable);
+      shortcutTarget = executable;
+    },
   };
-
-  (globalThis as Record<string, unknown>).window = windowShim;
+  (globalThis as Record<string, unknown>).window = { setTimeout, clearTimeout };
   (globalThis as Record<string, unknown>).SteamClient = { Apps: apps };
   try {
-    const normalBefore = await readSteamLaunchOptions(42, false);
-    assert.equal(normalBefore.options, "FOO=bar    %command%");
-    const normalAfter = await updateSteamLaunchOptions(
-      42,
-      false,
-      (options) => applyWorkaroundChange(options, "disableSteamdeckMode", true),
-    );
-    assert.equal(normalWrites.length, 1);
+    const normal = await readSteamLaunchOptions(42, false);
+    assert.equal(normal.options, "FOO=bar %command%");
+    const installed = await installWrapperIntegration(42, false, wrapper);
+    assert.equal(installed.snapshot.options, `FOO=bar ${wrapper} %command%`.replaceAll(" ", "  "));
+    assert.equal(installed.commandTokenAdded, false);
+    assert.equal(appWrites.length, 1);
     assert.equal(shortcutWrites.length, 0);
-    assert.equal(normalAfter.options, "SteamDeck=0  FOO=bar  %command%");
 
-    const shortcutAfter = await updateSteamLaunchOptions(
-      43,
-      true,
-      (options) => applyWorkaroundChange(options, "disableGamescopeWsi", true),
-    );
-    assert.equal(shortcutWrites.length, 1);
-    assert.equal(shortcutWrites[0], "ENABLE_GAMESCOPE_WSI=0 %command% --windowed");
-    assert.equal(shortcutAfter.options, shortcutWrites[0]);
+    const shortcut = await installWrapperIntegration(43, true, wrapper);
+    assert.equal(shortcut.originalExecutable, "/usr/bin/example-game");
+    assert.equal(shortcut.snapshot.target, wrapper);
+    assert.deepEqual(targetWrites, [wrapper]);
+    const restored = await removeWrapperIntegration(43, true, wrapper, shortcut.originalExecutable);
+    assert.equal(restored.target, "/usr/bin/example-game");
+    assert.deepEqual(targetWrites, [wrapper, "/usr/bin/example-game"]);
+    assert.equal(shortcutWrites.length, 0);
+
+    const cleaned = await removeWrapperIntegration(42, false, wrapper, undefined, installed.commandTokenAdded);
+    assert.equal(cleaned.options, "FOO=bar %command%".replaceAll(" ", "  "));
     assert.ok(unregisters.includes(42));
     assert.ok(unregisters.includes(43));
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
+    else (globalThis as Record<string, unknown>).window = previousWindow;
+    if (previousSteamClient === undefined) delete (globalThis as Record<string, unknown>).SteamClient;
+    else (globalThis as Record<string, unknown>).SteamClient = previousSteamClient;
+  }
+});
+
+test("fails closed when shortcut Target ownership or setters are unavailable", async () => {
+  const previousWindow = (globalThis as Record<string, unknown>).window;
+  const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
+  (globalThis as Record<string, unknown>).window = { setTimeout, clearTimeout };
+  (globalThis as Record<string, unknown>).SteamClient = {
+    Apps: {
+      RegisterForAppDetails(_appId: number, callback: (details: SteamAppDetails) => void) {
+        callback({ strShortcutExe: "/usr/bin/other", strShortcutLaunchOptions: "" });
+        return { unregister() {} };
+      },
+    },
+  };
+  try {
+    await assert.rejects(installWrapperIntegration(99, true, wrapper), /Target API is unavailable/);
+    await assert.rejects(removeWrapperIntegration(99, true, wrapper, "/usr/bin/original"), /Target changed externally/);
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
+    else (globalThis as Record<string, unknown>).window = previousWindow;
+    if (previousSteamClient === undefined) delete (globalThis as Record<string, unknown>).SteamClient;
+    else (globalThis as Record<string, unknown>).SteamClient = previousSteamClient;
+  }
+});
+
+test("restores launch options and shortcut Target when a setter fails after changing them", async () => {
+  const previousWindow = (globalThis as Record<string, unknown>).window;
+  const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
+  let appOptions = "FOO=bar %command%";
+  let shortcutTarget = "/usr/bin/original";
+  const appWrites: string[] = [];
+  const targetWrites: string[] = [];
+  const apps = {
+    RegisterForAppDetails(appId: number, callback: (details: SteamAppDetails) => void) {
+      callback(appId === 42
+        ? { strLaunchOptions: appOptions }
+        : { strShortcutExe: shortcutTarget, strShortcutLaunchOptions: "" });
+      return { unregister() {} };
+    },
+    SetAppLaunchOptions(_appId: number, options: string) {
+      appWrites.push(options);
+      appOptions = options;
+      if (options.includes(wrapper)) throw new Error("simulated launch-option write failure");
+    },
+    SetShortcutExe(_appId: number, executable: string) {
+      targetWrites.push(executable);
+      shortcutTarget = executable;
+      if (executable === wrapper) throw new Error("simulated Target write failure");
+    },
+  };
+  (globalThis as Record<string, unknown>).window = { setTimeout, clearTimeout };
+  (globalThis as Record<string, unknown>).SteamClient = { Apps: apps };
+  try {
+    await assert.rejects(installWrapperIntegration(42, false, wrapper), /simulated launch-option write failure/);
+    assert.equal(appOptions, "FOO=bar %command%");
+    assert.deepEqual(appWrites, [`FOO=bar ${wrapper} %command%`, "FOO=bar %command%"]);
+
+    await assert.rejects(installWrapperIntegration(43, true, wrapper), /simulated Target write failure/);
+    assert.equal(shortcutTarget, "/usr/bin/original");
+    assert.deepEqual(targetWrites, [wrapper, "/usr/bin/original"]);
   } finally {
     if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
     else (globalThis as Record<string, unknown>).window = previousWindow;

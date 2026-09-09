@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
-import { getGameConfigs, getInstalledGames, updateGameConfig, resetGameConfig, resetAllGameConfigs, type GameConfigEntry, type GlobalConfig, type InstalledGame } from "../api/lsfgApi";
+import { getGameConfigs, getInstalledGames, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
-import { applyWorkaroundState, cleanupLegacySteamLaunchOptions, cleanupSteamLaunchOptions, getDefaultWorkaroundState, updateSteamLaunchOptions } from "../utils/steamLaunchOptions";
+import { cleanupLegacySteamLaunchOptions, getDefaultWrapperPath, hasWrapperLaunchIntegration, installWrapperIntegration, isLegacyWrapperToken, readSteamLaunchOptions, removeWrapperIntegration } from "../utils/steamLaunchOptions";
 import { showErrorToast } from "../utils/toastUtils";
 
 export interface GameTarget extends InstalledGame { configured: boolean; }
@@ -30,6 +30,19 @@ function mergeInstalledGames(backendGames: InstalledGame[], shortcutGames: Insta
   const games = new Map(backendGames.map((game) => [game.appid, game]));
   for (const game of shortcutGames) games.set(game.appid, game);
   return Array.from(games.values());
+}
+
+const DEFAULT_WORKAROUND_STATE: WorkaroundState = {
+  dxvkFrameRate: 0,
+  disableGamescopeWsi: true,
+  disableHdr: true,
+  disableSteamdeckMode: false,
+  disableVkbasalt: false,
+  enableZink: false,
+};
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 export function useGameConfiguration() {
@@ -95,39 +108,107 @@ export function useGameConfiguration() {
   const template = useMemo(() => ({ ...getDefaults(), ...globalConfig }), [globalConfig]);
   const config = games.find((game) => game.appid === selectedAppId)?.config || template;
 
-  const cleanupTargetLaunchOptions = useCallback(async (target: GameTarget): Promise<boolean> => {
+  const ensureTargetWorkarounds = useCallback(async (target: GameTarget): Promise<boolean> => {
     if (!installedGames.some((game) => game.appid === target.appid)) return true;
+    const appId = Number(target.appid);
     try {
-      await cleanupLegacySteamLaunchOptions(Number(target.appid), target.nonSteam);
-      return true;
-    } catch (error) {
-      showErrorToast("Could not update Steam launch options", error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [installedGames]);
-
-  const removeTargetLaunchOptions = useCallback(async (target: GameTarget): Promise<boolean> => {
-    if (!installedGames.some((game) => game.appid === target.appid)) return true;
-    try {
-      await cleanupSteamLaunchOptions(Number(target.appid), target.nonSteam);
-      return true;
-    } catch (error) {
-      showErrorToast("Could not clean up Steam launch options", error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [installedGames]);
-
-  const initializeTargetLaunchOptions = useCallback(async (target: GameTarget): Promise<boolean> => {
-    if (!installedGames.some((game) => game.appid === target.appid)) return true;
-    try {
-      await updateSteamLaunchOptions(
-        Number(target.appid),
-        target.nonSteam,
-        (options) => applyWorkaroundState(options, getDefaultWorkaroundState()),
+      const existing = await getWorkaroundState(target.appid);
+      if (!existing.success) throw new Error(existing.error || "Could not read workaround state");
+      const current = await readSteamLaunchOptions(appId, target.nonSteam);
+      const wrapperPath = existing.wrapper_path || getDefaultWrapperPath();
+      const oldState = existing.state;
+      const oldShortcutExe = existing.shortcut_exe || undefined;
+      const oldCommandTokenAdded = existing.command_token_added === true;
+      if (target.nonSteam && oldState && current.target === wrapperPath && !oldShortcutExe) {
+        throw new Error("Managed shortcut Target has no saved original executable");
+      }
+      if (target.nonSteam && oldState && current.target !== wrapperPath && current.target !== oldShortcutExe) {
+        throw new Error("Shortcut Target changed externally; refusing to replace it");
+      }
+      if (target.nonSteam && !oldState && current.target === wrapperPath) {
+        throw new Error("Shortcut Target is already the managed wrapper but its original Target is unknown");
+      }
+      const state = oldState || { ...DEFAULT_WORKAROUND_STATE };
+      const originalExecutable = target.nonSteam ? (oldShortcutExe || current.target) : undefined;
+      const initialIntegration = target.nonSteam
+        ? current.target === wrapperPath
+        : hasWrapperLaunchIntegration(current.options, wrapperPath);
+      const initialStateResult = await setWorkaroundState(
+        target.appid,
+        state,
+        originalExecutable || null,
+        oldCommandTokenAdded,
       );
+      if (!initialStateResult.success) throw new Error(initialStateResult.error || "Could not create workaround state");
+
+      let integration: Awaited<ReturnType<typeof installWrapperIntegration>> | null = null;
+      try {
+        integration = await installWrapperIntegration(appId, target.nonSteam, wrapperPath, oldCommandTokenAdded);
+        const finalStateResult = await setWorkaroundState(
+          target.appid,
+          state,
+          target.nonSteam ? (integration.originalExecutable || originalExecutable || null) : null,
+          integration.commandTokenAdded,
+        );
+        if (!finalStateResult.success) throw new Error(finalStateResult.error || "Could not finalize workaround state");
+        return true;
+      } catch (error) {
+        let rollbackSucceeded = true;
+        if (!initialIntegration && integration) {
+          try {
+            await removeWrapperIntegration(
+              appId,
+              target.nonSteam,
+              wrapperPath,
+              target.nonSteam ? (integration?.originalExecutable || originalExecutable) : undefined,
+              integration?.commandTokenAdded ?? oldCommandTokenAdded,
+            );
+          } catch (rollbackError) {
+            showErrorToast("Workaround rollback failed", asError(rollbackError).message);
+            rollbackSucceeded = false;
+          }
+        }
+        if (rollbackSucceeded) {
+          const restored = oldState
+            ? await setWorkaroundState(target.appid, oldState, oldShortcutExe || null, oldCommandTokenAdded)
+            : await removeWorkaroundState(target.appid);
+          if (!restored.success) throw new Error(restored.error || "Could not roll back workaround state");
+        }
+        throw error;
+      }
+    } catch (error) {
+      showErrorToast("Could not initialize workarounds", asError(error).message);
+      return false;
+    }
+  }, [installedGames]);
+
+  const removeTargetWorkarounds = useCallback(async (target: GameTarget): Promise<boolean> => {
+    if (!installedGames.some((game) => game.appid === target.appid)) return true;
+    const appId = Number(target.appid);
+    try {
+      const existing = await getWorkaroundState(target.appid);
+      if (!existing.success) throw new Error(existing.error || "Could not read workaround state");
+      const wrapperPath = existing.wrapper_path || getDefaultWrapperPath();
+      if (existing.state) {
+        await removeWrapperIntegration(
+          appId,
+          target.nonSteam,
+          wrapperPath,
+          existing.shortcut_exe || undefined,
+          existing.command_token_added === true,
+        );
+      } else {
+        const current = await readSteamLaunchOptions(appId, target.nonSteam);
+        if (target.nonSteam && (current.target === wrapperPath || isLegacyWrapperToken(current.target))) {
+          throw new Error("Shortcut Target is a frame-generation wrapper but its original Target is unknown");
+        }
+        await cleanupLegacySteamLaunchOptions(appId, target.nonSteam, wrapperPath);
+      }
+      const removed = await removeWorkaroundState(target.appid);
+      if (!removed.success) throw new Error(removed.error || "Could not remove workaround state");
       return true;
     } catch (error) {
-      showErrorToast("Could not initialize Steam launch options", error instanceof Error ? error.message : String(error));
+      showErrorToast("Could not clean up game workarounds", asError(error).message);
       return false;
     }
   }, [installedGames]);
@@ -135,37 +216,46 @@ export function useGameConfiguration() {
   const save = useCallback(async (next: ConfigurationData, cleanupLaunchOptions = false) => {
     const selectedTarget = targets.find((target) => target.appid === selectedAppId);
     if (!selectedTarget?.name) return;
-    if (cleanupLaunchOptions && !(await cleanupTargetLaunchOptions(selectedTarget))) return;
+    // The profile owns its wrapper integration.  Keep this check on every
+    // configuration save so an external edit is detected before the profile
+    // is changed; toggles update the sidecar only.
+    if (cleanupLaunchOptions && !(await ensureTargetWorkarounds(selectedTarget))) return;
     const result = await updateGameConfig(selectedAppId, selectedTarget.name, next);
     if (result.success) await load();
-  }, [cleanupTargetLaunchOptions, load, selectedAppId, targets]);
+  }, [ensureTargetWorkarounds, load, selectedAppId, targets]);
 
   const enable = useCallback(async (appid: string) => {
     const target = targets.find((item) => item.appid === appid);
     if (!target?.name) return false;
-    if (!(await initializeTargetLaunchOptions(target))) return false;
+    if (!(await ensureTargetWorkarounds(target))) return false;
     const result = await updateGameConfig(appid, target.name, template);
     if (result.success) await load();
+    else await removeTargetWorkarounds(target);
     return result.success;
-  }, [initializeTargetLaunchOptions, load, targets, template]);
+  }, [ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
   const enableAll = useCallback(async (): Promise<void> => {
     const available = targets.filter((target) => !target.configured && target.name);
     if (available.length === 0) return;
     for (const target of available) {
-      if (!(await initializeTargetLaunchOptions(target))) return;
+      if (!(await ensureTargetWorkarounds(target))) return;
       const result = await updateGameConfig(target.appid, target.name, template);
       if (!result.success) {
         showErrorToast("Could not enable all games", result.error || "A game profile could not be created");
+        await removeTargetWorkarounds(target);
         return;
       }
     }
     await load();
-  }, [initializeTargetLaunchOptions, load, targets, template]);
+  }, [ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
+  const repair = useCallback(async (appid: string): Promise<boolean> => {
+    const target = targets.find((item) => item.appid === appid);
+    return target ? ensureTargetWorkarounds(target) : false;
+  }, [ensureTargetWorkarounds, targets]);
 
   const resetSelected = useCallback(async () => {
     if (selectedAppId) {
       const selectedTarget = targets.find((target) => target.appid === selectedAppId);
-      if (selectedTarget && !(await removeTargetLaunchOptions(selectedTarget))) return;
+      if (selectedTarget && !(await removeTargetWorkarounds(selectedTarget))) return;
       const result = await resetGameConfig(selectedAppId);
       if (result.success) {
         setRunningGame((current) => current?.appid === selectedAppId ? { ...current, configured: false } : current);
@@ -173,10 +263,10 @@ export function useGameConfiguration() {
         await load();
       }
     }
-  }, [load, removeTargetLaunchOptions, selectedAppId, targets]);
+  }, [load, removeTargetWorkarounds, selectedAppId, targets]);
   const resetAll = useCallback(async () => {
     for (const target of targets.filter((item) => item.configured)) {
-      if (!(await removeTargetLaunchOptions(target))) return;
+      if (!(await removeTargetWorkarounds(target))) return;
     }
     const result = await resetAllGameConfigs();
     if (result.success) {
@@ -184,7 +274,7 @@ export function useGameConfiguration() {
       setSelectedAppId("");
       await load();
     }
-  }, [load, removeTargetLaunchOptions, targets]);
+  }, [load, removeTargetWorkarounds, targets]);
 
-  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, resetSelected, resetAll, reload: load };
+  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, repair, resetSelected, resetAll, reload: load };
 }
