@@ -1,5 +1,4 @@
 import re
-import shlex
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -7,36 +6,7 @@ from .base_service import BaseService
 from .constants import (
     STEAM_LOSSLESS_SCALING_APP_ID,
     STEAM_LOSSLESS_SCALING_BRANCH,
-    WRAPPER_FILENAME,
 )
-
-_WRAPPER_TOKEN = f"~/{WRAPPER_FILENAME}"
-_LEGACY_WRAPPER_NAMES = {"lsfg", "lsfg-vk-experimental", "mako-run", "mako-launch"}
-_FLATPAK_TOKENS = {"flatpak", "/usr/bin/flatpak", "usr/bin/flatpak"}
-
-
-def _split_command(value: Optional[str]) -> Optional[list[str]]:
-    if not isinstance(value, str) or not value.strip():
-        return []
-    try:
-        return shlex.split(value, posix=True)
-    except ValueError:
-        return None
-
-
-def _is_wrapper(value: str) -> bool:
-    if value in {_WRAPPER_TOKEN, f"$HOME/{WRAPPER_FILENAME}"}:
-        return True
-    return Path(value).name in _LEGACY_WRAPPER_NAMES or Path(value).name == WRAPPER_FILENAME
-
-
-def is_direct_flatpak_shortcut(executable: Optional[str]) -> bool:
-    tokens = _split_command(executable)
-    if not tokens:
-        return False
-    if tokens[0] in _FLATPAK_TOKENS:
-        return True
-    return len(tokens) == 2 and _is_wrapper(tokens[0]) and tokens[1] in _FLATPAK_TOKENS
 
 
 def _first_string(values: Dict[str, object], *keys: str) -> Optional[str]:
@@ -140,7 +110,6 @@ class SteamService(BaseService):
             "appid": str(appid & 0xFFFFFFFF),
             "name": name,
             "nonSteam": True,
-            "directFlatpak": is_direct_flatpak_shortcut(executable),
         }
         for key, value in (("executable", executable), ("arguments", arguments), ("startDir", start_dir)):
             if value is not None:
@@ -295,7 +264,6 @@ class SteamService(BaseService):
                         "appid": appid,
                         "name": self._section_value(content, "AppState", "name") or f"App {appid}",
                         "nonSteam": False,
-                        "directFlatpak": False,
                     }
             for game in self._shortcut_games():
                 games.setdefault(str(game["appid"]), game)
