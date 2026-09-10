@@ -57,12 +57,20 @@ function timer() {
   };
 }
 
+export function normalizeShortcutTarget(executable?: string | null, startDir?: string | null): string {
+  const target = typeof executable === "string" ? executable.trim() : "";
+  const normalizedStartDir = typeof startDir === "string" ? startDir.trim().replace(/\/+$/, "") : "";
+  return target === "flatpak" && normalizedStartDir === "/usr/bin"
+    ? DIRECT_FLATPAK_EXECUTABLE
+    : target;
+}
+
 function snapshot(appId: number, nonSteam: boolean, details: SteamAppDetails): SteamLaunchOptionsSnapshot {
   return {
     appId,
     nonSteam,
     options: nonSteam ? details.strShortcutLaunchOptions || "" : details.strLaunchOptions || "",
-    target: nonSteam ? details.strShortcutExe || "" : "",
+    target: nonSteam ? normalizeShortcutTarget(details.strShortcutExe, details.strShortcutStartDir) : "",
     details,
   };
 }

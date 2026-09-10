@@ -8,6 +8,7 @@ import {
   installWrapperIntegration,
   installWrapperLaunchOption,
   isLegacyWrapperToken,
+  normalizeShortcutTarget,
   normalizeLaunchOptions,
   readSteamLaunchOptions,
   removeWrapperIntegration,
@@ -15,6 +16,12 @@ import {
 } from "../src/utils/steamLaunchOptions.ts";
 
 const wrapper = "~/.lsfg";
+
+test("normalizes Steam's split direct Flatpak target representation", () => {
+  assert.equal(normalizeShortcutTarget("flatpak", "/usr/bin/"), "/usr/bin/flatpak");
+  assert.equal(normalizeShortcutTarget("flatpak", "/usr/bin"), "/usr/bin/flatpak");
+  assert.equal(normalizeShortcutTarget("flatpak", "/home/deck/"), "flatpak");
+});
 
 test("inserts one wrapper immediately before an existing command macro", () => {
   assert.deepEqual(installWrapperLaunchOption('gamemoderun %command% --profile "high quality"', wrapper), {
@@ -136,6 +143,47 @@ test("reads the matching app-details field and installs/removes Steam integratio
     assert.equal(cleaned.options, "FOO=bar %command%".replaceAll(" ", "  "));
     assert.ok(unregisters.includes(42));
     assert.ok(unregisters.includes(43));
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
+    else (globalThis as Record<string, unknown>).window = previousWindow;
+    if (previousSteamClient === undefined) delete (globalThis as Record<string, unknown>).SteamClient;
+    else (globalThis as Record<string, unknown>).SteamClient = previousSteamClient;
+  }
+});
+
+test("wraps a split direct Flatpak target while preserving its launch arguments", async () => {
+  const previousWindow = (globalThis as Record<string, unknown>).window;
+  const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
+  let shortcutTarget = "flatpak";
+  const shortcutOptions = '"run" "--branch=master" "io.github.banjorecomp.banjorecomp"';
+  const targetWrites: string[] = [];
+  const apps = {
+    RegisterForAppDetails(_appId: number, callback: (details: SteamAppDetails) => void) {
+      callback({
+        strShortcutExe: shortcutTarget,
+        strShortcutStartDir: "/usr/bin/",
+        strShortcutLaunchOptions: shortcutOptions,
+      });
+      return { unregister() {} };
+    },
+    SetShortcutExe(_appId: number, executable: string) {
+      targetWrites.push(executable);
+      shortcutTarget = executable;
+    },
+    SetShortcutLaunchOptions() {},
+  };
+  (globalThis as Record<string, unknown>).window = { setTimeout, clearTimeout };
+  (globalThis as Record<string, unknown>).SteamClient = { Apps: apps };
+  try {
+    const installed = await installWrapperIntegration(46, true, wrapper, false, { kind: "flatpak" });
+    assert.equal(installed.originalExecutable, "/usr/bin/flatpak");
+    assert.equal(installed.snapshot.target, '"~/.lsfg" "/usr/bin/flatpak"');
+    assert.equal(installed.snapshot.options, shortcutOptions);
+    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"']);
+
+    const restored = await removeWrapperIntegration(46, true, wrapper, installed.originalExecutable, false, { kind: "flatpak" });
+    assert.equal(restored.target, "/usr/bin/flatpak");
+    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"', "/usr/bin/flatpak"]);
   } finally {
     if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
     else (globalThis as Record<string, unknown>).window = previousWindow;

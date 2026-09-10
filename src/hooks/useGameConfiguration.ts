@@ -3,13 +3,16 @@ import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
 import { getGameConfigs, getInstalledGames, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
-import { getDefaultWrapperPath, installWrapperIntegration, removeWrapperIntegration } from "../utils/steamLaunchOptions";
+import { getDefaultWrapperPath, installWrapperIntegration, normalizeShortcutTarget, removeWrapperIntegration } from "../utils/steamLaunchOptions";
 import { showErrorToast } from "../utils/toastUtils";
 
 export interface GameTarget extends InstalledGame { configured: boolean; }
 
-function shortcutTransport(executable: unknown): InstalledGame["transport"] {
-  const target = typeof executable === "string" ? executable.trim() : "";
+function shortcutTransport(executable: unknown, startDir: unknown): InstalledGame["transport"] {
+  const target = normalizeShortcutTarget(
+    typeof executable === "string" ? executable : undefined,
+    typeof startDir === "string" ? startDir : undefined,
+  );
   return target === "/usr/bin/flatpak"
     || target === '"~/.lsfg" "/usr/bin/flatpak"'
     || target === "~/.lsfg /usr/bin/flatpak"
@@ -29,11 +32,12 @@ async function getSteamShortcuts(): Promise<InstalledGame[]> {
       const name = shortcut?.data?.strAppName;
       if (!Number.isInteger(appid) || appid === 0 || typeof name !== "string" || !name) return [];
       const executable = shortcut?.data?.strShortcutExe ?? shortcut?.data?.strExe ?? shortcut?.data?.exe;
+      const startDir = shortcut?.data?.strShortcutStartDir ?? shortcut?.data?.strStartDir ?? shortcut?.data?.startDir;
       return [{
         appid: String(appid >>> 0),
         name,
         nonSteam: true,
-        transport: shortcutTransport(executable),
+        transport: shortcutTransport(executable, startDir),
       }];
     });
   } catch {

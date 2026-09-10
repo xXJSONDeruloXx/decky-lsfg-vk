@@ -21,6 +21,10 @@ class SteamTransportTests(unittest.TestCase):
             classify_shortcut_transport("/usr/bin/flatpak", "run com.example.Game --fullscreen"),
             {"kind": "flatpak"},
         )
+        self.assertEqual(
+            classify_shortcut_transport("flatpak", "run com.example.Game --fullscreen", "/usr/bin/"),
+            {"kind": "flatpak"},
+        )
         for executable, options in (
             ("flatpak", "run com.example.Game"),
             ("/usr/bin/flatpak run com.example.Game", "--fullscreen"),
@@ -39,6 +43,21 @@ class SteamTransportTests(unittest.TestCase):
             {"kind": "flatpak"},
         )
         self.assertEqual(classify_shortcut_transport("~/.lsfg", "run com.example.Game"), {"kind": "host"})
+
+    def test_split_flatpak_target_is_recognized_without_script_or_app_detection(self):
+        game = SteamService._shortcut_game(
+            {
+                "appid": 123456,
+                "AppName": "Split Flatpak shortcut",
+                "Exe": "flatpak",
+                "StartDir": "/usr/bin/",
+                "LaunchOptions": "run io.example.Game",
+            }
+        )
+
+        self.assertEqual(game["transport"], {"kind": "flatpak"})
+        self.assertEqual(game["executable"], "flatpak")
+        self.assertEqual(game["startDir"], "/usr/bin/")
 
     def test_direct_flatpak_shortcut_keeps_arguments_without_an_app_id(self):
         game = SteamService._shortcut_game(

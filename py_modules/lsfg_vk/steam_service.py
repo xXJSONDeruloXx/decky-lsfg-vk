@@ -26,13 +26,33 @@ def _split_command(value: Optional[str]) -> Optional[list[str]]:
         return None
 
 
-def classify_shortcut_transport(executable: Optional[str], _launch_options: Optional[str] = None) -> Dict[str, object]:
+def _is_usr_bin_start_dir(value: Optional[str]) -> bool:
+    return isinstance(value, str) and value.strip().rstrip("/") == "/usr/bin"
+
+
+def _effective_shortcut_executable(
+    executable: Optional[str],
+    start_dir: Optional[str],
+) -> Optional[str]:
+    if _split_command(executable) == ["flatpak"] and _is_usr_bin_start_dir(start_dir):
+        return "/usr/bin/flatpak"
+    return executable
+
+
+def classify_shortcut_transport(
+    executable: Optional[str],
+    _launch_options: Optional[str] = None,
+    start_dir: Optional[str] = None,
+) -> Dict[str, object]:
     """Recognize only the direct Flatpak executable Target.
 
+    Steam can serialize the direct target as ``Exe=flatpak`` with
+    ``StartDir=/usr/bin/``. Treat that split representation as the same
+    effective target without inspecting launch arguments or app IDs.
     Launch scripts and wrapper commands remain host targets.  Their launch
     options are intentionally opaque to the plugin.
     """
-    executable_tokens = _split_command(executable)
+    executable_tokens = _split_command(_effective_shortcut_executable(executable, start_dir))
     return {"kind": "flatpak"} if tuple(executable_tokens or ()) in _DIRECT_FLATPAK_TARGETS else {"kind": "host"}
 
 
@@ -137,7 +157,7 @@ class SteamService(BaseService):
             "appid": str(appid & 0xFFFFFFFF),
             "name": name,
             "nonSteam": True,
-            "transport": classify_shortcut_transport(executable, arguments),
+            "transport": classify_shortcut_transport(executable, arguments, start_dir),
         }
         for key, value in (("executable", executable), ("arguments", arguments), ("startDir", start_dir)):
             if value is not None:
