@@ -32,6 +32,7 @@ interface SteamApps {
   SetAppLaunchOptions(appId: number, options: string): void | Promise<void>;
   SetShortcutLaunchOptions(appId: number, options: string): void | Promise<void>;
   SetShortcutExe(appId: number, executable: string): void | Promise<void>;
+  TerminateApp(appId: string, param1: boolean): void;
   GetAllShortcuts?(): Promise<unknown[]>;
 }
 

@@ -1,4 +1,4 @@
-import { ButtonItem, DialogButton, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses } from "@decky/ui";
+import { ButtonItem, ConfirmModal, DialogButton, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses, showModal } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
@@ -91,13 +91,37 @@ export function ConfigurationTab({
   const profileDescription = selectedTarget
     ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
     : "Game is no longer available";
+  const enableProfile = async (appid: string, quitRunningGame = false) => {
+    if (!(await onEnable(appid))) return;
+    if (quitRunningGame) SteamClient.Apps.TerminateApp(appid, false);
+    setFocusFpsMultiplier(true);
+  };
   const handleProfileAction = async () => {
     if (selectedTarget?.configured) {
       await onReset();
       setFocusConfiguredToggle(true);
       closeDetails();
-    } else if (detailAppId && await onEnable(detailAppId)) {
-      setFocusFpsMultiplier(true);
+    } else if (detailAppId) {
+      const isRunningUnconfigured = runningGame?.appid === detailAppId
+        && runningGame.nonSteam === false
+        && runningGame.transport.kind === "host"
+        && selectedTarget?.nonSteam === false
+        && selectedTarget?.transport.kind === "host"
+        && !runningGame.configured;
+      if (isRunningUnconfigured) {
+        showModal(
+          <ConfirmModal
+            strTitle="Game is running"
+            strDescription="Quit the game now so LSFG-VK is used on its next launch?"
+            strOKButtonText="Quit and enable"
+            strCancelButtonText="Enable without quitting"
+            onOK={() => void enableProfile(detailAppId, true)}
+            onCancel={() => void enableProfile(detailAppId)}
+          />,
+        );
+      } else {
+        await enableProfile(detailAppId);
+      }
     }
   };
 
