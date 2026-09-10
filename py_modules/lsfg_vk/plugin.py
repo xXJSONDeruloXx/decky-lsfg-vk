@@ -30,6 +30,14 @@ class Plugin:
         return self.installation_service.check_installation()
 
     async def uninstall_lsfg_vk(self):
+        flatpak = self.flatpak_service.remove_plugin_owned_environment()
+        if not flatpak.get("success"):
+            return {
+                "success": False,
+                "message": "",
+                "error": flatpak.get("error") or "Could not clean up Flatpak support",
+                "removed_files": None,
+            }
         return self.installation_service.uninstall()
 
     async def get_game_configs(self):
@@ -125,9 +133,6 @@ class Plugin:
     async def get_lossless_scaling_branch_status(self):
         return self.steam_service.get_branch_status()
 
-    async def get_flatpak_support_status(self):
-        return self.flatpak_service.get_flatpak_support_status()
-
     async def get_flatpak_apps(self):
         return self.flatpak_service.get_flatpak_apps()
 
@@ -136,9 +141,6 @@ class Plugin:
 
     async def remove_flatpak_app(self, flatpak_app_id: str):
         return self.flatpak_service.remove_app_override(flatpak_app_id)
-
-    async def set_flatpak_extension_enabled(self, version: str, enabled: bool):
-        return self.flatpak_service.set_extension_enabled(version, enabled)
 
     async def _main(self):
         repair = self.wrapper_service.repair()
