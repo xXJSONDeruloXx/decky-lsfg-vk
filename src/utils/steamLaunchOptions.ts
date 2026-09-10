@@ -181,12 +181,8 @@ function selectFlatpakExecutable(transport: TargetTransport, candidate?: string 
     : undefined;
 }
 
-function quoteTargetToken(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-
 function flatpakTargetValue(wrapperPath: string, executable: string): string {
-  return `${quoteTargetToken(wrapperPath)} ${quoteTargetToken(executable)}`;
+  return `${wrapperPath} ${executable}`;
 }
 
 function managedFlatpakExecutable(target: string, wrapperPath: string): string | undefined {

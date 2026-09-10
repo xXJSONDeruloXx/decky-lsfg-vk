@@ -131,12 +131,12 @@ test("reads the matching app-details field and installs/removes Steam integratio
 
     const shortcut = await installWrapperIntegration(43, true, wrapper, false, { kind: "flatpak" });
     assert.equal(shortcut.originalExecutable, "/usr/bin/flatpak");
-    assert.equal(shortcut.snapshot.target, '"~/.lsfg" "/usr/bin/flatpak"');
+    assert.equal(shortcut.snapshot.target, "~/.lsfg /usr/bin/flatpak");
     assert.equal(shortcut.snapshot.options, "--windowed");
-    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"']);
+    assert.deepEqual(targetWrites, ["~/.lsfg /usr/bin/flatpak"]);
     const restored = await removeWrapperIntegration(43, true, wrapper, shortcut.originalExecutable, false, { kind: "flatpak" });
     assert.equal(restored.target, "/usr/bin/flatpak");
-    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"', "/usr/bin/flatpak"]);
+    assert.deepEqual(targetWrites, ["~/.lsfg /usr/bin/flatpak", "/usr/bin/flatpak"]);
     assert.equal(shortcutWrites.length, 0);
 
     const cleaned = await removeWrapperIntegration(42, false, wrapper, undefined, installed.commandTokenAdded);
@@ -177,13 +177,13 @@ test("wraps a split direct Flatpak target while preserving its launch arguments"
   try {
     const installed = await installWrapperIntegration(46, true, wrapper, false, { kind: "flatpak" });
     assert.equal(installed.originalExecutable, "/usr/bin/flatpak");
-    assert.equal(installed.snapshot.target, '"~/.lsfg" "/usr/bin/flatpak"');
+    assert.equal(installed.snapshot.target, "~/.lsfg /usr/bin/flatpak");
     assert.equal(installed.snapshot.options, shortcutOptions);
-    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"']);
+    assert.deepEqual(targetWrites, ["~/.lsfg /usr/bin/flatpak"]);
 
     const restored = await removeWrapperIntegration(46, true, wrapper, installed.originalExecutable, false, { kind: "flatpak" });
     assert.equal(restored.target, "/usr/bin/flatpak");
-    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"', "/usr/bin/flatpak"]);
+    assert.deepEqual(targetWrites, ["~/.lsfg /usr/bin/flatpak", "/usr/bin/flatpak"]);
   } finally {
     if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
     else (globalThis as Record<string, unknown>).window = previousWindow;
@@ -323,7 +323,7 @@ test("restores launch options and shortcut Target when a setter fails after chan
     SetShortcutExe(_appId: number, executable: string) {
       targetWrites.push(executable);
       shortcutTarget = executable;
-      if (executable === '"~/.lsfg" "/usr/bin/flatpak"') throw new Error("simulated Target write failure");
+      if (executable === "~/.lsfg /usr/bin/flatpak") throw new Error("simulated Target write failure");
     },
   };
   (globalThis as Record<string, unknown>).window = { setTimeout, clearTimeout };
@@ -335,7 +335,7 @@ test("restores launch options and shortcut Target when a setter fails after chan
 
     await assert.rejects(installWrapperIntegration(43, true, wrapper, false, { kind: "flatpak" }), /simulated Target write failure/);
     assert.equal(shortcutTarget, "/usr/bin/flatpak");
-    assert.deepEqual(targetWrites, ['"~/.lsfg" "/usr/bin/flatpak"', "/usr/bin/flatpak"]);
+    assert.deepEqual(targetWrites, ["~/.lsfg /usr/bin/flatpak", "/usr/bin/flatpak"]);
   } finally {
     if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
     else (globalThis as Record<string, unknown>).window = previousWindow;
