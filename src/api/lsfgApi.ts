@@ -41,9 +41,6 @@ export interface InstalledGame {
   appid: string;
   name: string;
   nonSteam: boolean;
-  executable?: string;
-  arguments?: string;
-  startDir?: string;
 }
 
 export interface GlobalConfig {
