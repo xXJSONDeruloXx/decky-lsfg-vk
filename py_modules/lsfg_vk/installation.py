@@ -122,17 +122,24 @@ class InstallationService(BaseService):
         if missing:
             raise OSError("Archive is missing required files: " + ", ".join(missing))
 
+    def _default_config(self) -> ProfileData:
+        defaults = ConfigurationManager.get_defaults()
+        return ProfileData(
+            profiles={},
+            global_config={"dll": defaults["dll"], "no_fp16": defaults["no_fp16"]},
+        )
+
     def _prepare_config(self) -> ProfileData:
-        if self.config_file_path.exists():
-            profile_data = ConfigurationManager.parse_toml_content_multi_profile(
-                self.config_file_path.read_text(encoding="utf-8")
+        try:
+            profile_data = (
+                ConfigurationManager.parse_toml_content_multi_profile(
+                    self.config_file_path.read_text(encoding="utf-8")
+                )
+                if self.config_file_path.exists()
+                else self._default_config()
             )
-        else:
-            defaults = ConfigurationManager.get_defaults()
-            profile_data = ProfileData(
-                profiles={},
-                global_config={"dll": defaults["dll"], "no_fp16": defaults["no_fp16"]},
-            )
+        except ValueError:
+            profile_data = self._default_config()
         self._resolve_dll_path(profile_data)
         defaults = ConfigurationManager.get_defaults()
         for name, profile in profile_data["profiles"].items():
