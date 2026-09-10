@@ -9,10 +9,6 @@ from .constants import (
 )
 
 
-def _first_string(values: Dict[str, object], *keys: str) -> Optional[str]:
-    return next((values[key] for key in keys if isinstance(values.get(key), str)), None)
-
-
 class SteamService(BaseService):
     DEFAULT_BRANCH = "public"
     MANIFEST_FILENAME = f"appmanifest_{STEAM_LOSSLESS_SCALING_APP_ID}.acf"
@@ -103,18 +99,11 @@ class SteamService(BaseService):
         name = shortcut.get("AppName") or shortcut.get("appname")
         if not isinstance(appid, int) or appid == 0 or not isinstance(name, str) or not name:
             return None
-        executable = _first_string(shortcut, "Exe", "exe", "executable")
-        arguments = _first_string(shortcut, "LaunchOptions", "launchoptions", "launch_options", "arguments")
-        start_dir = _first_string(shortcut, "StartDir", "startdir", "start_dir")
-        game: Dict[str, object] = {
+        return {
             "appid": str(appid & 0xFFFFFFFF),
             "name": name,
             "nonSteam": True,
         }
-        for key, value in (("executable", executable), ("arguments", arguments), ("startDir", start_dir)):
-            if value is not None:
-                game[key] = value
-        return game
 
     def _shortcut_games(self):
         games = {}
