@@ -16,7 +16,6 @@ declare module "*.jpg" {
 interface SteamAppDetails {
   strLaunchOptions?: string;
   strShortcutLaunchOptions?: string;
-  strShortcutStartDir?: string;
 }
 
 interface SteamAppDetailsRegistration {
