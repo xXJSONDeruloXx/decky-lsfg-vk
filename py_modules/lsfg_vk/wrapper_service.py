@@ -119,7 +119,7 @@ class WrapperService(BaseService):
         }
         if type(entry["command_token_added"]) is not bool:
             raise ValueError("command_token_added must be a boolean")
-        if "shortcut_exe" in raw and raw["shortcut_exe"] is not None:
+        if entry["transport"]["kind"] == "flatpak" and "shortcut_exe" in raw and raw["shortcut_exe"] is not None:
             shortcut_exe = raw["shortcut_exe"]
             if (
                 not isinstance(shortcut_exe, str)
@@ -475,10 +475,11 @@ class WrapperService(BaseService):
                     "command_token_added": bool(command_token_added),
                     "transport": selected_transport,
                 }
-                if shortcut_exe is not None:
-                    entry = self._validate_entry({**entry, "shortcut_exe": shortcut_exe})
-                elif previous_entry and "shortcut_exe" in previous_entry:
-                    entry["shortcut_exe"] = previous_entry["shortcut_exe"]
+                if selected_transport["kind"] == "flatpak":
+                    if shortcut_exe is not None:
+                        entry = self._validate_entry({**entry, "shortcut_exe": shortcut_exe})
+                    elif previous_entry and "shortcut_exe" in previous_entry:
+                        entry["shortcut_exe"] = previous_entry["shortcut_exe"]
                 document["apps"][normalized] = entry
                 self._write_pair(document)
                 return self._response(document, normalized)

@@ -1,3 +1,5 @@
+import type { TargetTransport } from "../api/lsfgApi";
+
 const DEFAULT_WRAPPER_PATH = "~/.lsfg";
 const COMMAND_TOKEN = "%command%";
 
@@ -31,6 +33,7 @@ export interface WrapperIntegrationResult {
   snapshot: SteamLaunchOptionsSnapshot;
   originalExecutable?: string;
   commandTokenAdded: boolean;
+  changed: boolean;
 }
 
 function asError(error: unknown): Error {
@@ -159,6 +162,13 @@ const commandIndex = (tokens: readonly LaunchToken[]) => tokens.findIndex((token
 const isAssignment = (token: LaunchToken) => /^[A-Za-z_][A-Za-z0-9_]*=/.test(token.value);
 const isLegacyToken = (value: string) => LEGACY_WRAPPER_TOKENS.has(value) || LEGACY_ABSOLUTE_WRAPPER.test(value);
 const isWrapperToken = (value: string, wrapperPath: string) => decodeToken(value) === wrapperPath || isLegacyWrapperToken(value);
+const usesShortcutTarget = (nonSteam: boolean, transport: TargetTransport) => nonSteam && transport.kind === "flatpak";
+
+function selectFlatpakExecutable(transport: TargetTransport, candidate?: string | null): string | undefined {
+  if (transport.kind !== "flatpak") return undefined;
+  const value = candidate?.trim();
+  return value ? (value.startsWith("/") ? value : "/usr/bin/flatpak") : undefined;
+}
 
 export const normalizeLaunchOptions = (options: string) => serialize(tokenize(options));
 export const isLegacyWrapperToken = (value: string) => isLegacyToken(decodeToken(value));
@@ -172,10 +182,10 @@ function removeMatchingWrappers(tokens: LaunchToken[], predicate: (value: string
   return true;
 }
 
-export function installWrapperLaunchOption(
+function installLaunchOption(
   options: string,
   wrapperPath = DEFAULT_WRAPPER_PATH,
-  allowCommandArgs = false,
+  shortcutLaunchOptions = false,
 ) {
   const tokens = tokenize(options);
   removeMatchingWrappers(tokens, isLegacyToken);
@@ -189,7 +199,7 @@ export function installWrapperLaunchOption(
   }
   let insertion = 0;
   while (insertion < tokens.length && isAssignment(tokens[insertion])) insertion++;
-  if (!allowCommandArgs && insertion < tokens.length && !tokens[insertion].value.startsWith("-")) {
+  if (!shortcutLaunchOptions && insertion < tokens.length && !tokens[insertion].value.startsWith("-")) {
     throw new Error("Launch options do not contain %command%; refusing to guess a launcher command");
   }
   tokens.splice(insertion, 0,
@@ -197,6 +207,10 @@ export function installWrapperLaunchOption(
     { raw: COMMAND_TOKEN, value: COMMAND_TOKEN },
   );
   return { options: serialize(tokens), commandTokenAdded: true };
+}
+
+export function installWrapperLaunchOption(options: string, wrapperPath = DEFAULT_WRAPPER_PATH) {
+  return installLaunchOption(options, wrapperPath);
 }
 
 export function removeWrapperLaunchOption(
@@ -247,6 +261,29 @@ export function hasWrapperLaunchIntegration(options: string, wrapperPath = DEFAU
   const tokens = tokenize(options);
   const command = commandIndex(tokens);
   return command > 0 && tokens[command - 1].value === wrapperPath;
+}
+
+export function isWrapperIntegrationInstalled(
+  steam: SteamLaunchOptionsSnapshot,
+  nonSteam: boolean,
+  transport: TargetTransport,
+  wrapperPath = DEFAULT_WRAPPER_PATH,
+): boolean {
+  return usesShortcutTarget(nonSteam, transport)
+    ? steam.target === wrapperPath
+    : hasWrapperLaunchIntegration(steam.options, wrapperPath);
+}
+
+export function assertKnownShortcutTarget(
+  steam: SteamLaunchOptionsSnapshot,
+  nonSteam: boolean,
+  transport: TargetTransport,
+  wrapperPath: string,
+  originalExecutable?: string | null,
+): void {
+  if (usesShortcutTarget(nonSteam, transport) && steam.target === wrapperPath && !originalExecutable) {
+    throw new Error("Managed shortcut Target has no saved original executable");
+  }
 }
 
 const queues = new Map<string, Promise<unknown>>();
@@ -340,43 +377,52 @@ export function installWrapperIntegration(
   nonSteam: boolean,
   wrapperPath: string,
   commandTokenAdded = false,
-  transport: "host" | "flatpak" = "host",
+  transport: TargetTransport = { kind: "host" },
+  originalExecutable?: string,
 ): Promise<WrapperIntegrationResult> {
   return queued(appId, nonSteam, async () => {
     let current = await readSteamLaunchOptions(appId, nonSteam);
-    if (nonSteam && transport === "flatpak") {
+    if (usesShortcutTarget(nonSteam, transport)) {
       if (!current.target) throw new Error("Steam shortcut Target is empty; refusing to replace it");
       if (current.target !== wrapperPath && isWrapperToken(current.target, wrapperPath)) {
         throw new Error("The shortcut Target points to a legacy frame-generation wrapper; restore it first");
       }
       const cleaned = cleanupPluginLaunchOptions(current.options, wrapperPath);
-      if (cleaned !== current.options) {
+      const launchOptionsChanged = cleaned !== current.options;
+      if (launchOptionsChanged) {
         current = await writeVerified(
           appId, true, current.options, cleaned,
           (value) => writeOptions(appId, true, value), readOptions,
           "Steam did not accept shortcut launch options",
         );
       }
-      if (current.target === wrapperPath) return { snapshot: current, commandTokenAdded: false };
-      const originalExecutable = current.target;
+      const savedOriginal = selectFlatpakExecutable(transport, originalExecutable);
+      if (current.target === wrapperPath) {
+        if (!savedOriginal) throw new Error("Managed shortcut Target has no saved original executable");
+        return { snapshot: current, originalExecutable: savedOriginal, commandTokenAdded: false, changed: launchOptionsChanged };
+      }
+      if (savedOriginal && selectFlatpakExecutable(transport, current.target) !== savedOriginal) {
+        throw new Error("Shortcut Target changed externally; refusing to replace it");
+      }
+      const currentOriginal = selectFlatpakExecutable(transport, current.target);
       const value = await writeVerified(
-        appId, true, originalExecutable, wrapperPath,
+        appId, true, current.target, wrapperPath,
         (target) => writeTarget(appId, target), readTarget,
         "Steam did not accept the shortcut Target",
       );
-      return { snapshot: value, originalExecutable, commandTokenAdded: false };
+      return { snapshot: value, originalExecutable: currentOriginal, commandTokenAdded: false, changed: true };
     }
 
     const cleaned = cleanupPluginAssignments(cleanupLegacyLaunchOptions(current.options));
     const alreadyInstalled = hasWrapperLaunchIntegration(current.options, wrapperPath);
-    const rewrite = installWrapperLaunchOption(cleaned, wrapperPath, nonSteam);
-    if (rewrite.options === current.options) return { snapshot: current, commandTokenAdded };
+    const rewrite = installLaunchOption(cleaned, wrapperPath, nonSteam);
+    if (rewrite.options === current.options) return { snapshot: current, commandTokenAdded, changed: false };
     const value = await writeVerified(
       appId, nonSteam, current.options, rewrite.options,
       (options) => writeOptions(appId, nonSteam, options), readOptions,
       "Steam did not accept the launch options",
     );
-    return { snapshot: value, commandTokenAdded: alreadyInstalled ? commandTokenAdded : rewrite.commandTokenAdded };
+    return { snapshot: value, commandTokenAdded: alreadyInstalled ? commandTokenAdded : rewrite.commandTokenAdded, changed: true };
   });
 }
 
@@ -386,17 +432,11 @@ export function removeWrapperIntegration(
   wrapperPath: string,
   originalExecutable?: string,
   commandTokenAdded = false,
-  transport: "host" | "flatpak" = "host",
+  transport: TargetTransport = { kind: "host" },
 ): Promise<SteamLaunchOptionsSnapshot> {
   return queued(appId, nonSteam, async () => {
     let current = await readSteamLaunchOptions(appId, nonSteam);
-    if (nonSteam && transport === "flatpak") {
-      if (!originalExecutable || isWrapperToken(originalExecutable, wrapperPath)) {
-        throw new Error("Original shortcut Target is unavailable; refusing to overwrite the current Target");
-      }
-      if (current.target !== wrapperPath && current.target !== originalExecutable) {
-        throw new Error("Shortcut Target changed externally; refusing to restore it");
-      }
+    if (usesShortcutTarget(nonSteam, transport)) {
       const cleaned = cleanupPluginLaunchOptions(current.options, wrapperPath);
       if (cleaned !== current.options) {
         current = await writeVerified(
@@ -405,7 +445,18 @@ export function removeWrapperIntegration(
           "Steam did not clean shortcut launch options",
         );
       }
-      if (current.target === originalExecutable) return current;
+      if (current.target !== wrapperPath) {
+        if (isWrapperToken(current.target, wrapperPath)) {
+          throw new Error("Original shortcut Target is unavailable; refusing to overwrite the current Target");
+        }
+        if (originalExecutable && selectFlatpakExecutable(transport, current.target) !== selectFlatpakExecutable(transport, originalExecutable)) {
+          throw new Error("Shortcut Target changed externally; refusing to restore it");
+        }
+        return current;
+      }
+      if (!originalExecutable || isWrapperToken(originalExecutable, wrapperPath)) {
+        throw new Error("Original shortcut Target is unavailable; refusing to overwrite the current Target");
+      }
       return writeVerified(
         appId, true, wrapperPath, originalExecutable,
         (target) => writeTarget(appId, target), readTarget,

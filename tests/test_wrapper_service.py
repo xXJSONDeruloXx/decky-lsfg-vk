@@ -170,6 +170,25 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertIn("ARG:com.example.Game", args)
         self.assertIn("ARG:--windowed", args)
 
+    def test_host_transport_does_not_store_shortcut_target(self):
+        self.service.set(
+            "123",
+            self._state(),
+            "/usr/bin/flatpak",
+            False,
+            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
+        )
+        response = self.service.set(
+            "123",
+            self._state(),
+            "/usr/bin/ignored",
+            False,
+            {"kind": "host"},
+        )
+        self.assertTrue(response["success"])
+        self.assertIsNone(response["shortcut_exe"])
+        self.assertIsNone(self.service.get("123")["shortcut_exe"])
+
     def test_flatpak_transport_rejects_non_run_invocation(self):
         fake_flatpak = self.home / ".local/bin/flatpak"
         fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
