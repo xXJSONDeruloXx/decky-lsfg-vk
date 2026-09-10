@@ -63,6 +63,7 @@ export interface WorkaroundState {
 
 export interface WorkaroundStateResult extends ApiResult {
   appid?: string;
+  app_id?: string;
   state?: WorkaroundState | null;
   wrapper_path?: string;
   wrapper_owned?: boolean;
@@ -110,6 +111,12 @@ export interface FlatpakApp {
   runtime_ready: boolean;
   prepared: boolean;
   owned: boolean;
+  enabled: boolean;
+  profile: string;
+  config?: LsfgConfig | null;
+  workarounds: WorkaroundState;
+  active?: boolean;
+  pid?: string;
   error?: string | null;
 }
 
@@ -117,12 +124,8 @@ export interface FlatpakAppsResult extends ApiResult {
   apps?: FlatpakApp[];
 }
 
-export interface FlatpakAppResult extends ApiResult {
+export interface FlatpakAppResult extends ApiResult, Partial<FlatpakApp> {
   app_id: string;
-  runtime?: string | null;
-  runtime_branch?: string | null;
-  prepared: boolean;
-  owned: boolean;
 }
 
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
@@ -131,8 +134,12 @@ export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 export const getFlatpakApps = callable<[], FlatpakAppsResult>("get_flatpak_apps");
-export const prepareFlatpakApp = callable<[string], FlatpakAppResult>("prepare_flatpak_app");
+export const enableFlatpakApp = callable<[string], FlatpakAppResult>("enable_flatpak_app");
+export const updateFlatpakConfig = callable<[string, LsfgConfig], FlatpakAppResult>("update_flatpak_config");
+export const getFlatpakWorkaroundState = callable<[string], WorkaroundStateResult>("get_flatpak_workaround_state");
+export const setFlatpakWorkaroundState = callable<[string, WorkaroundState], WorkaroundStateResult>("set_flatpak_workaround_state");
 export const removeFlatpakApp = callable<[string], FlatpakAppResult>("remove_flatpak_app");
+export const getRunningFlatpakApps = callable<[], FlatpakAppsResult>("get_running_flatpak_apps");
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
