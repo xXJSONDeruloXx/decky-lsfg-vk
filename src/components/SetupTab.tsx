@@ -1,5 +1,5 @@
 import { ButtonItem, Field, PanelSection, PanelSectionRow } from "@decky/ui";
-import { type SteamBranchStatus } from "../api/lsfgApi";
+import { type FlatpakExtensionStatus, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 
 interface SetupTabProps {
@@ -7,11 +7,14 @@ interface SetupTabProps {
   installationStatus: string;
   losslessScalingInstalled: boolean;
   losslessScalingStatus: string;
+  flatpakStatus: FlatpakExtensionStatus | null;
   steamBranchStatus: SteamBranchStatus | null;
   isInstalling: boolean;
   isUninstalling: boolean;
+  isRepairingFlatpak: boolean;
   onInstall: () => void;
   onUninstall: () => void;
+  onRepairFlatpak: () => void;
 }
 
 export function SetupTab(props: SetupTabProps) {
@@ -20,11 +23,14 @@ export function SetupTab(props: SetupTabProps) {
     installationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
+    flatpakStatus,
     steamBranchStatus,
     isInstalling,
     isUninstalling,
+    isRepairingFlatpak,
     onInstall,
     onUninstall,
+    onRepairFlatpak,
   } = props;
   const losslessScalingAppInstalled = losslessScalingInstalled || steamBranchStatus?.installed === true;
   const buttonLabel = isInstalling
@@ -46,6 +52,31 @@ export function SetupTab(props: SetupTabProps) {
       <PanelSectionRow>
         <Field label="LSFG-VK" description={installationStatus} />
       </PanelSectionRow>
+      <PanelSectionRow>
+        <Field
+          label="Flatpak support"
+          description={
+            !flatpakStatus
+              ? "Status unavailable"
+              : !flatpakStatus.available
+                ? "Flatpak is not available"
+                : flatpakStatus.ready
+                  ? "Configured for 23.08, 24.08, and 25.08"
+                  : flatpakStatus.error || "Needs repair"
+          }
+        />
+      </PanelSectionRow>
+      {flatpakStatus?.available && !flatpakStatus.ready && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={onRepairFlatpak}
+            disabled={isRepairingFlatpak || isInstalling || isUninstalling}
+          >
+            {isRepairingFlatpak ? "Repairing Flatpak support..." : "Repair Flatpak support"}
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
       {steamBranchStatus?.installed && (
         <PanelSectionRow>
           <Field

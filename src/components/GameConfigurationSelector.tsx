@@ -137,7 +137,7 @@ export function GameConfigurationSelector({
     showModal(
       <ConfirmModal
         strTitle="Enable all available games?"
-        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults. Flatpak targets will be provisioned as needed."
+        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults. Flatpak support is configured globally."
         strOKButtonText="Enable all"
         strCancelButtonText="Cancel"
         onOK={() => void onEnableAll()}

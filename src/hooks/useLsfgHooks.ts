@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import {
   checkLsfgVkInstalled,
+  getFlatpakSupportStatus,
   getLosslessScalingBranchStatus,
   installLsfgVk,
+  repairFlatpakSupport,
   uninstallLsfgVk,
+  type FlatpakExtensionStatus,
   type SteamBranchStatus,
 } from "../api/lsfgApi";
 import {
@@ -11,6 +14,7 @@ import {
   showInstallSuccessToast,
   showUninstallErrorToast,
   showUninstallSuccessToast,
+  showErrorToast,
 } from "../utils/toastUtils";
 
 export function useInstallation(reloadConfig?: () => Promise<void>) {
@@ -18,11 +22,19 @@ export function useInstallation(reloadConfig?: () => Promise<void>) {
   const [installationStatus, setInstallationStatus] = useState("");
   const [losslessScalingInstalled, setLosslessScalingInstalled] = useState(false);
   const [losslessScalingStatus, setLosslessScalingStatus] = useState("");
+  const [flatpakStatus, setFlatpakStatus] = useState<FlatpakExtensionStatus | null>(null);
   const [steamBranchStatus, setSteamBranchStatus] = useState<SteamBranchStatus | null>(null);
   const [isInstalling, setIsInstalling] = useState(false);
   const [isUninstalling, setIsUninstalling] = useState(false);
+  const [isRepairingFlatpak, setIsRepairingFlatpak] = useState(false);
 
   const checkInstallation = async () => {
+    try {
+      setFlatpakStatus(await getFlatpakSupportStatus());
+    } catch (error) {
+      console.error("Error checking Flatpak support:", error);
+      setFlatpakStatus(null);
+    }
     try {
       setSteamBranchStatus(await getLosslessScalingBranchStatus());
     } catch (error) {
@@ -95,16 +107,37 @@ export function useInstallation(reloadConfig?: () => Promise<void>) {
     }
   };
 
+  const repairFlatpak = async () => {
+    if (isRepairingFlatpak) return false;
+    setIsRepairingFlatpak(true);
+    try {
+      const result = await repairFlatpakSupport();
+      setFlatpakStatus(result);
+      if (!result.success) {
+        showErrorToast("Flatpak support repair failed", result.error || result.message || "Unknown error");
+      }
+      return result.success;
+    } catch (error) {
+      showErrorToast("Flatpak support repair failed", String(error));
+      return false;
+    } finally {
+      setIsRepairingFlatpak(false);
+    }
+  };
+
   return {
     isInstalled,
     installationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
+    flatpakStatus,
     steamBranchStatus,
     isInstalling,
     isUninstalling,
+    isRepairingFlatpak,
     install,
     uninstall,
+    repairFlatpak,
     checkInstallation,
   };
 }

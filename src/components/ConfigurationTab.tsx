@@ -182,18 +182,6 @@ export function ConfigurationTab({
           </PanelSectionRow>
         )}
       </PanelSection>
-      {selectedTarget?.configured && selectedTarget.transport.kind === "flatpak" && selectedTarget.flatpakSupport?.support_status !== "ready" && (
-        <PanelSection>
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={() => void onRepair(selectedTarget.appid)}
-            >
-              Repair Flatpak support
-            </ButtonItem>
-          </PanelSectionRow>
-        </PanelSection>
-      )}
       {selectedTarget?.configured && (
         <GameConfigurationControls
           config={config}

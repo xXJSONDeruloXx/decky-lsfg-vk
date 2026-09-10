@@ -59,11 +59,14 @@ export function Content() {
     installationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
+    flatpakStatus,
     steamBranchStatus,
     isInstalling,
     isUninstalling,
+    isRepairingFlatpak,
     install,
     uninstall,
+    repairFlatpak,
   } = useInstallation(reload);
   const [tab, setTab] = useState("Setup");
   const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
@@ -114,11 +117,14 @@ export function Content() {
       installationStatus={installationStatus}
       losslessScalingInstalled={losslessScalingInstalled}
       losslessScalingStatus={losslessScalingStatus}
+      flatpakStatus={flatpakStatus}
       steamBranchStatus={steamBranchStatus}
       isInstalling={isInstalling}
       isUninstalling={isUninstalling}
+      isRepairingFlatpak={isRepairingFlatpak}
       onInstall={() => void install()}
       onUninstall={() => void uninstall()}
+      onRepairFlatpak={() => void repairFlatpak()}
     />
   );
 
@@ -132,7 +138,6 @@ export function Content() {
               game={runningGame}
               config={config}
               onConfigChange={(field, value) => handleConfigChange(field, value)}
-              onRepair={repair}
             />
           ),
         }] : []),
