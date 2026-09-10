@@ -51,17 +51,35 @@ class PluginMigrationTests(unittest.TestCase):
         finally:
             self._restore(previous_decky, previous_tomllib)
 
-    def test_uninstall_cleans_owned_flatpak_state(self):
+    def test_uninstall_cleans_owned_flatpak_state_and_profiles(self):
         Plugin, _decky, previous_decky, previous_tomllib = self._load_plugin()
         try:
             plugin = Plugin.__new__(Plugin)
             plugin.installation_service = Mock()
             plugin.flatpak_service = Mock()
+            plugin.configuration_service = Mock()
             plugin.flatpak_service.remove_plugin_owned_environment.return_value = {"success": True}
 
             asyncio.run(plugin._uninstall())
 
             plugin.flatpak_service.remove_plugin_owned_environment.assert_called_once_with()
+            plugin.configuration_service.reset_all_flatpak_configs.assert_called_once_with()
+            plugin.installation_service.cleanup_on_uninstall.assert_called_once_with()
+        finally:
+            self._restore(previous_decky, previous_tomllib)
+
+    def test_uninstall_preserves_profiles_when_flatpak_cleanup_fails(self):
+        Plugin, _decky, previous_decky, previous_tomllib = self._load_plugin()
+        try:
+            plugin = Plugin.__new__(Plugin)
+            plugin.installation_service = Mock()
+            plugin.flatpak_service = Mock()
+            plugin.configuration_service = Mock()
+            plugin.flatpak_service.remove_plugin_owned_environment.return_value = {"success": False, "error": "changed"}
+
+            asyncio.run(plugin._uninstall())
+
+            plugin.configuration_service.reset_all_flatpak_configs.assert_not_called()
             plugin.installation_service.cleanup_on_uninstall.assert_called_once_with()
         finally:
             self._restore(previous_decky, previous_tomllib)
