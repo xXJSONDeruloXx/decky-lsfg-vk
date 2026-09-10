@@ -160,6 +160,9 @@ class Plugin:
     async def repair_flatpak_support(self, flatpak_app_id: str) -> Dict[str, Any]:
         return self.flatpak_service.ensure_app_support(flatpak_app_id)
 
+    async def set_flatpak_extension_enabled(self, version: str, enabled: bool) -> Dict[str, Any]:
+        return self.flatpak_service.set_extension_enabled(version, enabled)
+
     async def remove_plugin_owned_flatpak_extensions(self) -> Dict[str, Any]:
         return self.flatpak_service.remove_plugin_owned_extensions()
     

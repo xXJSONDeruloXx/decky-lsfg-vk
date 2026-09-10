@@ -4,6 +4,7 @@ export { InstallationButton } from "./InstallationButton";
 export { ConfigurationSection } from "./ConfigurationSection";
 export { FpsMultiplierControl } from "./FpsMultiplierControl";
 export { ConfigurationTab } from "./ConfigurationTab";
+export { ConfigFileTab } from "./ConfigFileTab";
 export { SetupTab } from "./SetupTab";
 export { GameConfigurationSelector } from "./GameConfigurationSelector";
 export { GameConfigurationControls } from "./GameConfigurationControls";

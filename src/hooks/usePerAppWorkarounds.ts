@@ -61,6 +61,18 @@ function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
+function selectShortcutExecutable(
+  transport: TargetTransport,
+  ...candidates: Array<string | null | undefined>
+): string | undefined {
+  const absolute = candidates
+    .map((candidate) => candidate?.trim())
+    .find((candidate) => candidate && candidate.startsWith("/"));
+  if (absolute) return absolute;
+  if (transport.kind === "flatpak") return "/usr/bin/flatpak";
+  return candidates.map((candidate) => candidate?.trim()).find(Boolean);
+}
+
 function integrationIsInstalled(
   steam: SteamLaunchOptionsSnapshot,
   nonSteam: boolean,
@@ -101,7 +113,9 @@ async function adoptWorkaroundState(
   if (nonSteam && (!steam.target || steam.target === wrapperPath || isLegacyWrapperToken(steam.target))) {
     throw new Error("Shortcut Target is a wrapper but its original Target is unknown");
   }
-  const originalExecutable = nonSteam ? steam.target : null;
+  const originalExecutable = nonSteam
+    ? selectShortcutExecutable(transport, steam.target)
+    : null;
   const initial = await setWorkaroundState(
     appId,
     DEFAULT_WORKAROUND_STATE,
@@ -120,7 +134,9 @@ async function adoptWorkaroundState(
     const finalized = await setWorkaroundState(
       appId,
       DEFAULT_WORKAROUND_STATE,
-      nonSteam ? (integration.originalExecutable || originalExecutable) : null,
+      nonSteam
+        ? (selectShortcutExecutable(transport, integration.originalExecutable, originalExecutable) || null)
+        : null,
       integration.commandTokenAdded,
       transport,
     );
@@ -134,7 +150,9 @@ async function adoptWorkaroundState(
           Number(appId),
           nonSteam,
           wrapperPath,
-          nonSteam ? (integration?.originalExecutable || originalExecutable || undefined) : undefined,
+          nonSteam
+            ? (selectShortcutExecutable(transport, integration?.originalExecutable, originalExecutable) || undefined)
+            : undefined,
           integration?.commandTokenAdded ?? false,
         );
       } catch {

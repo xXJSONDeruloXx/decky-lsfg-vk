@@ -1,18 +1,20 @@
 import { Tabs } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
-import { FaGamepad, FaList, FaTools } from "react-icons/fa";
+import { FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { tabStyles } from "../styles";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallationActions } from "../hooks/useInstallationActions";
 import { useInstallationStatus } from "../hooks/useLsfgHooks";
 import { ConfigurationTab } from "./ConfigurationTab";
+import { ConfigFileTab } from "./ConfigFileTab";
 import { NowPlayingTab } from "./NowPlayingTab";
 import { SetupTab } from "./SetupTab";
 
 const tabIcons = {
   nowPlaying: <FaGamepad size={18} />,
   games: <FaList size={18} />,
+  configFile: <FaFileAlt size={18} />,
   setup: <FaTools size={18} />,
 };
 
@@ -34,6 +36,7 @@ export function Content() {
     setSelectedAppId,
     save,
     enable,
+    enableAll,
     repair,
     resetSelected,
     resetAll,
@@ -130,11 +133,17 @@ export function Content() {
               onSelect={setSelectedAppId}
               onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value, true)}
               onEnable={enable}
+              onEnableAll={enableAll}
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
             />
           ),
+        },
+        {
+          id: "ConfigFile",
+          title: tabIcons.configFile,
+          content: <ConfigFileTab />,
         },
         { id: "Setup", title: tabIcons.setup, content: setupContent },
       ]

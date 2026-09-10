@@ -7,6 +7,7 @@ interface Props {
   targets: GameTarget[];
   runningGame: GameTarget | null;
   onSelect: (appid: string) => void;
+  onEnableAll: () => Promise<void>;
   onResetAll: () => Promise<void>;
   focusConfiguredToggle?: boolean;
   onConfiguredToggleFocused?: () => void;
@@ -95,6 +96,7 @@ export function GameConfigurationSelector({
   targets,
   runningGame,
   onSelect,
+  onEnableAll,
   onResetAll,
   focusConfiguredToggle = false,
   onConfiguredToggleFocused,
@@ -131,8 +133,39 @@ export function GameConfigurationSelector({
     );
   };
 
+  const confirmEnableAll = () => {
+    showModal(
+      <ConfirmModal
+        strTitle="Enable all available games?"
+        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults. Flatpak targets will be provisioned as needed."
+        strOKButtonText="Enable all"
+        strCancelButtonText="Cancel"
+        onOK={() => void onEnableAll()}
+        onCancel={() => {}}
+      />,
+    );
+  };
+
   return (
     <>
+      <style>
+        {`
+          .LSFG_GameGroupCollapseButton_Container > div > div > div > button,
+          .LSFG_GameGroupCollapseButton_Container > div > div > div > div > button {
+            height: 24px !important;
+            min-height: 24px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+
+          .LSFG_GameGroupCollapseButton_Container svg {
+            display: block;
+            margin: 0;
+          }
+        `}
+      </style>
       {targets.length === 0 && (
         <PanelSectionRow>
           <Field label="No installed games" description="Steam has not reported any eligible games" />
@@ -153,6 +186,13 @@ export function GameConfigurationSelector({
         onToggle={toggleAvailable}
         onSelect={onSelect}
       />
+      {availableGames.length > 0 && (
+        <PanelSectionRow>
+          <ButtonItem layout="below" onClick={confirmEnableAll}>
+            Enable all available games
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
       <PanelSectionRow>
         <ButtonItem
           layout="below"

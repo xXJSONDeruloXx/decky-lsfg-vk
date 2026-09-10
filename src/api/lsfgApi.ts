@@ -137,6 +137,17 @@ export interface FlatpakCleanupResult {
   ownership_uncertain: boolean;
 }
 
+export interface FlatpakExtensionToggleResult {
+  success: boolean;
+  message: string;
+  error?: string | null;
+  runtime_branch: string;
+  enabled: boolean;
+  installed: boolean;
+  owned_by_plugin: boolean;
+  preserved: boolean;
+}
+
 // API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
@@ -147,6 +158,10 @@ export const getConfigFileContent = callable<[], FileContentResult>("get_config_
 export const getFlatpakSupportStatus = callable<[], FlatpakExtensionStatus>("get_flatpak_support_status");
 export const ensureFlatpakSupport = callable<[string], FlatpakTargetSupport>("ensure_flatpak_support");
 export const repairFlatpakSupport = callable<[string], FlatpakTargetSupport>("repair_flatpak_support");
+export const setFlatpakExtensionEnabled = callable<
+  [string, boolean],
+  FlatpakExtensionToggleResult
+>("set_flatpak_extension_enabled");
 export const removePluginOwnedFlatpakExtensions = callable<
   [],
   FlatpakCleanupResult

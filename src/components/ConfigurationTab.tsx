@@ -14,6 +14,7 @@ interface ConfigurationTabProps {
   onSelect: (appid: string) => void;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
+  onEnableAll: () => Promise<void>;
   onRepair: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
   onResetAll: () => Promise<void>;
@@ -26,6 +27,7 @@ export function ConfigurationTab({
   onSelect,
   onConfigChange,
   onEnable,
+  onEnableAll,
   onRepair,
   onReset,
   onResetAll,
@@ -84,6 +86,7 @@ export function ConfigurationTab({
             onSelect(appid);
             setDetailAppId(appid);
           }}
+          onEnableAll={onEnableAll}
           onResetAll={onResetAll}
           focusConfiguredToggle={focusConfiguredToggle}
           onConfiguredToggleFocused={clearConfiguredToggleFocusRequest}

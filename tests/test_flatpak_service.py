@@ -115,6 +115,54 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertTrue(cleanup_response["success"])
         self.assertEqual(self.service._run_flatpak_command.call_count, 1)
 
+    def test_extension_toggle_is_idempotent_and_preserves_preexisting_branch(self):
+        self.service._run_flatpak_command.return_value = self._result(
+            self._extension_line("24.08")
+        )
+
+        enable_response = self.service.set_extension_enabled("24.08", True)
+        disable_response = self.service.set_extension_enabled("24.08", False)
+
+        self.assertTrue(enable_response["success"])
+        self.assertTrue(enable_response["enabled"])
+        self.assertTrue(disable_response["success"])
+        self.assertTrue(disable_response["enabled"])
+        self.assertTrue(disable_response["preserved"])
+        self.assertFalse(disable_response["owned_by_plugin"])
+        self.assertEqual(
+            [call.args[0][0] for call in self.service._run_flatpak_command.call_args_list],
+            ["list", "list"],
+        )
+
+    def test_extension_toggle_removes_owned_branch_and_can_repeat_disable(self):
+        self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
+        self.service.ownership_path.write_text(
+            json.dumps({"version": 1, "plugin_owned_branches": ["24.08"]}),
+            encoding="utf-8",
+        )
+        self.service._run_flatpak_command.side_effect = [
+            self._result(self._extension_line("24.08")),
+            self._result(""),
+            self._result(""),
+            self._result(""),
+        ]
+
+        disable_response = self.service.set_extension_enabled("24.08", False)
+        repeat_response = self.service.set_extension_enabled("24.08", False)
+
+        self.assertTrue(disable_response["success"])
+        self.assertFalse(disable_response["enabled"])
+        self.assertTrue(disable_response["removed"])
+        self.assertTrue(repeat_response["success"])
+        self.assertFalse(repeat_response["enabled"])
+        self.assertFalse(repeat_response["installed"])
+        uninstall_commands = [
+            call.args[0]
+            for call in self.service._run_flatpak_command.call_args_list
+            if call.args[0][0] == "uninstall"
+        ]
+        self.assertEqual(len(uninstall_commands), 1)
+
     def test_corrupt_ownership_metadata_fails_closed(self):
         self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
         self.service.ownership_path.write_text("{not-json", encoding="utf-8")

@@ -299,11 +299,6 @@ class FlatpakService(BaseService):
             version = self._validate_runtime(version)
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
-            bundle_path = self._bundled_extension_path(version)
-            if not bundle_path.is_file():
-                raise FileNotFoundError(
-                    f"Bundled Flatpak extension not found at {bundle_path}; reinstall the plugin"
-                )
             with self._lock:
                 owned, uncertain = self._read_owned_branches()
                 if uncertain:
@@ -318,7 +313,14 @@ class FlatpakService(BaseService):
                         f"lsfg-vk {version} runtime extension is already installed",
                         runtime_branch=version,
                         installed=True,
+                        enabled=True,
                         owned_by_plugin=version in owned,
+                        preserved=version not in owned,
+                    )
+                bundle_path = self._bundled_extension_path(version)
+                if not bundle_path.is_file():
+                    raise FileNotFoundError(
+                        f"Bundled Flatpak extension not found at {bundle_path}; reinstall the plugin"
                     )
                 result = self._run_flatpak_command(
                     [
@@ -346,7 +348,9 @@ class FlatpakService(BaseService):
                     f"lsfg-vk {version} runtime extension installed",
                     runtime_branch=version,
                     installed=True,
+                    enabled=True,
                     owned_by_plugin=True,
+                    preserved=False,
                 )
         except Exception as error:
             return self._error_response(
@@ -354,7 +358,9 @@ class FlatpakService(BaseService):
                 str(error),
                 runtime_branch=version,
                 installed=False,
+                enabled=False,
                 owned_by_plugin=False,
+                preserved=False,
             )
 
     def ensure_extension(self, version: str) -> Dict[str, Any]:
@@ -424,15 +430,29 @@ class FlatpakService(BaseService):
                     raise RuntimeError(
                         "Flatpak ownership metadata is uncertain; refusing to uninstall"
                     )
+                installed = self._installed_extension_branches()
                 if version not in owned:
+                    if version in installed:
+                        return self._success_response(
+                            dict,
+                            f"Preserved Flatpak extension {version}; it is not plugin-owned",
+                            runtime_branch=version,
+                            removed=False,
+                            installed=True,
+                            enabled=True,
+                            owned_by_plugin=False,
+                            preserved=True,
+                        )
                     return self._success_response(
                         dict,
-                        f"Preserved Flatpak extension {version}; it is not plugin-owned",
+                        f"Flatpak extension {version} is already not installed",
                         runtime_branch=version,
                         removed=False,
-                        preserved=True,
+                        installed=False,
+                        enabled=False,
+                        owned_by_plugin=False,
+                        preserved=False,
                     )
-                installed = self._installed_extension_branches()
                 if version in installed:
                     result = self._run_flatpak_command(
                         [
@@ -458,6 +478,9 @@ class FlatpakService(BaseService):
                     f"Plugin-owned lsfg-vk {version} runtime extension removed",
                     runtime_branch=version,
                     removed=True,
+                    installed=False,
+                    enabled=False,
+                    owned_by_plugin=False,
                     preserved=False,
                 )
         except Exception as error:
@@ -466,8 +489,25 @@ class FlatpakService(BaseService):
                 str(error),
                 runtime_branch=version,
                 removed=False,
+                installed=False,
+                enabled=False,
+                owned_by_plugin=False,
                 preserved=False,
             )
+
+    def set_extension_enabled(self, version: str, enabled: bool) -> Dict[str, Any]:
+        """Set one runtime branch to the requested state, safely and idempotently."""
+        if type(enabled) is not bool:
+            return self._error_response(
+                dict,
+                "enabled must be a boolean",
+                runtime_branch=version,
+                installed=False,
+                enabled=False,
+                owned_by_plugin=False,
+                preserved=False,
+            )
+        return self.install_extension(version) if enabled else self.uninstall_extension(version)
 
     def remove_plugin_owned_extensions(self) -> Dict[str, Any]:
         """Uninstall only branches recorded as installed by this plugin."""

@@ -1,13 +1,15 @@
-import { ButtonItem, ConfirmModal, Field, PanelSection, PanelSectionRow, showModal } from "@decky/ui";
+import { ButtonItem, ConfirmModal, Field, PanelSection, PanelSectionRow, ToggleField, showModal } from "@decky/ui";
 import { useEffect, useState } from "react";
 import {
   getFlatpakSupportStatus,
   removePluginOwnedFlatpakExtensions,
+  setFlatpakExtensionEnabled,
   type FlatpakExtensionStatus,
   type SteamBranchStatus,
 } from "../api/lsfgApi";
 import { InstallationButton } from "./InstallationButton";
 import { StatusDisplay } from "./StatusDisplay";
+import { showErrorToast } from "../utils/toastUtils";
 
 interface SetupTabProps {
   isInstalled: boolean;
@@ -25,7 +27,7 @@ interface SetupTabProps {
 function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
   const [status, setStatus] = useState<FlatpakExtensionStatus | null>(null);
   const [advanced, setAdvanced] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<string | null>(null);
 
   const refresh = async () => {
     try {
@@ -51,6 +53,51 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
 
   if (!relevant || !status?.available) return null;
 
+  const runExtensionOperation = async (version: string, enabled: boolean) => {
+    const operationKey = `${enabled ? "enable" : "disable"}-${version}`;
+    setOperation(operationKey);
+    try {
+      const result = await setFlatpakExtensionEnabled(version, enabled);
+      if (!result.success) throw new Error(result.error || result.message || "Flatpak runtime update failed");
+      await refresh();
+    } catch (error) {
+      showErrorToast("Flatpak runtime update failed", String(error));
+    } finally {
+      setOperation(null);
+    }
+  };
+
+  const confirmDisable = (version: string) => {
+    showModal(
+      <ConfirmModal
+        strTitle={`Disable Flatpak runtime ${version}?`}
+        strDescription="Only runtime extensions installed by this plugin can be removed. Pre-existing extensions are preserved."
+        strOKButtonText="Disable"
+        strCancelButtonText="Cancel"
+        onOK={() => void runExtensionOperation(version, false)}
+        onCancel={() => {}}
+      />,
+    );
+  };
+
+  const handleExtensionToggle = (version: string, enabled: boolean) => {
+    const installed = status.installed_branches.includes(version);
+    const owned = status.owned_branches.includes(version);
+    if (!enabled && installed && !owned) {
+      showErrorToast(
+        "Flatpak runtime preserved",
+        `${version} was not installed by this plugin, so it will remain installed.`,
+      );
+      void refresh();
+      return;
+    }
+    if (!enabled && installed && owned) {
+      confirmDisable(version);
+      return;
+    }
+    void runExtensionOperation(version, enabled);
+  };
+
   const confirmCleanup = () => {
     showModal(
       <ConfirmModal
@@ -59,12 +106,15 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
         strOKButtonText="Remove extensions"
         strCancelButtonText="Cancel"
         onOK={async () => {
-          setBusy(true);
+          setOperation("cleanup");
           try {
-            await removePluginOwnedFlatpakExtensions();
+            const result = await removePluginOwnedFlatpakExtensions();
+            if (!result.success) throw new Error(result.error || result.message || "Flatpak cleanup failed");
             await refresh();
+          } catch (error) {
+            showErrorToast("Flatpak cleanup failed", String(error));
           } finally {
-            setBusy(false);
+            setOperation(null);
           }
         }}
         onCancel={() => {}}
@@ -89,13 +139,22 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
         <>
           {status.supported_branches.map((branch) => (
             <PanelSectionRow key={branch}>
-              <Field
+              <ToggleField
                 label={branch}
                 description={
-                  status.installed_branches.includes(branch)
-                    ? "Installed" + (status.owned_branches.includes(branch) ? " · plugin-owned" : "")
-                    : "Not installed"
+                  operation === `enable-${branch}`
+                    ? "Installing..."
+                    : operation === `disable-${branch}`
+                      ? "Uninstalling..."
+                      : status.installed_branches.includes(branch)
+                        ? status.owned_branches.includes(branch)
+                          ? "Installed · plugin-owned"
+                          : "Installed · pre-existing (preserved)"
+                        : "Not installed"
                 }
+                checked={status.installed_branches.includes(branch)}
+                onChange={(enabled) => handleExtensionToggle(branch, enabled)}
+                disabled={operation !== null || status.ownership_uncertain}
               />
             </PanelSectionRow>
           ))}
@@ -107,10 +166,10 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
           <PanelSectionRow>
             <ButtonItem
               layout="below"
-              disabled={busy || status.ownership_uncertain || status.owned_branches.length === 0}
+              disabled={operation !== null || status.ownership_uncertain || status.owned_branches.length === 0}
               onClick={confirmCleanup}
             >
-              {busy ? "Removing..." : "Remove plugin-installed extensions"}
+              {operation === "cleanup" ? "Removing..." : "Remove plugin-installed extensions"}
             </ButtonItem>
           </PanelSectionRow>
         </>
