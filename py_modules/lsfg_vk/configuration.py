@@ -7,7 +7,7 @@ from .runtime_service import RuntimeService
 
 
 class ConfigurationService(BaseService):
-    """Controller-facing adapter over upstream lsfg-vk profiles."""
+    FLATPAK_PROFILE_PREFIX = "flatpak:"
 
     def __init__(self, logger=None, runtime_service: RuntimeService = None):
         super().__init__(logger)
@@ -46,6 +46,13 @@ class ConfigurationService(BaseService):
             ),
             (None, None),
         )
+
+    @classmethod
+    def flatpak_profile_name(cls, app_id: str) -> str:
+        value = str(app_id).strip()
+        if not value:
+            raise ValueError("Flatpak application ID is required")
+        return f"{cls.FLATPAK_PROFILE_PREFIX}{value}"
 
     @staticmethod
     def _public_config(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -87,6 +94,51 @@ class ConfigurationService(BaseService):
         except Exception as error:
             return self._error_response(dict, str(error), appid=str(appid), config=None)
 
+    def get_flatpak_config(self, app_id: str) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            name = self.flatpak_profile_name(app_id)
+            raw = data["profiles"].get(name)
+            return self._success_response(
+                dict,
+                app_id=str(app_id),
+                profile=name,
+                exists=raw is not None,
+                config=self._public_config(raw) if raw is not None else None,
+                global_config=dict(data["global_config"]),
+            )
+        except Exception as error:
+            return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
+
+    def update_flatpak_config(self, app_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            name = self.flatpak_profile_name(app_id)
+            merged_config = {**data["global_config"], **config}
+            if not config.get("dll"):
+                merged_config["dll"] = data["global_config"].get("dll", "")
+            validated = self._public_config(merged_config)
+            validated["active_in"] = []
+            data["global_config"] = {
+                "dll": validated["dll"],
+                "no_fp16": validated["no_fp16"],
+            }
+            data["profiles"][name] = validated
+            self._save_profile_data(data)
+            return self._success_response(dict, app_id=str(app_id), profile=name, exists=True, config=validated)
+        except Exception as error:
+            return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
+
+    def reset_flatpak_config(self, app_id: str) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            name = self.flatpak_profile_name(app_id)
+            data["profiles"].pop(name, None)
+            self._save_profile_data(data)
+            return self._success_response(dict, app_id=str(app_id), profile=name, exists=False)
+        except Exception as error:
+            return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
+
     def reset_game_config(self, appid: str) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
@@ -101,7 +153,14 @@ class ConfigurationService(BaseService):
     def reset_all_game_configs(self) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
-            data["profiles"] = {}
+            data["profiles"] = {
+                name: profile
+                for name, profile in data["profiles"].items()
+                if not (
+                    len(profile.get("active_in", [])) == 1
+                    and re.fullmatch(r"-?[0-9]+", str(profile.get("active_in", [""])[0]))
+                )
+            }
             self._save_profile_data(data)
             return self._success_response(dict, global_config=dict(data["global_config"]), games=[])
         except Exception as error:
