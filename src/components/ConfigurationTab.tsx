@@ -100,8 +100,8 @@ export function ConfigurationTab({
 
   const profileLabel = selectedTarget?.name || "Game profile";
   const profileTransport = selectedTarget
-    ? selectedTarget.transport.kind === "flatpak"
-      ? "Non-Steam · Flatpak"
+    ? selectedTarget.directFlatpak
+      ? "Non-Steam · Direct Flatpak"
       : selectedTarget.nonSteam ? "Non-Steam" : "Steam"
     : "Game";
   const profileDescription = selectedTarget
@@ -120,9 +120,7 @@ export function ConfigurationTab({
     } else if (detailAppId) {
       const isRunningUnconfigured = runningGame?.appid === detailAppId
         && runningGame.nonSteam === false
-        && runningGame.transport.kind === "host"
         && selectedTarget?.nonSteam === false
-        && selectedTarget?.transport.kind === "host"
         && !runningGame.configured;
       if (isRunningUnconfigured) {
         showModal(
@@ -147,22 +145,22 @@ export function ConfigurationTab({
         <PanelSectionRow>
           <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             <Focusable noFocusRing style={{ flex: "none" }}>
-            <DialogButton
-              aria-label="Back to games"
-              onClick={closeDetails}
-              style={{
-                width: "48px",
-                minWidth: "48px",
-                height: "24px",
-                minHeight: "24px",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FaArrowLeft />
-            </DialogButton>
+              <DialogButton
+                aria-label="Back to games"
+                onClick={closeDetails}
+                style={{
+                  width: "48px",
+                  minWidth: "48px",
+                  height: "24px",
+                  minHeight: "24px",
+                  padding: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <FaArrowLeft />
+              </DialogButton>
             </Focusable>
             <div
               className={gamepadDialogClasses.FieldLabel}
@@ -182,18 +180,6 @@ export function ConfigurationTab({
           </PanelSectionRow>
         )}
       </PanelSection>
-      {selectedTarget?.configured && selectedTarget.transport.kind === "flatpak" && selectedTarget.flatpakSupport?.support_status !== "ready" && (
-        <PanelSection>
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={() => void onRepair(selectedTarget.appid)}
-            >
-              Repair Flatpak support
-            </ButtonItem>
-          </PanelSectionRow>
-        </PanelSection>
-      )}
       {selectedTarget?.configured && (
         <GameConfigurationControls
           config={config}
