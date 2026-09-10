@@ -8,13 +8,14 @@ import {
   updateFlatpakConfig,
   type FlatpakApp,
   type LsfgConfig,
+  type RunningFlatpakApp,
   type WorkaroundState,
 } from "../api/lsfgApi";
 import { showErrorToast } from "../utils/toastUtils";
 
 export function useFlatpakConfiguration(enabled: boolean) {
   const [apps, setApps] = useState<FlatpakApp[]>([]);
-  const [runningApps, setRunningApps] = useState<FlatpakApp[]>([]);
+  const [runningApps, setRunningApps] = useState<RunningFlatpakApp[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyAppId, setBusyAppId] = useState("");
 
@@ -87,8 +88,10 @@ export function useFlatpakConfiguration(enabled: boolean) {
 
   const runningApp = useMemo(() => {
     if (runningApps.length === 0) return null;
-    return runningApps.find((app) => app.active) || (runningApps.length === 1 ? runningApps[0] : null);
-  }, [runningApps]);
+    const running = runningApps.find((app) => app.active) || (runningApps.length === 1 ? runningApps[0] : null);
+    if (!running) return null;
+    return apps.find((app) => app.app_id === running.app_id) || null;
+  }, [apps, runningApps]);
 
   return {
     apps,
