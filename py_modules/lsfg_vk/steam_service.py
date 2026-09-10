@@ -1,5 +1,4 @@
 import re
-import shlex
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -7,50 +6,7 @@ from .base_service import BaseService
 from .constants import (
     STEAM_LOSSLESS_SCALING_APP_ID,
     STEAM_LOSSLESS_SCALING_BRANCH,
-    WRAPPER_FILENAME,
 )
-
-_FLATPAK_APP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+$")
-_WRAPPER_TOKEN = f"~/{WRAPPER_FILENAME}"
-
-
-def _split_command(value: Optional[str]) -> Optional[list[str]]:
-    if not isinstance(value, str) or not value.strip():
-        return []
-    try:
-        return shlex.split(value, posix=True)
-    except ValueError:
-        return None
-
-
-def _is_managed_wrapper(value: str) -> bool:
-    if value in {_WRAPPER_TOKEN, f"$HOME/{WRAPPER_FILENAME}"}:
-        return True
-    path = Path(value)
-    return path.is_absolute() and path.name == WRAPPER_FILENAME
-
-
-def classify_shortcut_transport(executable: Optional[str], launch_options: Optional[str] = None) -> Dict[str, object]:
-    executable_tokens = _split_command(executable)
-    option_tokens = _split_command(launch_options)
-    if executable_tokens is None or option_tokens is None or not executable_tokens:
-        return {"kind": "host"}
-    direct_flatpak = executable_tokens[0] in {"flatpak", "/usr/bin/flatpak"}
-    managed_wrapper = len(executable_tokens) == 1 and _is_managed_wrapper(executable_tokens[0])
-    if not direct_flatpak and not managed_wrapper:
-        return {"kind": "host"}
-    arguments = [*executable_tokens[1:], *option_tokens]
-    if not arguments or arguments[0] != "run":
-        return {"kind": "host"}
-    for argument in arguments[1:]:
-        if argument == "--" or argument.startswith("-"):
-            continue
-        return (
-            {"kind": "flatpak", "flatpakAppId": argument}
-            if _FLATPAK_APP_ID.fullmatch(argument)
-            else {"kind": "host"}
-        )
-    return {"kind": "host"}
 
 
 def _first_string(values: Dict[str, object], *keys: str) -> Optional[str]:
@@ -74,7 +30,6 @@ class SteamService(BaseService):
             self.user_home / ".local/share/Steam",
             self.user_home / ".steam/steam",
             self.user_home / ".steam/root",
-            self.user_home / ".var/app/com.valvesoftware.Steam/.local/share/Steam",
         ):
             yield from self._unique_existing_root(candidate, seen)
 
@@ -154,7 +109,6 @@ class SteamService(BaseService):
             "appid": str(appid & 0xFFFFFFFF),
             "name": name,
             "nonSteam": True,
-            "transport": classify_shortcut_transport(executable, arguments),
         }
         for key, value in (("executable", executable), ("arguments", arguments), ("startDir", start_dir)):
             if value is not None:
@@ -309,7 +263,6 @@ class SteamService(BaseService):
                         "appid": appid,
                         "name": self._section_value(content, "AppState", "name") or f"App {appid}",
                         "nonSteam": False,
-                        "transport": {"kind": "host"},
                     }
             for game in self._shortcut_games():
                 games.setdefault(str(game["appid"]), game)

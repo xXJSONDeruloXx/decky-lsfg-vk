@@ -25,7 +25,6 @@ class PluginMigrationTests(unittest.TestCase):
 
             plugin = Plugin.__new__(Plugin)
             plugin.installation_service = Mock()
-            plugin.flatpak_service = Mock()
 
             asyncio.run(plugin._migration())
 
@@ -33,7 +32,6 @@ class PluginMigrationTests(unittest.TestCase):
             decky.migrate_settings.assert_called_once()
             decky.migrate_runtime.assert_called_once()
             plugin.installation_service.install.assert_not_called()
-            plugin.flatpak_service.migrate_v2.assert_not_called()
         finally:
             sys.path.remove("py_modules")
             if previous_decky is None:

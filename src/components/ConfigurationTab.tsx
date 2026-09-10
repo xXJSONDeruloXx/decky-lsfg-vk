@@ -99,13 +99,11 @@ export function ConfigurationTab({
   }
 
   const profileLabel = selectedTarget?.name || "Game profile";
-  const profileTransport = selectedTarget
-    ? selectedTarget.transport.kind === "flatpak"
-      ? "Non-Steam · Flatpak"
-      : selectedTarget.nonSteam ? "Non-Steam" : "Steam"
+  const profileType = selectedTarget
+    ? selectedTarget.nonSteam ? "Non-Steam" : "Steam"
     : "Game";
   const profileDescription = selectedTarget
-    ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
+    ? `${profileType} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
     : "Game is no longer available";
   const enableProfile = async (appid: string, quitRunningGame = false) => {
     if (!(await onEnable(appid))) return;
@@ -120,9 +118,7 @@ export function ConfigurationTab({
     } else if (detailAppId) {
       const isRunningUnconfigured = runningGame?.appid === detailAppId
         && runningGame.nonSteam === false
-        && runningGame.transport.kind === "host"
         && selectedTarget?.nonSteam === false
-        && selectedTarget?.transport.kind === "host"
         && !runningGame.configured;
       if (isRunningUnconfigured) {
         showModal(
@@ -182,18 +178,6 @@ export function ConfigurationTab({
           </PanelSectionRow>
         )}
       </PanelSection>
-      {selectedTarget?.configured && selectedTarget.transport.kind === "flatpak" && selectedTarget.flatpakSupport?.support_status !== "ready" && (
-        <PanelSection>
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              onClick={() => void onRepair(selectedTarget.appid)}
-            >
-              Repair Flatpak support
-            </ButtonItem>
-          </PanelSectionRow>
-        </PanelSection>
-      )}
       {selectedTarget?.configured && (
         <GameConfigurationControls
           config={config}

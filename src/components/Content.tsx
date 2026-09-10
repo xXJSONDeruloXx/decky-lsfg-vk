@@ -132,7 +132,6 @@ export function Content() {
               game={runningGame}
               config={config}
               onConfigChange={(field, value) => handleConfigChange(field, value)}
-              onRepair={repair}
             />
           ),
         }] : []),

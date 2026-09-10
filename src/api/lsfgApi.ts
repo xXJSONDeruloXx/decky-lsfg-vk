@@ -30,10 +30,6 @@ export interface SteamBranchStatus extends ApiResult {
 }
 
 export type LsfgConfig = ConfigurationData;
-export type TargetTransport =
-  | { kind: "host" }
-  | { kind: "flatpak"; flatpakAppId: string };
-export type FlatpakTargetSupportStatus = "ready" | "needs-runtime" | "unsupported" | "error";
 
 export interface GameConfigEntry {
   appid: string;
@@ -45,25 +41,14 @@ export interface InstalledGame {
   appid: string;
   name: string;
   nonSteam: boolean;
-  transport: TargetTransport;
   executable?: string;
   arguments?: string;
   startDir?: string;
-  flatpakSupport?: FlatpakTargetSupport;
 }
 
 export interface GlobalConfig {
   dll: string;
   no_fp16: boolean;
-}
-
-export interface FlatpakTargetSupport extends ApiResult {
-  flatpak_app_id?: string;
-  runtime?: string | null;
-  runtime_branch?: string | null;
-  support_status: FlatpakTargetSupportStatus;
-  extension_installed: boolean;
-  installed_branches: string[];
 }
 
 export interface WorkaroundState {
@@ -80,9 +65,7 @@ export interface WorkaroundStateResult extends ApiResult {
   state?: WorkaroundState | null;
   wrapper_path?: string;
   wrapper_owned?: boolean;
-  shortcut_exe?: string | null;
   command_token_added?: boolean;
-  transport?: TargetTransport | null;
 }
 
 export interface GameConfigsResult extends ApiResult {
@@ -118,42 +101,17 @@ export interface DebugFileContentsResult extends ApiResult {
   files?: DebugFileContent[];
 }
 
-export interface FlatpakExtensionStatus extends ApiResult {
-  message: string;
-  available: boolean;
-  extension_id: string;
-  supported_branches: string[];
-  installed_branches: string[];
-}
-
-export interface FlatpakExtensionToggleResult extends ApiResult {
-  message: string;
-  runtime_branch: string;
-  enabled: boolean;
-  installed: boolean;
-}
-
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-export const getFlatpakSupportStatus = callable<[], FlatpakExtensionStatus>("get_flatpak_support_status");
-export const ensureFlatpakSupport = callable<[string], FlatpakTargetSupport>("ensure_flatpak_support");
-export const repairFlatpakSupport = callable<[string], FlatpakTargetSupport>("repair_flatpak_support");
-export const setFlatpakExtensionEnabled = callable<[string, boolean], FlatpakExtensionToggleResult>("set_flatpak_extension_enabled");
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
 export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
 export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
 export const getWorkaroundState = callable<[string], WorkaroundStateResult>("get_workaround_state");
-export const setWorkaroundState = callable<[
-  string,
-  WorkaroundState,
-  string | null | undefined,
-  boolean,
-  TargetTransport | null | undefined,
-], WorkaroundStateResult>("set_workaround_state");
+export const setWorkaroundState = callable<[string, WorkaroundState, boolean?], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
 export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

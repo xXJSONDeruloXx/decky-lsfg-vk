@@ -37,7 +37,6 @@ function usePersistentCollapsed(key: string) {
 }
 
 function targetDescription(game: GameTarget): string {
-  if (game.transport.kind === "flatpak") return "Non-Steam · Flatpak";
   return game.nonSteam ? "Non-Steam" : "Steam";
 }
 
@@ -137,7 +136,7 @@ export function GameConfigurationSelector({
     showModal(
       <ConfirmModal
         strTitle="Enable all available games?"
-        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults. Flatpak targets will be provisioned as needed."
+        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults."
         strOKButtonText="Enable all"
         strCancelButtonText="Cancel"
         onOK={() => void onEnableAll()}

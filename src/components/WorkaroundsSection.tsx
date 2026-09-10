@@ -1,7 +1,6 @@
 import { ButtonItem, Field, PanelSectionRow, SliderField, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
-import type { TargetTransport } from "../api/lsfgApi";
 import { usePerAppWorkarounds } from "../hooks/usePerAppWorkarounds";
 import t from "../i18n/i18n";
 import type { WorkaroundField } from "../hooks/usePerAppWorkarounds";
@@ -9,7 +8,6 @@ import type { WorkaroundField } from "../hooks/usePerAppWorkarounds";
 interface WorkaroundsSectionProps {
   appId: string;
   nonSteam: boolean;
-  transport: TargetTransport;
   onRepair?: () => Promise<boolean>;
 }
 
@@ -81,9 +79,9 @@ function usePersistentCollapsed() {
   return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
-export function WorkaroundsSection({ appId, nonSteam, transport, onRepair }: WorkaroundsSectionProps) {
+export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSectionProps) {
   const [collapsed, toggleCollapsed] = usePersistentCollapsed();
-  const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam, transport);
+  const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam);
   const [repairing, setRepairing] = useState(false);
   const state = snapshot?.state;
   const controlsDisabled = status !== "ready" || state === undefined || snapshot?.wrapperOwned !== true || snapshot.integrationInstalled !== true;

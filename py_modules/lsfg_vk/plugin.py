@@ -1,10 +1,9 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import decky
 
 from .configuration import ConfigurationService
-from .flatpak_service import FlatpakService
 from .installation import InstallationService
 from .runtime_service import RuntimeService
 from .steam_service import SteamService
@@ -20,7 +19,6 @@ class Plugin:
             steam_service=self.steam_service,
         )
         self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
-        self.flatpak_service = FlatpakService()
         self.wrapper_service = WrapperService()
 
     async def install_lsfg_vk(self):
@@ -36,21 +34,7 @@ class Plugin:
         return self.configuration_service.get_game_configs()
 
     async def get_installed_games(self):
-        result = self.steam_service.get_installed_games()
-        if not result.get("success"):
-            return result
-        cache: Dict[str, Dict[str, Any]] = {}
-        for game in result.get("games", []):
-            transport = game.get("transport", {})
-            if transport.get("kind") != "flatpak":
-                continue
-            app_id = transport.get("flatpakAppId")
-            if not app_id:
-                continue
-            if app_id not in cache:
-                cache[app_id] = self.flatpak_service.resolve_app_support(app_id)
-            game["flatpakSupport"] = cache[app_id]
-        return result
+        return self.steam_service.get_installed_games()
 
     async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]):
         return self.configuration_service.update_game_config(appid, game_name, config)
@@ -68,17 +52,9 @@ class Plugin:
         self,
         appid: str,
         state: Dict[str, Any],
-        shortcut_exe: Optional[str] = None,
         command_token_added: bool = False,
-        transport: Optional[Dict[str, Any]] = None,
     ):
-        return self.wrapper_service.set(
-            appid,
-            state,
-            shortcut_exe,
-            command_token_added,
-            transport,
-        )
+        return self.wrapper_service.set(appid, state, command_token_added)
 
     async def remove_workaround_state(self, appid: str):
         return self.wrapper_service.remove(appid)
@@ -112,7 +88,6 @@ class Plugin:
             ("config", "LSFG-VK configuration", self.configuration_service.config_file_path),
             ("workarounds", "Per-app workarounds", self.wrapper_service.sidecar_path),
             ("wrapper", "Generated launch wrapper", self.wrapper_service.wrapper_path),
-            ("flatpak_extensions", "Flatpak extension ownership", self.flatpak_service.ownership_path),
         )
         contents = []
         for file_id, label, path in files:
@@ -147,18 +122,6 @@ class Plugin:
     async def get_lossless_scaling_branch_status(self):
         return self.steam_service.get_branch_status()
 
-    async def get_flatpak_support_status(self):
-        return self.flatpak_service.get_flatpak_support_status()
-
-    async def ensure_flatpak_support(self, flatpak_app_id: str):
-        return self.flatpak_service.ensure_app_support(flatpak_app_id)
-
-    async def repair_flatpak_support(self, flatpak_app_id: str):
-        return self.flatpak_service.ensure_app_support(flatpak_app_id)
-
-    async def set_flatpak_extension_enabled(self, version: str, enabled: bool):
-        return self.flatpak_service.set_extension_enabled(version, enabled)
-
     async def _main(self):
         repair = self.wrapper_service.repair()
         if not repair.get("success"):
@@ -171,12 +134,6 @@ class Plugin:
     async def _uninstall(self):
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         self.installation_service.cleanup_on_uninstall()
-        try:
-            result = self.flatpak_service.remove_plugin_owned_extensions()
-            if not result.get("success"):
-                decky.logger.warning(result.get("error"))
-        except Exception as error:
-            decky.logger.error(f"Error during Flatpak cleanup: {error}")
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
     async def _migration(self):

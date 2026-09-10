@@ -10,7 +10,7 @@ interface Props {
   autoFocusFpsMultiplier?: boolean;
   onFpsMultiplierFocused?: () => void;
   showWorkarounds?: boolean;
-  workaroundTarget?: Pick<GameTarget, "appid" | "nonSteam" | "transport">;
+  workaroundTarget?: Pick<GameTarget, "appid" | "nonSteam">;
   onRepairWorkaround?: () => Promise<boolean>;
 }
 
@@ -36,7 +36,6 @@ export function GameConfigurationControls({
         <WorkaroundsSection
           appId={workaroundTarget.appid}
           nonSteam={workaroundTarget.nonSteam}
-          transport={workaroundTarget.transport}
           onRepair={onRepairWorkaround}
         />
       )}
