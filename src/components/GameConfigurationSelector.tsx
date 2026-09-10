@@ -28,16 +28,14 @@ function usePersistentCollapsed(key: string) {
   useEffect(() => {
     try {
       localStorage.setItem(key, String(collapsed));
-    } catch {
-      // Persisting the view preference is optional.
-    }
+    } catch {}
   }, [collapsed, key]);
 
   return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
 function targetDescription(game: GameTarget): string {
-  if (game.transport.kind === "flatpak") return "Non-Steam · Flatpak";
+  if (game.directFlatpak) return "Non-Steam · Direct Flatpak";
   return game.nonSteam ? "Non-Steam" : "Steam";
 }
 
@@ -137,7 +135,7 @@ export function GameConfigurationSelector({
     showModal(
       <ConfirmModal
         strTitle="Enable all available games?"
-        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults. Flatpak targets will be provisioned as needed."
+        strDescription="Create individual LSFG-VK profiles for every available game using the plugin defaults. Flatpak applications are prepared separately in Setup."
         strOKButtonText="Enable all"
         strCancelButtonText="Cancel"
         onOK={() => void onEnableAll()}
