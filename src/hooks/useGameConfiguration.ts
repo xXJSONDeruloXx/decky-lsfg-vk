@@ -23,7 +23,6 @@ async function getSteamShortcuts(): Promise<InstalledGame[]> {
         appid: String(appid >>> 0),
         name,
         nonSteam: true,
-        directFlatpak: false,
       }];
     });
   } catch {
@@ -91,7 +90,7 @@ export function useGameConfiguration() {
       const name = app.display_name || installed?.name;
       if (!name) return setRunningGame(null);
       setRunningGame((current) => current?.appid === appid ? current : {
-        ...(installed || { appid, name, nonSteam: false, directFlatpak: false }),
+        ...(installed || { appid, name, nonSteam: false }),
         name,
         configured: games.some((game) => game.appid === appid),
       });
@@ -111,7 +110,7 @@ export function useGameConfiguration() {
 
   const targets = useMemo<GameTarget[]>(() => {
     const configured = installedGames.map((game) => ({ ...game, configured: games.some((item) => item.appid === game.appid) }));
-    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: game.profile, nonSteam: false, directFlatpak: false, configured: true });
+    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: game.profile, nonSteam: false, configured: true });
     if (runningGame && !configured.some((game) => game.appid === runningGame.appid)) configured.unshift(runningGame);
     return configured;
   }, [games, installedGames, runningGame]);
@@ -137,7 +136,6 @@ export function useGameConfiguration() {
         target.nonSteam,
         wrapperPath,
         commandTokenAdded,
-        target.directFlatpak === true,
       );
       stateWriteAttempted = true;
       const saved = await setWorkaroundState(
@@ -156,7 +154,6 @@ export function useGameConfiguration() {
             target.nonSteam,
             wrapperPath,
             integration.commandTokenAdded,
-            target.directFlatpak === true,
           );
         } catch (rollbackError) {
           showErrorToast("Workaround rollback failed", asError(rollbackError).message);
@@ -187,7 +184,6 @@ export function useGameConfiguration() {
         target.nonSteam,
         wrapperPath,
         existing.command_token_added === true,
-        target.directFlatpak === true,
       );
       const removed = await removeWorkaroundState(target.appid);
       if (!removed.success) throw new Error(removed.error || "Could not remove workaround state");
