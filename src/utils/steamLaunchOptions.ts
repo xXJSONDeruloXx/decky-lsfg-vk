@@ -162,7 +162,9 @@ const isWrapperToken = (value: string, wrapperPath: string) => decodeToken(value
 
 function flatpakExecutable(value: string): string | undefined {
   const decoded = decodeToken(value.trim());
-  return decoded === "flatpak" || decoded === "/usr/bin/flatpak" ? "/usr/bin/flatpak" : undefined;
+  return decoded === "flatpak" || decoded === "/usr/bin/flatpak" || decoded === "usr/bin/flatpak"
+    ? "/usr/bin/flatpak"
+    : undefined;
 }
 
 function wrappedFlatpakExecutable(target: string, wrapperPath: string, includeLegacy = true): string | undefined {
