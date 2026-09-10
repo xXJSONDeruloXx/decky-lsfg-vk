@@ -1,4 +1,4 @@
-import { Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
+import { ButtonItem, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import {
   getFlatpakSupportStatus,
@@ -6,8 +6,7 @@ import {
   type FlatpakExtensionStatus,
   type SteamBranchStatus,
 } from "../api/lsfgApi";
-import { InstallationButton } from "./InstallationButton";
-import { StatusDisplay } from "./StatusDisplay";
+import t from "../i18n/i18n";
 import { showErrorToast } from "../utils/toastUtils";
 
 interface SetupTabProps {
@@ -20,10 +19,12 @@ interface SetupTabProps {
   isUninstalling: boolean;
   onInstall: () => void;
   onUninstall: () => void;
+  flatpakRelevant: boolean;
 }
 
-function FlatpakSupportDiagnostics() {
+function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
   const [status, setStatus] = useState<FlatpakExtensionStatus | null>(null);
+  const [advanced, setAdvanced] = useState(false);
   const [operation, setOperation] = useState<string | null>(null);
 
   const refresh = async () => {
@@ -43,16 +44,15 @@ function FlatpakSupportDiagnostics() {
   };
 
   useEffect(() => {
-    void refresh();
-  }, []);
+    if (relevant) void refresh();
+  }, [relevant]);
 
-  if (!status?.available) return null;
+  if (!relevant || !status?.available) return null;
 
-  const runExtensionOperation = async (version: string, enabled: boolean) => {
-    const operationKey = `${enabled ? "enable" : "disable"}-${version}`;
-    setOperation(operationKey);
+  const setEnabled = async (branch: string, enabled: boolean) => {
+    setOperation(`${enabled ? "enable" : "disable"}-${branch}`);
     try {
-      const result = await setFlatpakExtensionEnabled(version, enabled);
+      const result = await setFlatpakExtensionEnabled(branch, enabled);
       if (!result.success) throw new Error(result.error || result.message || "Flatpak runtime update failed");
       await refresh();
     } catch (error) {
@@ -62,70 +62,91 @@ function FlatpakSupportDiagnostics() {
     }
   };
 
-  const handleExtensionToggle = (version: string, enabled: boolean) => {
-    void runExtensionOperation(version, enabled);
-  };
-
   return (
-    <PanelSection title="Flatpak runtimes">
+    <PanelSection title="Flatpak support">
       <PanelSectionRow>
         <Field
-          label="LSFG-VK runtime extensions"
-          description={status.message || "Toggle a branch to install or uninstall it."}
+          label="Runtime extension support"
+          description={status.message || "Flatpak is available for classified targets."}
         />
       </PanelSectionRow>
-      {status.supported_branches.map((branch) => (
-        <PanelSectionRow key={branch}>
-          <ToggleField
-            label={branch}
-            description={
-              operation === `enable-${branch}`
-                ? "Installing..."
-                : operation === `disable-${branch}`
-                  ? "Uninstalling..."
-                  : status.installed_branches.includes(branch)
-                    ? "Installed"
-                    : "Not installed"
-            }
-            checked={status.installed_branches.includes(branch)}
-            onChange={(enabled) => handleExtensionToggle(branch, enabled)}
-            disabled={operation !== null}
-          />
-        </PanelSectionRow>
-      ))}
+      <PanelSectionRow>
+        <ButtonItem layout="below" onClick={() => setAdvanced((value) => !value)}>
+          {advanced ? "Hide runtime details" : "Show runtime details"}
+        </ButtonItem>
+      </PanelSectionRow>
+      {advanced && status.supported_branches.map((branch) => {
+        const installed = status.installed_branches.includes(branch);
+        const pending = operation?.endsWith(`-${branch}`);
+        return (
+          <PanelSectionRow key={branch}>
+            <ToggleField
+              label={branch}
+              description={pending ? (operation?.startsWith("enable") ? "Installing..." : "Uninstalling...") : installed ? "Installed" : "Not installed"}
+              checked={installed}
+              onChange={(enabled) => void setEnabled(branch, enabled)}
+              disabled={operation !== null}
+            />
+          </PanelSectionRow>
+        );
+      })}
     </PanelSection>
   );
 }
 
-export function SetupTab({
-  isInstalled,
-  installationStatus,
-  losslessScalingInstalled,
-  losslessScalingStatus,
-  steamBranchStatus,
-  isInstalling,
-  isUninstalling,
-  onInstall,
-  onUninstall,
-}: SetupTabProps) {
+export function SetupTab(props: SetupTabProps) {
+  const {
+    isInstalled,
+    installationStatus,
+    losslessScalingInstalled,
+    losslessScalingStatus,
+    steamBranchStatus,
+    isInstalling,
+    isUninstalling,
+    onInstall,
+    onUninstall,
+    flatpakRelevant,
+  } = props;
+  const losslessScalingAppInstalled = losslessScalingInstalled || steamBranchStatus?.installed === true;
+  const buttonLabel = isInstalling
+    ? t("INSTALL_INSTALLING", "Installing...")
+    : isUninstalling
+      ? t("INSTALL_UNINSTALLING", "Uninstalling...")
+      : isInstalled
+        ? t("INSTALL_UNINSTALL_BTN", "Uninstall LSFG-VK")
+        : t("INSTALL_INSTALL_BTN", "Install LSFG-VK");
+
   return (
     <>
       <PanelSection title="Setup">
-        <StatusDisplay
-          installationStatus={installationStatus}
-          losslessScalingInstalled={losslessScalingInstalled}
-          losslessScalingStatus={losslessScalingStatus}
-          steamBranchStatus={steamBranchStatus}
-        />
-        <InstallationButton
-          isInstalled={isInstalled}
-          isInstalling={isInstalling}
-          isUninstalling={isUninstalling}
-          onInstall={onInstall}
-          onUninstall={onUninstall}
-        />
+        <PanelSectionRow>
+          <Field
+            label="Lossless Scaling"
+            description={losslessScalingAppInstalled ? "Installed" : losslessScalingStatus || "Not installed"}
+          />
+        </PanelSectionRow>
+        <PanelSectionRow>
+          <Field label="LSFG-VK" description={installationStatus} />
+        </PanelSectionRow>
+        {steamBranchStatus?.installed && (
+          <PanelSectionRow>
+            <Field
+              label="Steam branch"
+              description={`${steamBranchStatus.current_branch || "public"}${steamBranchStatus.needs_switch ? ` - ${steamBranchStatus.message}` : ""}`}
+            />
+          </PanelSectionRow>
+        )}
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={isInstalled ? onUninstall : onInstall}
+            disabled={isInstalling || isUninstalling}
+          >
+            {buttonLabel}
+          </ButtonItem>
+        </PanelSectionRow>
       </PanelSection>
-      <FlatpakSupportDiagnostics />
+      <FlatpakSupportDiagnostics relevant={flatpakRelevant} />
     </>
   );
 }

@@ -1,11 +1,13 @@
 import { callable } from "@decky/api";
 import { ConfigurationData } from "../config/configSchema";
 
-// Type definitions for API responses
-export interface InstallationResult {
+interface ApiResult {
   success: boolean;
-  error?: string;
   message?: string;
+  error?: string | null;
+}
+
+export interface InstallationResult extends ApiResult {
   removed_files?: string[];
 }
 
@@ -16,10 +18,8 @@ export interface InstallationStatus {
   error?: string;
 }
 
-export interface SteamBranchStatus {
-  success: boolean;
+export interface SteamBranchStatus extends ApiResult {
   message: string;
-  error?: string;
   installed: boolean;
   manifest_path?: string;
   selected_branch?: string;
@@ -29,36 +29,16 @@ export interface SteamBranchStatus {
   restart_required: boolean;
 }
 
-// Use centralized configuration data type
 export type LsfgConfig = ConfigurationData;
-
-export interface ConfigUpdateResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-}
+export type TargetTransport =
+  | { kind: "host" }
+  | { kind: "flatpak"; flatpakAppId: string };
+export type FlatpakTargetSupportStatus = "ready" | "needs-runtime" | "unsupported" | "error";
 
 export interface GameConfigEntry {
   appid: string;
   profile: string;
   config: LsfgConfig;
-}
-export type TargetTransport =
-  | { kind: "host" }
-  | { kind: "flatpak"; flatpakAppId: string };
-
-export type FlatpakTargetSupportStatus = "ready" | "needs-runtime" | "unsupported" | "error";
-
-export interface FlatpakTargetSupport {
-  success: boolean;
-  message?: string;
-  error?: string | null;
-  flatpak_app_id?: string;
-  runtime?: string | null;
-  runtime_branch?: string | null;
-  support_status: FlatpakTargetSupportStatus;
-  extension_installed: boolean;
-  installed_branches: string[];
 }
 
 export interface InstalledGame {
@@ -71,20 +51,19 @@ export interface InstalledGame {
   startDir?: string;
   flatpakSupport?: FlatpakTargetSupport;
 }
-export interface InstalledGamesResult { success: boolean; games?: InstalledGame[]; error?: string; }
-export interface GlobalConfig { dll: string; no_fp16: boolean; }
 
-export interface GameConfigsResult {
-  success: boolean;
-  global_config?: GlobalConfig;
-  games?: GameConfigEntry[];
-  error?: string;
+export interface GlobalConfig {
+  dll: string;
+  no_fp16: boolean;
 }
 
-export interface GameConfigResult extends ConfigUpdateResult {
-  appid?: string;
-  exists?: boolean;
-  config?: LsfgConfig;
+export interface FlatpakTargetSupport extends ApiResult {
+  flatpak_app_id?: string;
+  runtime?: string | null;
+  runtime_branch?: string | null;
+  support_status: FlatpakTargetSupportStatus;
+  extension_installed: boolean;
+  installed_branches: string[];
 }
 
 export interface WorkaroundState {
@@ -96,10 +75,7 @@ export interface WorkaroundState {
   enableZink: boolean;
 }
 
-export interface WorkaroundStateResult {
-  success: boolean;
-  message?: string;
-  error?: string;
+export interface WorkaroundStateResult extends ApiResult {
   appid?: string;
   state?: WorkaroundState | null;
   wrapper_path?: string;
@@ -109,47 +85,50 @@ export interface WorkaroundStateResult {
   transport?: TargetTransport | null;
 }
 
-export interface FileContentResult {
-  success: boolean;
-  content?: string;
-  path?: string;
-  error?: string;
+export interface GameConfigsResult extends ApiResult {
+  global_config?: GlobalConfig;
+  games?: GameConfigEntry[];
 }
 
-export interface FlatpakExtensionStatus {
-  success: boolean;
+export interface GameConfigResult extends ApiResult {
+  appid?: string;
+  exists?: boolean;
+  config?: LsfgConfig;
+}
+
+export interface InstalledGamesResult extends ApiResult {
+  games?: InstalledGame[];
+}
+
+export interface FileContentResult extends ApiResult {
+  content?: string;
+  path?: string;
+}
+
+export interface FlatpakExtensionStatus extends ApiResult {
   message: string;
-  error?: string | null;
   available: boolean;
   extension_id: string;
   supported_branches: string[];
   installed_branches: string[];
 }
 
-export interface FlatpakExtensionToggleResult {
-  success: boolean;
+export interface FlatpakExtensionToggleResult extends ApiResult {
   message: string;
-  error?: string | null;
   runtime_branch: string;
   enabled: boolean;
   installed: boolean;
 }
 
-// API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-
 export const getFlatpakSupportStatus = callable<[], FlatpakExtensionStatus>("get_flatpak_support_status");
 export const ensureFlatpakSupport = callable<[string], FlatpakTargetSupport>("ensure_flatpak_support");
 export const repairFlatpakSupport = callable<[string], FlatpakTargetSupport>("repair_flatpak_support");
-export const setFlatpakExtensionEnabled = callable<
-  [string, boolean],
-  FlatpakExtensionToggleResult
->("set_flatpak_extension_enabled");
-
+export const setFlatpakExtensionEnabled = callable<[string, boolean], FlatpakExtensionToggleResult>("set_flatpak_extension_enabled");
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");

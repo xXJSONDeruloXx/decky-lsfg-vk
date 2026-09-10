@@ -1,16 +1,26 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   checkLsfgVkInstalled,
   getLosslessScalingBranchStatus,
-  type SteamBranchStatus
+  installLsfgVk,
+  uninstallLsfgVk,
+  type SteamBranchStatus,
 } from "../api/lsfgApi";
+import {
+  showInstallErrorToast,
+  showInstallSuccessToast,
+  showUninstallErrorToast,
+  showUninstallSuccessToast,
+} from "../utils/toastUtils";
 
-export function useInstallationStatus() {
-  const [isInstalled, setIsInstalled] = useState<boolean>(false);
-  const [installationStatus, setInstallationStatus] = useState<string>("");
-  const [losslessScalingInstalled, setLosslessScalingInstalled] = useState<boolean>(false);
-  const [losslessScalingStatus, setLosslessScalingStatus] = useState<string>("");
+export function useInstallation(reloadConfig?: () => Promise<void>) {
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [installationStatus, setInstallationStatus] = useState("");
+  const [losslessScalingInstalled, setLosslessScalingInstalled] = useState(false);
+  const [losslessScalingStatus, setLosslessScalingStatus] = useState("");
   const [steamBranchStatus, setSteamBranchStatus] = useState<SteamBranchStatus | null>(null);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [isUninstalling, setIsUninstalling] = useState(false);
 
   const checkInstallation = async () => {
     try {
@@ -25,13 +35,9 @@ export function useInstallationStatus() {
       setIsInstalled(status.installed);
       setLosslessScalingInstalled(status.lossless_scaling_installed);
       setLosslessScalingStatus(status.lossless_scaling_status || "Lossless Scaling Not Installed");
-      if (status.installed) {
-        setInstallationStatus("lsfg-vk Installed");
-      } else {
-        setInstallationStatus("lsfg-vk Not Installed");
-      }
+      setInstallationStatus(status.installed ? "lsfg-vk Installed" : "lsfg-vk Not Installed");
       return status.installed;
-    } catch (error) {
+    } catch {
       setSteamBranchStatus(null);
       setLosslessScalingInstalled(false);
       setLosslessScalingStatus("Lossless Scaling Not Installed");
@@ -41,17 +47,64 @@ export function useInstallationStatus() {
   };
 
   useEffect(() => {
-    checkInstallation();
+    void checkInstallation();
   }, []);
+
+  const install = async () => {
+    setIsInstalling(true);
+    setInstallationStatus("Installing lsfg-vk...");
+    try {
+      const result = await installLsfgVk();
+      if (!result.success) {
+        setInstallationStatus(`Installation failed: ${result.error}`);
+        showInstallErrorToast(result.error);
+        return;
+      }
+      setIsInstalled(true);
+      setInstallationStatus("lsfg-vk installed");
+      showInstallSuccessToast();
+      await reloadConfig?.();
+      await checkInstallation();
+    } catch (error) {
+      setInstallationStatus(`Installation failed: ${error}`);
+      showInstallErrorToast(String(error));
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  const uninstall = async () => {
+    setIsUninstalling(true);
+    setInstallationStatus("Uninstalling lsfg-vk...");
+    try {
+      const result = await uninstallLsfgVk();
+      if (!result.success) {
+        setInstallationStatus(`Uninstallation failed: ${result.error}`);
+        showUninstallErrorToast(result.error);
+        return;
+      }
+      setIsInstalled(false);
+      setInstallationStatus("lsfg-vk uninstalled successfully!");
+      await checkInstallation();
+      showUninstallSuccessToast();
+    } catch (error) {
+      setInstallationStatus(`Uninstallation failed: ${error}`);
+      showUninstallErrorToast(String(error));
+    } finally {
+      setIsUninstalling(false);
+    }
+  };
 
   return {
     isInstalled,
     installationStatus,
-    setIsInstalled,
-    setInstallationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
     steamBranchStatus,
-    checkInstallation
+    isInstalling,
+    isUninstalling,
+    install,
+    uninstall,
+    checkInstallation,
   };
 }

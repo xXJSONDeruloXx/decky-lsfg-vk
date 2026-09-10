@@ -1,12 +1,8 @@
 """Small adapter for the upstream lsfg-vk v2 configuration format."""
 
 import json
-import sys
 import tomllib
-from pathlib import Path
 from typing import Any, Dict, TypedDict
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 ConfigurationData = Dict[str, Any]
 
@@ -57,8 +53,8 @@ class ConfigurationManager:
     def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
         result = {**PROFILE_DEFAULTS, **GLOBAL_DEFAULTS}
         result.update({key: value for key, value in config.items() if key in result})
-        result["active_in"] = _normalize_active_in(result.get("active_in"))
-        result["pacing_mode"] = str(result.get("pacing_mode", "vsync")).lower()
+        result["active_in"] = _normalize_active_in(result["active_in"])
+        result["pacing_mode"] = str(result["pacing_mode"]).lower()
         if result["pacing_mode"] != "vsync":
             raise ValueError("pacing_mode must be vsync")
         result["multiplier"] = int(result["multiplier"])
@@ -67,43 +63,24 @@ class ConfigurationManager:
         result["flow_scale"] = float(result["flow_scale"])
         if not 0.25 <= result["flow_scale"] <= 1.0:
             raise ValueError("flow_scale must be between 0.25 and 1.0")
-        for name in ("no_fp16", "performance_mode", "override_present_mode", "preserve_swapchain_image_count"):
+        for name in (
+            "no_fp16",
+            "performance_mode",
+            "override_present_mode",
+            "preserve_swapchain_image_count",
+        ):
             result[name] = bool(result[name])
-        result["dll"] = str(result.get("dll") or "")
+        result["dll"] = str(result["dll"] or "")
         return result
-
-    @staticmethod
-    def _migrate_dll_path(value: Any) -> str:
-        path_value = str(value or "")
-        if not path_value:
-            return ""
-        path = Path(path_value)
-        if path.name.lower() in {"lossless.dll"}:
-            return str(path.with_name("lsfg-vk.dll"))
-        return path_value
-
-    @staticmethod
-    def _config_from_profile(profile: Dict[str, Any], global_config: Dict[str, Any]) -> Dict[str, Any]:
-        raw = dict(profile)
-        if "pacing_mode" not in raw and "pacing" in raw:
-            raw["pacing_mode"] = raw["pacing"]
-        if "override_present_mode" not in raw and "experimental_present_mode" in raw:
-            raw["override_present_mode"] = raw["experimental_present_mode"] == "fifo"
-        raw["dll"] = global_config.get("dll", "")
-        raw["no_fp16"] = global_config.get("no_fp16", False)
-        return ConfigurationManager.validate_config(raw)
 
     @staticmethod
     def generate_toml_content_multi_profile(profile_data: ProfileData) -> str:
         global_config = {**GLOBAL_DEFAULTS, **profile_data.get("global_config", {})}
         lines = ["version = 2", "", "[global]"]
-        dll = ConfigurationManager._migrate_dll_path(global_config.get("dll"))
-        if dll:
-            lines.append(f"dll = {_toml_value(dll)}")
-        lines.append(f"allow_fp16 = {_toml_value(not bool(global_config.get('no_fp16', False)))}")
-        profiles = sorted(profile_data["profiles"].items())
-        if not profiles:
-            profiles = [("", {})]
+        if global_config["dll"]:
+            lines.append(f"dll = {_toml_value(global_config['dll'])}")
+        lines.append(f"allow_fp16 = {_toml_value(not bool(global_config['no_fp16']))}")
+        profiles = sorted(profile_data["profiles"].items()) or [("", {})]
         for name, raw in profiles:
             config = ConfigurationManager.validate_config({**raw, **global_config})
             lines.extend(["", "[[profile]]", f"name = {_toml_value(name)}"])
@@ -122,26 +99,20 @@ class ConfigurationManager:
     @staticmethod
     def parse_toml_content_multi_profile(content: str) -> ProfileData:
         data = tomllib.loads(content)
-        version = data.get("version")
-        if version not in (1, 2):
+        if data.get("version") != 2:
             raise ValueError("unsupported lsfg-vk configuration version")
-        raw_global = dict(data.get("global", {}))
+        raw_global = data.get("global", {})
         global_config = {
-            "dll": ConfigurationManager._migrate_dll_path(raw_global.get("dll", "")),
+            "dll": str(raw_global.get("dll", "") or ""),
             "no_fp16": not bool(raw_global.get("allow_fp16", True)),
         }
         profiles: Dict[str, Dict[str, Any]] = {}
-        source_profiles = data.get("game", []) if version == 1 else data.get("profile", [])
-        for profile in source_profiles:
-            name = str(profile.get("exe" if version == 1 else "name", ""))
-            config = ConfigurationManager._config_from_profile(profile, global_config)
+        for profile in data.get("profile", []):
+            name = str(profile.get("name", ""))
+            config = ConfigurationManager.validate_config({
+                **profile,
+                **global_config,
+            })
             if config["active_in"]:
                 profiles[name] = config
         return {"profiles": profiles, "global_config": global_config}
-
-    @staticmethod
-    def is_legacy_v1(content: str) -> bool:
-        try:
-            return tomllib.loads(content).get("version") == 1
-        except tomllib.TOMLDecodeError:
-            return False

@@ -1,40 +1,17 @@
-"""
-Type definitions for the lsfg-vk plugin responses.
-"""
-
-from typing import TypedDict, Optional, List
+from typing import List, Optional, TypedDict
 
 
-class BaseResponse(TypedDict):
-    """Base response structure"""
+class InstallationResponse(TypedDict):
     success: bool
-
-
-class ErrorResponse(BaseResponse):
-    """Response structure for errors"""
-    error: str
-
-
-class MessageResponse(BaseResponse):
-    """Response structure with message"""
-    message: str
-
-
-class InstallationResponse(BaseResponse):
-    """Response for installation operations"""
     message: str
     error: Optional[str]
 
 
-class UninstallationResponse(BaseResponse):
-    """Response for uninstallation operations"""
-    message: str
+class UninstallationResponse(InstallationResponse):
     removed_files: Optional[List[str]]
-    error: Optional[str]
 
 
 class InstallationCheckResponse(TypedDict):
-    """Response for installation check"""
     installed: bool
     lossless_scaling_installed: bool
     lossless_scaling_status: str

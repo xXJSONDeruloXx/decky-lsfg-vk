@@ -2,12 +2,11 @@ import { Tabs } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
-import { tabStyles } from "../styles";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
-import { useInstallationActions } from "../hooks/useInstallationActions";
-import { useInstallationStatus } from "../hooks/useLsfgHooks";
-import { ConfigurationTab } from "./ConfigurationTab";
+import { useInstallation } from "../hooks/useLsfgHooks";
+import { tabStyles } from "../styles";
 import { ConfigFileTab } from "./ConfigFileTab";
+import { ConfigurationTab } from "./ConfigurationTab";
 import { NowPlayingTab } from "./NowPlayingTab";
 import { SetupTab } from "./SetupTab";
 
@@ -19,16 +18,6 @@ const tabIcons = {
 };
 
 export function Content() {
-  const {
-    isInstalled,
-    installationStatus,
-    setIsInstalled,
-    setInstallationStatus,
-    losslessScalingInstalled,
-    losslessScalingStatus,
-    steamBranchStatus,
-    checkInstallation,
-  } = useInstallationStatus();
   const {
     config,
     targets,
@@ -42,15 +31,25 @@ export function Content() {
     resetAll,
     reload,
   } = useGameConfiguration();
-  const { isInstalling, isUninstalling, handleInstall, handleUninstall } = useInstallationActions();
+  const {
+    isInstalled,
+    installationStatus,
+    losslessScalingInstalled,
+    losslessScalingStatus,
+    steamBranchStatus,
+    isInstalling,
+    isUninstalling,
+    install,
+    uninstall,
+  } = useInstallation(reload);
   const [tab, setTab] = useState("Setup");
+  const previousRunningAppId = useRef<string | null>(null);
   const setupComplete =
     isInstalled &&
     losslessScalingInstalled &&
     steamBranchStatus?.success === true &&
     steamBranchStatus.installed &&
     !steamBranchStatus.needs_switch;
-  const previousRunningAppId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!setupComplete) {
@@ -65,10 +64,9 @@ export function Content() {
     const appid = runningGame?.appid || null;
     const previous = previousRunningAppId.current;
     previousRunningAppId.current = appid;
-    if (appid && appid !== previous) {
-      setTab("NowPlaying");
-    } else if (!appid && previous) {
-      setTab((currentTab) => currentTab === "NowPlaying" ? "Games" : currentTab);
+    if (appid && appid !== previous) setTab("NowPlaying");
+    else if (!appid && previous) {
+      setTab((current) => current === "NowPlaying" ? "Games" : current);
     }
   }, [runningGame?.appid, runningGame?.configured, setupComplete]);
 
@@ -80,19 +78,9 @@ export function Content() {
     fieldName: keyof ConfigurationData,
     value: boolean | number | string | string[],
     cleanupLaunchOptions = false,
-  ) => {
-    await save({ ...config, [fieldName]: value }, cleanupLaunchOptions);
-  };
+  ) => save({ ...config, [fieldName]: value }, cleanupLaunchOptions);
 
-  const onInstall = () => {
-    void handleInstall(setIsInstalled, setInstallationStatus, reload, checkInstallation);
-  };
-
-  const onUninstall = () => {
-    void handleUninstall(setIsInstalled, setInstallationStatus, checkInstallation);
-  };
-
-  const setupContent = (
+  const setup = (
     <SetupTab
       isInstalled={isInstalled}
       installationStatus={installationStatus}
@@ -101,8 +89,9 @@ export function Content() {
       steamBranchStatus={steamBranchStatus}
       isInstalling={isInstalling}
       isUninstalling={isUninstalling}
-      onInstall={onInstall}
-      onUninstall={onUninstall}
+      onInstall={() => void install()}
+      onUninstall={() => void uninstall()}
+      flatpakRelevant={targets.some((target) => target.transport.kind === "flatpak")}
     />
   );
 
@@ -115,7 +104,7 @@ export function Content() {
             <NowPlayingTab
               game={runningGame}
               config={config}
-              onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value)}
+              onConfigChange={(field, value) => handleConfigChange(field, value)}
               onEnable={enable}
               onRepair={repair}
             />
@@ -130,7 +119,7 @@ export function Content() {
               targets={targets}
               runningGame={runningGame}
               onSelect={setSelectedAppId}
-              onConfigChange={(fieldName, value) => handleConfigChange(fieldName, value, true)}
+              onConfigChange={(field, value) => handleConfigChange(field, value, true)}
               onEnable={enable}
               onEnableAll={enableAll}
               onRepair={repair}
@@ -139,16 +128,10 @@ export function Content() {
             />
           ),
         },
-        {
-          id: "ConfigFile",
-          title: tabIcons.configFile,
-          content: <ConfigFileTab />,
-        },
-        { id: "Setup", title: tabIcons.setup, content: setupContent },
+        { id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> },
+        { id: "Setup", title: tabIcons.setup, content: setup },
       ]
-    : [
-        { id: "Setup", title: tabIcons.setup, content: setupContent },
-      ];
+    : [{ id: "Setup", title: tabIcons.setup, content: setup }];
 
   return (
     <div
