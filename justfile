@@ -1,8 +1,11 @@
 default:
-    echo "Available recipes: build, test, clean"
+    echo "Available recipes: build, deploy, test, clean"
 
 build:
-    .vscode/build.sh
+    pnpm build
+
+deploy:
+    ./scripts/deploy-to-deck.sh
 
 test:
     scp "out/Decky LSFG-VK.zip" deck@192.168.0.6:~/Desktop
