@@ -41,7 +41,6 @@ export interface InstalledGame {
   appid: string;
   name: string;
   nonSteam: boolean;
-  directFlatpak?: boolean;
   executable?: string;
   arguments?: string;
   startDir?: string;
@@ -115,13 +114,21 @@ export interface FlatpakApp {
   profile: string;
   config?: LsfgConfig | null;
   workarounds: WorkaroundState;
-  active?: boolean;
-  pid?: string;
   error?: string | null;
+}
+
+export interface RunningFlatpakApp {
+  app_id: string;
+  active: boolean;
+  pid?: string;
 }
 
 export interface FlatpakAppsResult extends ApiResult {
   apps?: FlatpakApp[];
+}
+
+export interface RunningFlatpakAppsResult extends ApiResult {
+  apps?: RunningFlatpakApp[];
 }
 
 export interface FlatpakAppResult extends ApiResult, Partial<FlatpakApp> {
@@ -136,10 +143,9 @@ export const getConfigFileContent = callable<[], FileContentResult>("get_config_
 export const getFlatpakApps = callable<[], FlatpakAppsResult>("get_flatpak_apps");
 export const enableFlatpakApp = callable<[string], FlatpakAppResult>("enable_flatpak_app");
 export const updateFlatpakConfig = callable<[string, LsfgConfig], FlatpakAppResult>("update_flatpak_config");
-export const getFlatpakWorkaroundState = callable<[string], WorkaroundStateResult>("get_flatpak_workaround_state");
 export const setFlatpakWorkaroundState = callable<[string, WorkaroundState], WorkaroundStateResult>("set_flatpak_workaround_state");
 export const removeFlatpakApp = callable<[string], FlatpakAppResult>("remove_flatpak_app");
-export const getRunningFlatpakApps = callable<[], FlatpakAppsResult>("get_running_flatpak_apps");
+export const getRunningFlatpakApps = callable<[], RunningFlatpakAppsResult>("get_running_flatpak_apps");
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
