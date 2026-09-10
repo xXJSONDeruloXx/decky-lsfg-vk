@@ -19,12 +19,10 @@ interface SetupTabProps {
   isUninstalling: boolean;
   onInstall: () => void;
   onUninstall: () => void;
-  flatpakRelevant: boolean;
 }
 
-function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
+function FlatpakSupportDiagnostics() {
   const [status, setStatus] = useState<FlatpakExtensionStatus | null>(null);
-  const [advanced, setAdvanced] = useState(false);
   const [operation, setOperation] = useState<string | null>(null);
 
   const refresh = async () => {
@@ -44,10 +42,10 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
   };
 
   useEffect(() => {
-    if (relevant) void refresh();
-  }, [relevant]);
+    void refresh();
+  }, []);
 
-  if (!relevant || !status?.available) return null;
+  if (!status?.available) return null;
 
   const setEnabled = async (branch: string, enabled: boolean) => {
     setOperation(`${enabled ? "enable" : "disable"}-${branch}`);
@@ -63,19 +61,14 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
   };
 
   return (
-    <PanelSection title="Flatpak support">
+    <PanelSection title="Flatpak runtimes">
       <PanelSectionRow>
         <Field
-          label="Runtime extension support"
-          description={status.message || "Flatpak is available for classified targets."}
+          label="LSFG-VK runtime extensions"
+          description={status.message || "Toggle a branch to install or uninstall it."}
         />
       </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem layout="below" onClick={() => setAdvanced((value) => !value)}>
-          {advanced ? "Hide runtime details" : "Show runtime details"}
-        </ButtonItem>
-      </PanelSectionRow>
-      {advanced && status.supported_branches.map((branch) => {
+      {status.supported_branches.map((branch) => {
         const installed = status.installed_branches.includes(branch);
         const pending = operation?.endsWith(`-${branch}`);
         return (
@@ -105,7 +98,6 @@ export function SetupTab(props: SetupTabProps) {
     isUninstalling,
     onInstall,
     onUninstall,
-    flatpakRelevant,
   } = props;
   const losslessScalingAppInstalled = losslessScalingInstalled || steamBranchStatus?.installed === true;
   const buttonLabel = isInstalling
@@ -146,7 +138,7 @@ export function SetupTab(props: SetupTabProps) {
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
-      <FlatpakSupportDiagnostics relevant={flatpakRelevant} />
+      <FlatpakSupportDiagnostics />
     </>
   );
 }

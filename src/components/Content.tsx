@@ -91,7 +91,6 @@ export function Content() {
       isUninstalling={isUninstalling}
       onInstall={() => void install()}
       onUninstall={() => void uninstall()}
-      flatpakRelevant={targets.some((target) => target.transport.kind === "flatpak")}
     />
   );
 
