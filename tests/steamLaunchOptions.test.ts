@@ -192,6 +192,37 @@ test("wraps a split direct Flatpak target while preserving its launch arguments"
   }
 });
 
+test("canonicalizes an existing quoted direct Flatpak target", async () => {
+  const previousWindow = (globalThis as Record<string, unknown>).window;
+  const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
+  let shortcutTarget = '"~/.lsfg" "/usr/bin/flatpak"';
+  const targetWrites: string[] = [];
+  const apps = {
+    RegisterForAppDetails(_appId: number, callback: (details: SteamAppDetails) => void) {
+      callback({ strShortcutExe: shortcutTarget, strShortcutLaunchOptions: "" });
+      return { unregister() {} };
+    },
+    SetShortcutExe(_appId: number, executable: string) {
+      targetWrites.push(executable);
+      shortcutTarget = executable;
+    },
+    SetShortcutLaunchOptions() {},
+  };
+  (globalThis as Record<string, unknown>).window = { setTimeout, clearTimeout };
+  (globalThis as Record<string, unknown>).SteamClient = { Apps: apps };
+  try {
+    const installed = await installWrapperIntegration(47, true, wrapper, false, { kind: "flatpak" });
+    assert.equal(installed.originalExecutable, "/usr/bin/flatpak");
+    assert.equal(installed.snapshot.target, "~/.lsfg /usr/bin/flatpak");
+    assert.deepEqual(targetWrites, ["~/.lsfg /usr/bin/flatpak"]);
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
+    else (globalThis as Record<string, unknown>).window = previousWindow;
+    if (previousSteamClient === undefined) delete (globalThis as Record<string, unknown>).SteamClient;
+    else (globalThis as Record<string, unknown>).SteamClient = previousSteamClient;
+  }
+});
+
 test("uses shortcut launch options for a host shortcut without changing its Target", async () => {
   const previousWindow = (globalThis as Record<string, unknown>).window;
   const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;

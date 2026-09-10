@@ -428,11 +428,21 @@ export function installWrapperIntegration(
         if (savedOriginal && savedOriginal !== managedOriginal) {
           throw new Error("Shortcut Target changed externally; refusing to replace it");
         }
+        const canonicalTarget = flatpakTargetValue(wrapperPath, managedOriginal);
+        let targetChanged = false;
+        if (current.target !== canonicalTarget) {
+          current = await writeVerified(
+            appId, true, current.target, canonicalTarget,
+            (target) => writeTarget(appId, target), readTarget,
+            "Steam did not accept the canonical Flatpak shortcut Target",
+          );
+          targetChanged = true;
+        }
         return {
           snapshot: current,
           originalExecutable: savedOriginal || managedOriginal,
           commandTokenAdded: false,
-          changed: launchOptionsChanged,
+          changed: launchOptionsChanged || targetChanged,
         };
       }
       const currentOriginal = selectFlatpakExecutable(transport, current.target);
