@@ -50,6 +50,7 @@ export function Content() {
     runningGame,
     setSelectedAppId,
     save,
+    saveFor,
     enable,
     enableAll,
     repair,
@@ -138,7 +139,7 @@ export function Content() {
       game={runningGame}
       config={runningConfig}
       onConfigChange={async (field, value) => {
-        await save({ ...runningConfig, [field]: value }, true);
+        await saveFor(runningGame.appid, { ...runningConfig, [field]: value }, true);
       }}
     />
   ) : runningFlatpak ? (
