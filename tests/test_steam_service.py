@@ -11,73 +11,21 @@ sys.modules.setdefault(
 )
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "py_modules"))
 
-from lsfg_vk.steam_service import SteamService, classify_shortcut_transport
+from lsfg_vk.steam_service import SteamService, is_direct_flatpak_shortcut
 
 
-class SteamTransportTests(unittest.TestCase):
-    def test_only_direct_canonical_flatpak_forms_are_classified(self):
-        self.assertEqual(
-            classify_shortcut_transport(
-                "/usr/bin/flatpak",
-                "run com.example.PCSX2 --fullscreen",
-            ),
-            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "flatpak",
-                "run com.example.PCSX2 --fullscreen",
-            ),
-            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "/usr/bin/flatpak run com.example.PCSX2",
-                "--fullscreen",
-            ),
-            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "/usr/bin/bash",
-                "~/launch-game.sh --fullscreen",
-            ),
-            {"kind": "host"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "/usr/bin/flatpak",
-                "--user run com.example.PCSX2",
-            ),
-            {"kind": "host"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "/usr/bin/flatpak",
-                "run bash ~/launch-game.sh",
-            ),
-            {"kind": "host"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "~/.lsfg",
-                "run --branch=stable --arch=x86_64 com.example.PCSX2",
-            ),
-            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport(
-                "/home/deck/.lsfg",
-                "run com.example.PCSX2",
-            ),
-            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
-        )
-        self.assertEqual(
-            classify_shortcut_transport("~/.lsfg", "--profile high"),
-            {"kind": "host"},
-        )
+class SteamShortcutTests(unittest.TestCase):
+    def test_only_direct_flatpak_targets_are_special(self):
+        self.assertTrue(is_direct_flatpak_shortcut("/usr/bin/flatpak"))
+        self.assertTrue(is_direct_flatpak_shortcut("flatpak"))
+        self.assertTrue(is_direct_flatpak_shortcut("/usr/bin/flatpak run com.example.Game"))
+        self.assertTrue(is_direct_flatpak_shortcut('~/.lsfg "/usr/bin/flatpak"'))
+        self.assertFalse(is_direct_flatpak_shortcut("/usr/bin/bash"))
+        self.assertFalse(is_direct_flatpak_shortcut("/home/deck/Emulation/tools/launchers/retroarch.sh"))
+        self.assertFalse(is_direct_flatpak_shortcut("/home/deck/Emulation/tools/launchers/ppsspp.sh"))
+        self.assertFalse(is_direct_flatpak_shortcut("/home/deck/AppImages/dusk.appimage"))
 
-    def test_shortcut_data_preserves_transport_inputs(self):
+    def test_shortcut_data_preserves_launch_shape_without_flatpak_identity(self):
         game = SteamService._shortcut_game(
             {
                 "appid": 123456,
@@ -89,28 +37,27 @@ class SteamTransportTests(unittest.TestCase):
         )
 
         self.assertEqual(game["appid"], "123456")
-        self.assertEqual(game["transport"], {
-            "kind": "flatpak",
-            "flatpakAppId": "net.pcsx2.PCSX2",
-        })
+        self.assertTrue(game["directFlatpak"])
+        self.assertNotIn("transport", game)
         self.assertEqual(game["executable"], "/usr/bin/flatpak")
         self.assertEqual(game["arguments"], "run net.pcsx2.PCSX2 --fullscreen")
         self.assertEqual(game["startDir"], "/home/deck/Games")
 
-    def test_wrapped_flatpak_shortcut_remains_a_flatpak_target(self):
+    def test_emudeck_launcher_is_ordinary_non_steam(self):
         game = SteamService._shortcut_game(
             {
                 "appid": 987654,
-                "AppName": "Wrapped Flatpak",
-                "Exe": "~/.lsfg",
-                "LaunchOptions": "run --branch=stable --arch=x86_64 com.example.Game",
+                "AppName": "1080 Snowboarding",
+                "Exe": '"/home/deck/Emulation/tools/launchers/retroarch.sh" -L core rom.z64',
+                "LaunchOptions": "",
             }
         )
 
-        self.assertEqual(game["transport"], {
-            "kind": "flatpak",
-            "flatpakAppId": "com.example.Game",
-        })
+        self.assertFalse(game["directFlatpak"])
+        self.assertEqual(
+            game["executable"],
+            '"/home/deck/Emulation/tools/launchers/retroarch.sh" -L core rom.z64',
+        )
 
 
 if __name__ == "__main__":
