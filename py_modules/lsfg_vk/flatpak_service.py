@@ -202,11 +202,8 @@ class FlatpakService(BaseService):
                     extension_id=self.EXTENSION_ID,
                     supported_branches=list(self.SUPPORTED_RUNTIMES),
                     installed_branches=[],
-                    owned_branches=[],
-                    ownership_uncertain=False,
                 )
             installed = self._installed_extension_branches()
-            owned, uncertain = self._read_owned_branches()
             return self._success_response(
                 dict,
                 "Flatpak runtime extension status retrieved",
@@ -214,8 +211,6 @@ class FlatpakService(BaseService):
                 extension_id=self.EXTENSION_ID,
                 supported_branches=list(self.SUPPORTED_RUNTIMES),
                 installed_branches=sorted(installed),
-                owned_branches=sorted(owned),
-                ownership_uncertain=uncertain,
             )
         except Exception as error:
             return self._error_response(
@@ -225,8 +220,6 @@ class FlatpakService(BaseService):
                 extension_id=self.EXTENSION_ID,
                 supported_branches=list(self.SUPPORTED_RUNTIMES),
                 installed_branches=[],
-                owned_branches=[],
-                ownership_uncertain=False,
             )
 
     def get_flatpak_support_status(self) -> Dict[str, Any]:
@@ -294,18 +287,12 @@ class FlatpakService(BaseService):
             )
 
     def install_extension(self, version: str) -> Dict[str, Any]:
-        """Install one missing branch and record ownership only after readback."""
+        """Install one branch, treating an already-installed branch as success."""
         try:
             version = self._validate_runtime(version)
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             with self._lock:
-                owned, uncertain = self._read_owned_branches()
-                if uncertain:
-                    raise RuntimeError(
-                        "Flatpak ownership metadata is uncertain; refusing to install "
-                        "until it is repaired"
-                    )
                 installed_before = self._installed_extension_branches()
                 if version in installed_before:
                     return self._success_response(
@@ -314,8 +301,6 @@ class FlatpakService(BaseService):
                         runtime_branch=version,
                         installed=True,
                         enabled=True,
-                        owned_by_plugin=version in owned,
-                        preserved=version not in owned,
                     )
                 bundle_path = self._bundled_extension_path(version)
                 if not bundle_path.is_file():
@@ -341,16 +326,16 @@ class FlatpakService(BaseService):
                         f"Flatpak install completed but {self._extension_ref(version)} "
                         "was not visible afterwards"
                     )
-                owned.add(version)
-                self._write_owned_branches(owned)
+                owned, uncertain = self._read_owned_branches()
+                if not uncertain:
+                    owned.add(version)
+                    self._write_owned_branches(owned)
                 return self._success_response(
                     dict,
                     f"lsfg-vk {version} runtime extension installed",
                     runtime_branch=version,
                     installed=True,
                     enabled=True,
-                    owned_by_plugin=True,
-                    preserved=False,
                 )
         except Exception as error:
             return self._error_response(
@@ -359,8 +344,6 @@ class FlatpakService(BaseService):
                 runtime_branch=version,
                 installed=False,
                 enabled=False,
-                owned_by_plugin=False,
-                preserved=False,
             )
 
     def ensure_extension(self, version: str) -> Dict[str, Any]:
@@ -384,7 +367,6 @@ class FlatpakService(BaseService):
                 f"lsfg-vk {version} runtime extension is ready",
                 runtime_branch=version,
                 installed=True,
-                owned_by_plugin=version in status.get("owned_branches", []),
             )
         return self.install_extension(version)
 
@@ -419,41 +401,15 @@ class FlatpakService(BaseService):
         )
 
     def uninstall_extension(self, version: str) -> Dict[str, Any]:
-        """Uninstall only when explicitly requested for a plugin-owned branch."""
+        """Uninstall one branch, treating an already-absent branch as success."""
         try:
             version = self._validate_runtime(version)
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             with self._lock:
-                owned, uncertain = self._read_owned_branches()
-                if uncertain:
-                    raise RuntimeError(
-                        "Flatpak ownership metadata is uncertain; refusing to uninstall"
-                    )
                 installed = self._installed_extension_branches()
-                if version not in owned:
-                    if version in installed:
-                        return self._success_response(
-                            dict,
-                            f"Preserved Flatpak extension {version}; it is not plugin-owned",
-                            runtime_branch=version,
-                            removed=False,
-                            installed=True,
-                            enabled=True,
-                            owned_by_plugin=False,
-                            preserved=True,
-                        )
-                    return self._success_response(
-                        dict,
-                        f"Flatpak extension {version} is already not installed",
-                        runtime_branch=version,
-                        removed=False,
-                        installed=False,
-                        enabled=False,
-                        owned_by_plugin=False,
-                        preserved=False,
-                    )
-                if version in installed:
+                was_installed = version in installed
+                if was_installed:
                     result = self._run_flatpak_command(
                         [
                             "uninstall",
@@ -471,17 +427,17 @@ class FlatpakService(BaseService):
                             f"Flatpak uninstall completed but {self._extension_ref(version)} "
                             "is still installed"
                         )
-                owned.remove(version)
-                self._write_owned_branches(owned)
+                owned, uncertain = self._read_owned_branches()
+                if not uncertain and version in owned:
+                    owned.remove(version)
+                    self._write_owned_branches(owned)
                 return self._success_response(
                     dict,
-                    f"Plugin-owned lsfg-vk {version} runtime extension removed",
+                    f"lsfg-vk {version} runtime extension uninstalled",
                     runtime_branch=version,
-                    removed=True,
+                    removed=was_installed,
                     installed=False,
                     enabled=False,
-                    owned_by_plugin=False,
-                    preserved=False,
                 )
         except Exception as error:
             return self._error_response(
@@ -491,8 +447,6 @@ class FlatpakService(BaseService):
                 removed=False,
                 installed=False,
                 enabled=False,
-                owned_by_plugin=False,
-                preserved=False,
             )
 
     def set_extension_enabled(self, version: str, enabled: bool) -> Dict[str, Any]:
@@ -504,8 +458,6 @@ class FlatpakService(BaseService):
                 runtime_branch=version,
                 installed=False,
                 enabled=False,
-                owned_by_plugin=False,
-                preserved=False,
             )
         return self.install_extension(version) if enabled else self.uninstall_extension(version)
 

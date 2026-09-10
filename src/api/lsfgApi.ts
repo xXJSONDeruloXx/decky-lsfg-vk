@@ -124,17 +124,6 @@ export interface FlatpakExtensionStatus {
   extension_id: string;
   supported_branches: string[];
   installed_branches: string[];
-  owned_branches: string[];
-  ownership_uncertain: boolean;
-}
-
-export interface FlatpakCleanupResult {
-  success: boolean;
-  message: string;
-  error?: string | null;
-  removed_branches: string[];
-  preserved_branches: string[];
-  ownership_uncertain: boolean;
 }
 
 export interface FlatpakExtensionToggleResult {
@@ -144,8 +133,6 @@ export interface FlatpakExtensionToggleResult {
   runtime_branch: string;
   enabled: boolean;
   installed: boolean;
-  owned_by_plugin: boolean;
-  preserved: boolean;
 }
 
 // API functions
@@ -162,10 +149,6 @@ export const setFlatpakExtensionEnabled = callable<
   [string, boolean],
   FlatpakExtensionToggleResult
 >("set_flatpak_extension_enabled");
-export const removePluginOwnedFlatpakExtensions = callable<
-  [],
-  FlatpakCleanupResult
->("remove_plugin_owned_flatpak_extensions");
 
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");

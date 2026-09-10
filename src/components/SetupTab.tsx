@@ -1,8 +1,7 @@
-import { ButtonItem, ConfirmModal, Field, PanelSection, PanelSectionRow, ToggleField, showModal } from "@decky/ui";
+import { ButtonItem, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import {
   getFlatpakSupportStatus,
-  removePluginOwnedFlatpakExtensions,
   setFlatpakExtensionEnabled,
   type FlatpakExtensionStatus,
   type SteamBranchStatus,
@@ -41,8 +40,6 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
         extension_id: "",
         supported_branches: [],
         installed_branches: [],
-        owned_branches: [],
-        ownership_uncertain: false,
       });
     }
   };
@@ -67,59 +64,8 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
     }
   };
 
-  const confirmDisable = (version: string) => {
-    showModal(
-      <ConfirmModal
-        strTitle={`Disable Flatpak runtime ${version}?`}
-        strDescription="Only runtime extensions installed by this plugin can be removed. Pre-existing extensions are preserved."
-        strOKButtonText="Disable"
-        strCancelButtonText="Cancel"
-        onOK={() => void runExtensionOperation(version, false)}
-        onCancel={() => {}}
-      />,
-    );
-  };
-
   const handleExtensionToggle = (version: string, enabled: boolean) => {
-    const installed = status.installed_branches.includes(version);
-    const owned = status.owned_branches.includes(version);
-    if (!enabled && installed && !owned) {
-      showErrorToast(
-        "Flatpak runtime preserved",
-        `${version} was not installed by this plugin, so it will remain installed.`,
-      );
-      void refresh();
-      return;
-    }
-    if (!enabled && installed && owned) {
-      confirmDisable(version);
-      return;
-    }
     void runExtensionOperation(version, enabled);
-  };
-
-  const confirmCleanup = () => {
-    showModal(
-      <ConfirmModal
-        strTitle="Remove plugin-installed Flatpak extensions?"
-        strDescription="Shared runtime branches recorded as installed by this plugin will be removed. Existing unowned branches are preserved."
-        strOKButtonText="Remove extensions"
-        strCancelButtonText="Cancel"
-        onOK={async () => {
-          setOperation("cleanup");
-          try {
-            const result = await removePluginOwnedFlatpakExtensions();
-            if (!result.success) throw new Error(result.error || result.message || "Flatpak cleanup failed");
-            await refresh();
-          } catch (error) {
-            showErrorToast("Flatpak cleanup failed", String(error));
-          } finally {
-            setOperation(null);
-          }
-        }}
-        onCancel={() => {}}
-      />,
-    );
   };
 
   return (
@@ -147,31 +93,15 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
                     : operation === `disable-${branch}`
                       ? "Uninstalling..."
                       : status.installed_branches.includes(branch)
-                        ? status.owned_branches.includes(branch)
-                          ? "Installed · plugin-owned"
-                          : "Installed · pre-existing (preserved)"
+                        ? "Installed"
                         : "Not installed"
                 }
                 checked={status.installed_branches.includes(branch)}
                 onChange={(enabled) => handleExtensionToggle(branch, enabled)}
-                disabled={operation !== null || status.ownership_uncertain}
+                disabled={operation !== null}
               />
             </PanelSectionRow>
           ))}
-          {status.ownership_uncertain && (
-            <PanelSectionRow>
-              <Field label="Ownership metadata is uncertain" description="Cleanup is disabled until the metadata is repaired." />
-            </PanelSectionRow>
-          )}
-          <PanelSectionRow>
-            <ButtonItem
-              layout="below"
-              disabled={operation !== null || status.ownership_uncertain || status.owned_branches.length === 0}
-              onClick={confirmCleanup}
-            >
-              {operation === "cleanup" ? "Removing..." : "Remove plugin-installed extensions"}
-            </ButtonItem>
-          </PanelSectionRow>
         </>
       )}
     </PanelSection>
