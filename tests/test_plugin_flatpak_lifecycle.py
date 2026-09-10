@@ -57,6 +57,77 @@ class PluginFlatpakLifecycleTests(unittest.TestCase):
         plugin.installation_service.cleanup_on_uninstall.assert_called_once_with()
         plugin.flatpak_service.remove_plugin_owned_extensions.assert_called_once_with()
 
+    def test_uninstall_button_also_cleans_flatpak_support(self):
+        plugin = Plugin.__new__(Plugin)
+        plugin.installation_service = Mock()
+        plugin.installation_service.uninstall.return_value = {
+            "success": True,
+            "message": "lsfg-vk uninstalled successfully",
+            "error": None,
+            "removed_files": ["/home/deck/.local/lib/liblsfg-vk.so"],
+        }
+        plugin.flatpak_service = Mock()
+        plugin.flatpak_service.remove_plugin_owned_extensions.return_value = {
+            "success": True,
+            "message": "Plugin-owned Flatpak state removed",
+            "error": None,
+            "removed_branches": ["23.08", "24.08", "25.08"],
+            "preserved_branches": [],
+            "removed_filesystem_grants": ["/home/deck/.config/lsfg-vk"],
+            "preserved_filesystem_grants": [],
+            "ownership_uncertain": False,
+        }
+
+        result = asyncio.run(plugin.uninstall_lsfg_vk())
+
+        plugin.installation_service.uninstall.assert_called_once_with()
+        plugin.flatpak_service.remove_plugin_owned_extensions.assert_called_once_with()
+        self.assertTrue(result["success"])
+        self.assertEqual(result["flatpak_cleanup"]["removed_branches"], ["23.08", "24.08", "25.08"])
+
+    def test_uninstall_button_reports_flatpak_cleanup_failure(self):
+        plugin = Plugin.__new__(Plugin)
+        plugin.installation_service = Mock()
+        plugin.installation_service.uninstall.return_value = {
+            "success": True,
+            "message": "lsfg-vk uninstalled successfully",
+            "error": None,
+            "removed_files": [],
+        }
+        plugin.flatpak_service = Mock()
+        plugin.flatpak_service.remove_plugin_owned_extensions.return_value = {
+            "success": False,
+            "message": "",
+            "error": "Flatpak ownership metadata was not trusted",
+            "ownership_uncertain": True,
+        }
+
+        result = asyncio.run(plugin.uninstall_lsfg_vk())
+
+        self.assertFalse(result["success"])
+        self.assertIn("Flatpak ownership metadata was not trusted", result["error"])
+        self.assertTrue(result["flatpak_cleanup"]["ownership_uncertain"])
+
+    def test_uninstall_button_fails_closed_if_flatpak_cleanup_raises(self):
+        plugin = Plugin.__new__(Plugin)
+        plugin.installation_service = Mock()
+        plugin.installation_service.uninstall.return_value = {
+            "success": True,
+            "message": "lsfg-vk uninstalled successfully",
+            "error": None,
+            "removed_files": [],
+        }
+        plugin.flatpak_service = Mock()
+        plugin.flatpak_service.remove_plugin_owned_extensions.side_effect = RuntimeError(
+            "ownership could not be established"
+        )
+
+        result = asyncio.run(plugin.uninstall_lsfg_vk())
+
+        self.assertFalse(result["success"])
+        self.assertIn("ownership could not be established", result["error"])
+        self.assertTrue(result["flatpak_cleanup"]["ownership_uncertain"])
+
 
 if __name__ == "__main__":
     unittest.main()

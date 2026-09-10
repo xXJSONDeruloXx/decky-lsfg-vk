@@ -37,7 +37,20 @@ class Plugin:
         return self.installation_service.check_installation()
 
     async def uninstall_lsfg_vk(self):
-        return self.installation_service.uninstall()
+        result = self.installation_service.uninstall()
+        flatpak = self._cleanup_plugin_flatpak_state()
+        result = dict(result)
+        result["flatpak_cleanup"] = flatpak
+
+        if not result.get("success") or not flatpak.get("success"):
+            result["success"] = False
+            errors = [
+                str(error)
+                for error in (result.get("error"), flatpak.get("error"))
+                if error
+            ]
+            result["error"] = "; ".join(errors) or "Uninstallation did not complete"
+        return result
 
     async def get_game_configs(self):
         return self.configuration_service.get_game_configs()
@@ -166,13 +179,30 @@ class Plugin:
     async def _uninstall(self):
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         self.installation_service.cleanup_on_uninstall()
+        result = self._cleanup_plugin_flatpak_state()
+        if not result.get("success"):
+            decky.logger.warning(result.get("error"))
+        decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
+
+    def _cleanup_plugin_flatpak_state(self) -> Dict[str, Any]:
+        """Run ownership-safe Flatpak cleanup and fail closed on unexpected errors."""
         try:
             result = self.flatpak_service.remove_plugin_owned_extensions()
-            if not result.get("success"):
-                decky.logger.warning(result.get("error"))
+            if not isinstance(result, dict):
+                raise RuntimeError("Flatpak cleanup returned an invalid result")
+            return result
         except Exception as error:
             decky.logger.error(f"Error during Flatpak cleanup: {error}")
-        decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
+            return {
+                "success": False,
+                "message": "",
+                "error": f"Error during Flatpak cleanup: {error}",
+                "removed_branches": [],
+                "preserved_branches": [],
+                "removed_filesystem_grants": [],
+                "preserved_filesystem_grants": [],
+                "ownership_uncertain": True,
+            }
 
     async def _migration(self):
         decky.logger.info("Running decky-lsfg-vk plugin migrations")

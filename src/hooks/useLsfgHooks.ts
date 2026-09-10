@@ -96,7 +96,7 @@ export function useInstallation(reloadConfig?: () => Promise<void>) {
         return;
       }
       setIsInstalled(false);
-      setInstallationStatus("lsfg-vk uninstalled successfully!");
+      setInstallationStatus("lsfg-vk and Flatpak support uninstalled successfully!");
       await checkInstallation();
       showUninstallSuccessToast();
     } catch (error) {

@@ -7,8 +7,17 @@ interface ApiResult {
   error?: string | null;
 }
 
+export interface FlatpakCleanupResult extends ApiResult {
+  removed_branches?: string[];
+  preserved_branches?: string[];
+  removed_filesystem_grants?: string[];
+  preserved_filesystem_grants?: string[];
+  ownership_uncertain?: boolean;
+}
+
 export interface InstallationResult extends ApiResult {
   removed_files?: string[];
+  flatpak_cleanup?: FlatpakCleanupResult;
 }
 
 export interface InstallationStatus {
