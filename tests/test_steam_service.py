@@ -51,6 +51,24 @@ class SteamTransportTests(unittest.TestCase):
             ),
             {"kind": "host"},
         )
+        self.assertEqual(
+            classify_shortcut_transport(
+                "~/.lsfg",
+                "run --branch=stable --arch=x86_64 com.example.PCSX2",
+            ),
+            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
+        )
+        self.assertEqual(
+            classify_shortcut_transport(
+                "/home/deck/.lsfg",
+                "run com.example.PCSX2",
+            ),
+            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
+        )
+        self.assertEqual(
+            classify_shortcut_transport("~/.lsfg", "--profile high"),
+            {"kind": "host"},
+        )
 
     def test_shortcut_data_preserves_transport_inputs(self):
         game = SteamService._shortcut_game(
@@ -71,6 +89,21 @@ class SteamTransportTests(unittest.TestCase):
         self.assertEqual(game["executable"], "/usr/bin/flatpak")
         self.assertEqual(game["arguments"], "run net.pcsx2.PCSX2 --fullscreen")
         self.assertEqual(game["startDir"], "/home/deck/Games")
+
+    def test_wrapped_flatpak_shortcut_remains_a_flatpak_target(self):
+        game = SteamService._shortcut_game(
+            {
+                "appid": 987654,
+                "AppName": "Wrapped Flatpak",
+                "Exe": "~/.lsfg",
+                "LaunchOptions": "run --branch=stable --arch=x86_64 com.example.Game",
+            }
+        )
+
+        self.assertEqual(game["transport"], {
+            "kind": "flatpak",
+            "flatpakAppId": "com.example.Game",
+        })
 
 
 if __name__ == "__main__":

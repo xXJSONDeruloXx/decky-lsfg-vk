@@ -1,4 +1,4 @@
-import { ButtonItem, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
+import { Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import {
   getFlatpakSupportStatus,
@@ -20,12 +20,10 @@ interface SetupTabProps {
   isUninstalling: boolean;
   onInstall: () => void;
   onUninstall: () => void;
-  flatpakRelevant: boolean;
 }
 
-function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
+function FlatpakSupportDiagnostics() {
   const [status, setStatus] = useState<FlatpakExtensionStatus | null>(null);
-  const [advanced, setAdvanced] = useState(false);
   const [operation, setOperation] = useState<string | null>(null);
 
   const refresh = async () => {
@@ -45,10 +43,10 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
   };
 
   useEffect(() => {
-    if (relevant) void refresh();
-  }, [relevant]);
+    void refresh();
+  }, []);
 
-  if (!relevant || !status?.available) return null;
+  if (!status?.available) return null;
 
   const runExtensionOperation = async (version: string, enabled: boolean) => {
     const operationKey = `${enabled ? "enable" : "disable"}-${version}`;
@@ -69,41 +67,32 @@ function FlatpakSupportDiagnostics({ relevant }: { relevant: boolean }) {
   };
 
   return (
-    <PanelSection title="Flatpak support">
+    <PanelSection title="Flatpak runtimes">
       <PanelSectionRow>
         <Field
-          label="Runtime extension support"
-          description={status.message || "Flatpak is available for classified targets."}
+          label="LSFG-VK runtime extensions"
+          description={status.message || "Toggle a branch to install or uninstall it."}
         />
       </PanelSectionRow>
-      <PanelSectionRow>
-        <ButtonItem layout="below" onClick={() => setAdvanced((value) => !value)}>
-          {advanced ? "Hide runtime details" : "Show runtime details"}
-        </ButtonItem>
-      </PanelSectionRow>
-      {advanced && (
-        <>
-          {status.supported_branches.map((branch) => (
-            <PanelSectionRow key={branch}>
-              <ToggleField
-                label={branch}
-                description={
-                  operation === `enable-${branch}`
-                    ? "Installing..."
-                    : operation === `disable-${branch}`
-                      ? "Uninstalling..."
-                      : status.installed_branches.includes(branch)
-                        ? "Installed"
-                        : "Not installed"
-                }
-                checked={status.installed_branches.includes(branch)}
-                onChange={(enabled) => handleExtensionToggle(branch, enabled)}
-                disabled={operation !== null}
-              />
-            </PanelSectionRow>
-          ))}
-        </>
-      )}
+      {status.supported_branches.map((branch) => (
+        <PanelSectionRow key={branch}>
+          <ToggleField
+            label={branch}
+            description={
+              operation === `enable-${branch}`
+                ? "Installing..."
+                : operation === `disable-${branch}`
+                  ? "Uninstalling..."
+                  : status.installed_branches.includes(branch)
+                    ? "Installed"
+                    : "Not installed"
+            }
+            checked={status.installed_branches.includes(branch)}
+            onChange={(enabled) => handleExtensionToggle(branch, enabled)}
+            disabled={operation !== null}
+          />
+        </PanelSectionRow>
+      ))}
     </PanelSection>
   );
 }
@@ -118,7 +107,6 @@ export function SetupTab({
   isUninstalling,
   onInstall,
   onUninstall,
-  flatpakRelevant,
 }: SetupTabProps) {
   return (
     <>
@@ -137,7 +125,7 @@ export function SetupTab({
           onUninstall={onUninstall}
         />
       </PanelSection>
-      <FlatpakSupportDiagnostics relevant={flatpakRelevant} />
+      <FlatpakSupportDiagnostics />
     </>
   );
 }

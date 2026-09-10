@@ -4,10 +4,15 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from .base_service import BaseService
-from .constants import STEAM_LOSSLESS_SCALING_APP_ID, STEAM_LOSSLESS_SCALING_BRANCH
+from .constants import (
+    STEAM_LOSSLESS_SCALING_APP_ID,
+    STEAM_LOSSLESS_SCALING_BRANCH,
+    WRAPPER_FILENAME,
+)
 
 
 _FLATPAK_APP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+$")
+_WRAPPER_TOKEN = f"~/{WRAPPER_FILENAME}"
 
 
 def _split_command(value: Optional[str]) -> Optional[list[str]]:
@@ -19,17 +24,27 @@ def _split_command(value: Optional[str]) -> Optional[list[str]]:
         return None
 
 
+def _is_managed_wrapper(value: str) -> bool:
+    """Recognize the wrapper Target while keeping arbitrary launchers as host games."""
+    if value in {_WRAPPER_TOKEN, f"$HOME/{WRAPPER_FILENAME}"}:
+        return True
+    path = Path(value)
+    return path.is_absolute() and path.name == WRAPPER_FILENAME
+
+
 def classify_shortcut_transport(
     executable: Optional[str],
     launch_options: Optional[str] = None,
 ) -> Dict[str, object]:
-    """Classify only direct Flatpak invocations; leave shell launchers on host."""
+    """Classify direct Flatpak invocations, including the managed wrapper Target."""
     executable_tokens = _split_command(executable)
     option_tokens = _split_command(launch_options)
     if executable_tokens is None or option_tokens is None or not executable_tokens:
         return {"kind": "host"}
 
-    if executable_tokens[0] != "/usr/bin/flatpak":
+    direct_flatpak = executable_tokens[0] == "/usr/bin/flatpak"
+    managed_wrapper = len(executable_tokens) == 1 and _is_managed_wrapper(executable_tokens[0])
+    if not direct_flatpak and not managed_wrapper:
         return {"kind": "host"}
 
     arguments = [*executable_tokens[1:], *option_tokens]
