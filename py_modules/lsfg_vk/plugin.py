@@ -4,6 +4,7 @@ from typing import Any, Dict
 import decky
 
 from .configuration import ConfigurationService
+from .flatpak_profile_service import FlatpakProfileService
 from .flatpak_service import FlatpakService
 from .installation import InstallationService
 from .runtime_service import RuntimeService
@@ -21,6 +22,10 @@ class Plugin:
         )
         self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
         self.flatpak_service = FlatpakService()
+        self.flatpak_profile_service = FlatpakProfileService(
+            self.flatpak_service,
+            self.configuration_service,
+        )
         self.wrapper_service = WrapperService()
 
     async def install_lsfg_vk(self):
@@ -38,6 +43,7 @@ class Plugin:
                 "error": flatpak.get("error") or "Could not clean up Flatpak support",
                 "removed_files": None,
             }
+        self.configuration_service.reset_all_flatpak_configs()
         return self.installation_service.uninstall()
 
     async def get_game_configs(self):
@@ -134,13 +140,25 @@ class Plugin:
         return self.steam_service.get_branch_status()
 
     async def get_flatpak_apps(self):
-        return self.flatpak_service.get_flatpak_apps()
+        return self.flatpak_profile_service.get_apps()
 
-    async def prepare_flatpak_app(self, flatpak_app_id: str):
-        return self.flatpak_service.prepare_app(flatpak_app_id)
+    async def enable_flatpak_app(self, flatpak_app_id: str):
+        return self.flatpak_profile_service.enable_app(flatpak_app_id)
+
+    async def update_flatpak_config(self, flatpak_app_id: str, config: Dict[str, Any]):
+        return self.flatpak_profile_service.update_config(flatpak_app_id, config)
+
+    async def get_flatpak_workaround_state(self, flatpak_app_id: str):
+        return self.flatpak_profile_service.get_workaround_state(flatpak_app_id)
+
+    async def set_flatpak_workaround_state(self, flatpak_app_id: str, state: Dict[str, Any]):
+        return self.flatpak_profile_service.set_workaround_state(flatpak_app_id, state)
 
     async def remove_flatpak_app(self, flatpak_app_id: str):
-        return self.flatpak_service.remove_app_override(flatpak_app_id)
+        return self.flatpak_profile_service.remove_app(flatpak_app_id)
+
+    async def get_running_flatpak_apps(self):
+        return self.flatpak_profile_service.get_running_apps()
 
     async def _main(self):
         repair = self.wrapper_service.repair()
@@ -155,7 +173,9 @@ class Plugin:
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         try:
             result = self.flatpak_service.remove_plugin_owned_environment()
-            if not result.get("success"):
+            if result.get("success"):
+                self.configuration_service.reset_all_flatpak_configs()
+            else:
                 decky.logger.warning(result.get("error"))
         except Exception as error:
             decky.logger.error(f"Error during Flatpak cleanup: {error}")
