@@ -1,4 +1,4 @@
-"""Flatpak runtime support for classified Steam targets."""
+"""Plugin-level Flatpak capability for the bundled lsfg-vk Vulkan layers."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import threading
 from pathlib import Path
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, Tuple
 
 from .base_service import BaseService
 from .constants import (
@@ -22,15 +22,12 @@ from .constants import (
 
 
 class FlatpakService(BaseService):
+    """Install the shared Flatpak layer and own only the grants we add."""
+
     EXTENSION_ID = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
     SUPPORTED_RUNTIMES = ("23.08", "24.08", "25.08")
-    DERIVED_RUNTIME_IDS = {"org.gnome.Platform", "org.kde.Platform"}
-    RUNTIME_METADATA_SECTION = "Extension org.freedesktop.Platform.GL"
     OWNERSHIP_FILENAME = "flatpak_extensions.json"
-    OWNERSHIP_VERSION = 1
-    APP_ID_PATTERN = re.compile(
-        r"^[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+$"
-    )
+    OWNERSHIP_VERSION = 2
 
     def __init__(self, logger=None):
         super().__init__(logger)
@@ -74,12 +71,6 @@ class FlatpakService(BaseService):
         return subprocess.run(command, env=env, **kwargs)
 
     @classmethod
-    def _validate_app_id(cls, app_id: str) -> str:
-        if not isinstance(app_id, str) or not cls.APP_ID_PATTERN.fullmatch(app_id):
-            raise ValueError("Invalid Flatpak application ID")
-        return app_id
-
-    @classmethod
     def _validate_runtime(cls, branch: str) -> str:
         if branch not in cls.SUPPORTED_RUNTIMES:
             raise ValueError(
@@ -87,33 +78,6 @@ class FlatpakService(BaseService):
                 + ", ".join(cls.SUPPORTED_RUNTIMES)
             )
         return branch
-
-    @classmethod
-    def runtime_branch_from_ref(cls, runtime_ref: str) -> str:
-        parts = runtime_ref.strip().split("/") if isinstance(runtime_ref, str) else []
-        if len(parts) != 3 or parts[0] != "org.freedesktop.Platform":
-            raise ValueError(f"Unsupported Flatpak runtime reference: {runtime_ref}")
-        return cls._validate_runtime(parts[2])
-
-    @classmethod
-    def runtime_branch_from_metadata(cls, metadata: str) -> str:
-        section = None
-        versions = []
-        for raw_line in metadata.splitlines() if isinstance(metadata, str) else []:
-            line = raw_line.strip()
-            if line.startswith("[") and line.endswith("]"):
-                section = line[1:-1].strip()
-                continue
-            if section != cls.RUNTIME_METADATA_SECTION:
-                continue
-            key, separator, value = line.partition("=")
-            if separator and key.strip() == "versions":
-                versions.extend(part.strip() for part in value.split(";"))
-        for value in versions:
-            for branch in cls.SUPPORTED_RUNTIMES:
-                if value == branch or value.startswith(f"{branch}-"):
-                    return branch
-        raise ValueError("Could not determine a supported Freedesktop base runtime from Flatpak metadata")
 
     @classmethod
     def _extension_ref(cls, branch: str) -> str:
@@ -145,26 +109,44 @@ class FlatpakService(BaseService):
                     installed.add(fields[2])
         return installed
 
-    def _owned_branches(self) -> Set[str]:
+    @staticmethod
+    def _validate_filesystem_path(value: object) -> str:
+        if not isinstance(value, str) or not value or "\x00" in value:
+            raise ValueError("Flatpak filesystem ownership entries must be non-empty strings")
+        path = Path(value)
+        if not path.is_absolute() or str(path) != value:
+            raise ValueError("Flatpak filesystem ownership entries must be normalized absolute paths")
+        return value
+
+    def _read_ownership(self) -> Tuple[Set[str], Set[str]]:
         path = self.ownership_path
         if not path.exists() and not path.is_symlink():
-            return set()
+            return set(), set()
         if path.is_symlink() or not path.is_file():
             raise RuntimeError("Flatpak ownership metadata is not a regular file")
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            version = data.get("version")
             branches = data.get("plugin_owned_branches")
-            if data.get("version") != self.OWNERSHIP_VERSION or not isinstance(branches, list):
+            filesystems = data.get("plugin_owned_filesystems", [])
+            if version not in (1, self.OWNERSHIP_VERSION) or not isinstance(branches, list):
                 raise ValueError("invalid ownership metadata")
-            owned = {self._validate_runtime(branch) for branch in branches}
-            if len(owned) != len(branches):
+            if version == self.OWNERSHIP_VERSION and not isinstance(filesystems, list):
                 raise ValueError("invalid ownership metadata")
-            return owned
+            owned_branches = {self._validate_runtime(branch) for branch in branches}
+            if len(owned_branches) != len(branches):
+                raise ValueError("invalid ownership metadata")
+            owned_filesystems = {
+                self._validate_filesystem_path(filesystem) for filesystem in filesystems
+            }
+            if len(owned_filesystems) != len(filesystems):
+                raise ValueError("invalid ownership metadata")
+            return owned_branches, owned_filesystems
         except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
             raise RuntimeError(f"Could not trust Flatpak ownership metadata: {error}") from error
 
-    def _write_owned_branches(self, branches: Set[str]) -> None:
-        if not branches:
+    def _write_ownership(self, branches: Set[str], filesystems: Set[str]) -> None:
+        if not branches and not filesystems:
             self.ownership_path.unlink(missing_ok=True)
             return
         self._write_file(
@@ -173,135 +155,191 @@ class FlatpakService(BaseService):
                 {
                     "version": self.OWNERSHIP_VERSION,
                     "plugin_owned_branches": sorted(branches),
+                    "plugin_owned_filesystems": sorted(filesystems),
                 },
                 indent=2,
             ) + "\n",
         )
 
+    def _configured_lossless_scaling_directory(self) -> Path:
+        default = self.user_home / ".local/share/Steam/steamapps/common/Lossless Scaling"
+        if not self.config_file_path.exists():
+            return default
+        try:
+            content = self.config_file_path.read_text(encoding="utf-8")
+            match = re.search(
+                r'(?m)^[ \t]*dll[ \t]*=[ \t]*"((?:\\.|[^"\\])*)"',
+                content,
+            )
+            if not match:
+                return default
+            configured_dll = json.loads('"' + match.group(1) + '"')
+            if not configured_dll:
+                return default
+            if configured_dll.startswith("~/"):
+                return self.user_home / configured_dll[2:]
+            configured_path = Path(configured_dll)
+            return configured_path.parent if configured_path.is_absolute() else default
+        except Exception:
+            return default
+
+    def _filesystem_grant_paths(self) -> Tuple[str, ...]:
+        paths = (
+            str(self.config_dir),
+            str(self._configured_lossless_scaling_directory()),
+        )
+        return tuple(dict.fromkeys(paths))
+
+    @staticmethod
+    def _parse_filesystems(output: str) -> Dict[str, str]:
+        entries: Dict[str, str] = {}
+        for raw_line in output.splitlines() if isinstance(output, str) else []:
+            line = raw_line.strip()
+            if not line.startswith("filesystems="):
+                continue
+            for raw_entry in line.partition("=")[2].split(";"):
+                entry = raw_entry.strip()
+                if not entry:
+                    continue
+                for mode in ("ro", "rw", "create"):
+                    suffix = f":{mode}"
+                    if entry.endswith(suffix):
+                        entries[entry[:-len(suffix)]] = mode
+                        break
+                else:
+                    entries[entry] = "rw"
+        return entries
+
+    def _global_filesystems(self) -> Dict[str, str]:
+        result = self._run_flatpak_command(
+            ["override", "--user", "--show"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise OSError(result.stderr.strip() or "Could not read Flatpak global overrides")
+        return self._parse_filesystems(result.stdout)
+
+    def _status(self, message: Optional[str] = None):
+        available = self.check_flatpak_available()
+        owned_branches, owned_filesystems = self._read_ownership()
+        installed = self._installed_extension_branches() if available else set()
+        filesystems = self._global_filesystems() if available else {}
+        grant_paths = self._filesystem_grant_paths()
+        filesystem_grants = [
+            {
+                "path": path,
+                "present": path in filesystems,
+                "read_only": filesystems.get(path) == "ro",
+            }
+            for path in grant_paths
+        ]
+        ready = available and all(branch in installed for branch in self.SUPPORTED_RUNTIMES) and all(
+            grant["present"] for grant in filesystem_grants
+        )
+        return self._success_response(
+            dict,
+            message or ("Flatpak support is ready" if ready else "Flatpak support needs setup"),
+            available=available,
+            ready=ready,
+            extension_id=self.EXTENSION_ID,
+            supported_branches=list(self.SUPPORTED_RUNTIMES),
+            installed_branches=sorted(installed),
+            filesystem_grants=filesystem_grants,
+            missing_filesystem_grants=[
+                grant["path"] for grant in filesystem_grants if not grant["present"]
+            ],
+            plugin_owned_branches=sorted(owned_branches),
+            plugin_owned_filesystems=sorted(owned_filesystems),
+        )
+
     def get_extension_status(self):
         try:
-            available = self.check_flatpak_available()
-            installed = self._installed_extension_branches() if available else set()
-            return self._success_response(
-                dict,
-                "Flatpak runtime extension status retrieved" if available else "Flatpak is not available",
-                available=available,
-                extension_id=self.EXTENSION_ID,
-                supported_branches=list(self.SUPPORTED_RUNTIMES),
-                installed_branches=sorted(installed),
-            )
+            if not self.check_flatpak_available():
+                return self._status("Flatpak is not available")
+            return self._status()
         except Exception as error:
             return self._error_response(
                 dict,
                 str(error),
                 available=False,
+                ready=False,
                 extension_id=self.EXTENSION_ID,
                 supported_branches=list(self.SUPPORTED_RUNTIMES),
                 installed_branches=[],
+                filesystem_grants=[],
+                missing_filesystem_grants=list(self._filesystem_grant_paths()),
             )
 
     get_flatpak_support_status = get_extension_status
 
-    def _resolve_runtime(self, app_id: str):
-        self._validate_app_id(app_id)
-        if not self.check_flatpak_available():
-            raise FileNotFoundError("Flatpak is not available on this system")
+    def _install_branch(self, branch: str) -> None:
+        bundle = self._bundled_extension_path(branch)
+        if not bundle.is_file():
+            raise FileNotFoundError(
+                f"Bundled Flatpak extension not found at {bundle}; reinstall the plugin"
+            )
         result = self._run_flatpak_command(
-            ["info", "--show-runtime", app_id],
+            ["install", "--user", "--noninteractive", "--or-update", str(bundle)],
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
-            raise OSError(result.stderr.strip() or f"Could not inspect Flatpak app {app_id}")
-        runtime = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
-        parts = runtime.split("/")
-        if len(parts) != 3:
-            raise ValueError(f"Unsupported Flatpak runtime reference: {runtime}")
-        if parts[0] == "org.freedesktop.Platform":
-            branch = self._validate_runtime(parts[2])
-        elif parts[0] in self.DERIVED_RUNTIME_IDS:
-            metadata_result = self._run_flatpak_command(
-                ["info", "--show-metadata", runtime],
-                capture_output=True,
-                text=True,
+            raise OSError(result.stderr.strip() or "Flatpak installation failed")
+        if branch not in self._installed_extension_branches("user"):
+            raise RuntimeError(
+                f"Flatpak install completed but {self._extension_ref(branch)} was not visible afterwards"
             )
-            if metadata_result.returncode != 0:
-                raise OSError(
-                    metadata_result.stderr.strip()
-                    or f"Could not inspect Flatpak runtime {runtime}"
-                )
-            branch = self.runtime_branch_from_metadata(metadata_result.stdout)
-        else:
-            raise ValueError(f"Unsupported Flatpak runtime reference: {runtime}")
-        return runtime, branch
 
-    def resolve_app_support(self, app_id: str):
+    def _add_filesystem_grant(self, path: str) -> None:
+        result = self._run_flatpak_command(
+            ["override", "--user", f"--filesystem={path}:ro"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise OSError(result.stderr.strip() or f"Could not grant Flatpak access to {path}")
+        current = self._global_filesystems()
+        if current.get(path) != "ro":
+            raise RuntimeError(f"Flatpak did not confirm the read-only grant for {path}")
+
+    def ensure_plugin_support(self):
+        """Make the shared layer and exact read-only grants available once."""
         try:
-            app_id = self._validate_app_id(app_id)
-            runtime, branch = self._resolve_runtime(app_id)
-            installed = self._installed_extension_branches()
-            ready = branch in installed
-            return self._success_response(
-                dict,
-                f"lsfg-vk support is ready for {app_id}" if ready
-                else f"lsfg-vk runtime extension {branch} is required for {app_id}",
-                flatpak_app_id=app_id,
-                runtime=runtime,
-                runtime_branch=branch,
-                support_status="ready" if ready else "needs-runtime",
-                extension_installed=ready,
-                installed_branches=sorted(installed),
-            )
-        except ValueError as error:
-            return self._success_response(
-                dict,
-                str(error),
-                flatpak_app_id=app_id,
-                runtime=None,
-                runtime_branch=None,
-                support_status="unsupported",
-                extension_installed=False,
-                installed_branches=[],
-                error=str(error),
-            )
+            with self._lock:
+                if not self.check_flatpak_available():
+                    return self._status("Flatpak is not available")
+                owned_branches, owned_filesystems = self._read_ownership()
+                installed = self._installed_extension_branches()
+                for branch in self.SUPPORTED_RUNTIMES:
+                    if branch in installed:
+                        continue
+                    self._install_branch(branch)
+                    installed.add(branch)
+                    owned_branches.add(branch)
+                    self._write_ownership(owned_branches, owned_filesystems)
+
+                current_filesystems = self._global_filesystems()
+                for path in self._filesystem_grant_paths():
+                    if path in current_filesystems:
+                        continue
+                    self._add_filesystem_grant(path)
+                    owned_filesystems.add(path)
+                    self._write_ownership(owned_branches, owned_filesystems)
+
+                return self._status("Flatpak support is ready")
         except Exception as error:
             return self._error_response(
                 dict,
                 str(error),
-                flatpak_app_id=app_id,
-                runtime=None,
-                runtime_branch=None,
-                support_status="error",
-                extension_installed=False,
+                available=self.check_flatpak_available(),
+                ready=False,
+                extension_id=self.EXTENSION_ID,
+                supported_branches=list(self.SUPPORTED_RUNTIMES),
                 installed_branches=[],
+                filesystem_grants=[],
+                missing_filesystem_grants=list(self._filesystem_grant_paths()),
             )
-
-    def install_extension(self, branch: str):
-        try:
-            branch = self._validate_runtime(branch)
-            if not self.check_flatpak_available():
-                raise FileNotFoundError("Flatpak is not available on this system")
-            with self._lock:
-                if branch in self._installed_extension_branches():
-                    return self._extension_result(branch, True, False, "already installed")
-                bundle = self._bundled_extension_path(branch)
-                if not bundle.is_file():
-                    raise FileNotFoundError(f"Bundled Flatpak extension not found at {bundle}; reinstall the plugin")
-                result = self._run_flatpak_command(
-                    ["install", "--user", "--noninteractive", "--or-update", str(bundle)],
-                    capture_output=True,
-                    text=True,
-                )
-                if result.returncode != 0:
-                    raise OSError(result.stderr.strip() or "Flatpak installation failed")
-                if branch not in self._installed_extension_branches("user"):
-                    raise RuntimeError(f"Flatpak install completed but {self._extension_ref(branch)} was not visible afterwards")
-                owned = self._owned_branches()
-                owned.add(branch)
-                self._write_owned_branches(owned)
-                return self._extension_result(branch, True, False, "installed")
-        except Exception as error:
-            return self._error_response(dict, str(error), runtime_branch=branch, installed=False, enabled=False)
 
     def _remove_extension(self, branch: str) -> bool:
         if branch not in self._installed_extension_branches("user"):
@@ -314,111 +352,89 @@ class FlatpakService(BaseService):
         if result.returncode != 0:
             raise OSError(result.stderr.strip() or "Flatpak uninstall failed")
         if branch in self._installed_extension_branches("user"):
-            raise RuntimeError(f"Flatpak uninstall completed but {self._extension_ref(branch)} is still installed")
+            raise RuntimeError(
+                f"Flatpak uninstall completed but {self._extension_ref(branch)} is still installed"
+            )
         return True
 
-    def _extension_result(self, branch: str, installed: bool, removed: bool, verb: str):
-        return self._success_response(
-            dict,
-            f"lsfg-vk {branch} runtime extension {verb}",
-            runtime_branch=branch,
-            installed=installed,
-            enabled=installed,
-            removed=removed,
+    def _remove_filesystem_grant(self, path: str) -> bool:
+        current = self._global_filesystems()
+        if path not in current:
+            return False
+        if current[path] != "ro":
+            raise RuntimeError(
+                f"Refusing to remove Flatpak grant for {path}; its permissions changed externally"
+            )
+        result = self._run_flatpak_command(
+            ["override", "--user", f"--nofilesystem={path}"],
+            capture_output=True,
+            text=True,
         )
-
-    def uninstall_extension(self, branch: str):
-        try:
-            branch = self._validate_runtime(branch)
-            if not self.check_flatpak_available():
-                raise FileNotFoundError("Flatpak is not available on this system")
-            with self._lock:
-                owned = self._owned_branches()
-                if branch not in owned:
-                    installed = branch in self._installed_extension_branches()
-                    return self._extension_result(branch, installed, False, "preserved (not plugin-owned)")
-                removed = self._remove_extension(branch)
-                owned.remove(branch)
-                self._write_owned_branches(owned)
-                installed = branch in self._installed_extension_branches()
-                return self._extension_result(branch, installed, removed, "uninstalled")
-        except Exception as error:
-            return self._error_response(
-                dict,
-                str(error),
-                runtime_branch=branch,
-                removed=False,
-                installed=False,
-                enabled=False,
-            )
-
-    def ensure_extension(self, branch: str):
-        try:
-            branch = self._validate_runtime(branch)
-            if branch in self._installed_extension_branches():
-                return self._extension_result(branch, True, False, "is ready")
-        except Exception as error:
-            return self._error_response(dict, str(error), runtime_branch=branch, support_status="error")
-        return self.install_extension(branch)
-
-    def ensure_app_support(self, app_id: str):
-        resolved = self.resolve_app_support(app_id)
-        if not resolved.get("success") or resolved.get("support_status") != "needs-runtime":
-            return resolved
-        result = self.ensure_extension(resolved["runtime_branch"])
-        if not result.get("success"):
-            return self._error_response(
-                dict,
-                result.get("error") or "Could not install the required Flatpak runtime extension",
-                flatpak_app_id=app_id,
-                runtime=resolved.get("runtime"),
-                runtime_branch=resolved.get("runtime_branch"),
-                support_status="error",
-                extension_installed=False,
-            )
-        return self.resolve_app_support(app_id)
-
-    def set_extension_enabled(self, branch: str, enabled: bool):
-        if type(enabled) is not bool:
-            return self._error_response(dict, "enabled must be a boolean", runtime_branch=branch, installed=False, enabled=False)
-        return self.install_extension(branch) if enabled else self.uninstall_extension(branch)
+        if result.returncode != 0:
+            raise OSError(result.stderr.strip() or f"Could not remove Flatpak access to {path}")
+        if path in self._global_filesystems():
+            raise RuntimeError(f"Flatpak filesystem grant for {path} is still present")
+        return True
 
     def remove_plugin_owned_extensions(self):
+        """Remove only positively owned user branches and exact filesystem grants."""
         try:
             with self._lock:
-                owned = self._owned_branches()
-                if not owned:
+                owned_branches, owned_filesystems = self._read_ownership()
+                if not owned_branches and not owned_filesystems:
                     return self._success_response(
                         dict,
-                        "No plugin-owned Flatpak extensions to remove",
+                        "No plugin-owned Flatpak state to remove",
                         removed_branches=[],
                         preserved_branches=[],
+                        removed_filesystem_grants=[],
+                        preserved_filesystem_grants=[],
                         ownership_uncertain=False,
                     )
                 if not self.check_flatpak_available():
-                    raise RuntimeError("Flatpak is not available; plugin-owned extension metadata was preserved")
-                removed, failures = [], []
-                for branch in sorted(owned):
+                    raise RuntimeError(
+                        "Flatpak is not available; plugin-owned state metadata was preserved"
+                    )
+
+                removed_branches, preserved_branches = [], []
+                remaining_branches = set(owned_branches)
+                for branch in sorted(owned_branches):
                     try:
                         self._remove_extension(branch)
-                        removed.append(branch)
+                        removed_branches.append(branch)
+                        remaining_branches.discard(branch)
                     except Exception as error:
-                        failures.append(f"{branch}: {error}")
-                remaining = owned - set(removed)
-                self._write_owned_branches(remaining)
+                        preserved_branches.append(f"{branch}: {error}")
+
+                removed_filesystems, preserved_filesystems = [], []
+                remaining_filesystems = set(owned_filesystems)
+                for path in sorted(owned_filesystems):
+                    try:
+                        self._remove_filesystem_grant(path)
+                        removed_filesystems.append(path)
+                        remaining_filesystems.discard(path)
+                    except Exception as error:
+                        preserved_filesystems.append(f"{path}: {error}")
+
+                self._write_ownership(remaining_branches, remaining_filesystems)
+                failures = [*preserved_branches, *preserved_filesystems]
                 if failures:
                     return self._error_response(
                         dict,
                         "; ".join(failures),
-                        removed_branches=removed,
-                        preserved_branches=sorted(remaining),
+                        removed_branches=removed_branches,
+                        preserved_branches=preserved_branches,
+                        removed_filesystem_grants=removed_filesystems,
+                        preserved_filesystem_grants=preserved_filesystems,
                         ownership_uncertain=False,
                     )
                 return self._success_response(
                     dict,
-                    "Plugin-owned Flatpak extensions removed",
-                    removed_branches=removed,
+                    "Plugin-owned Flatpak state removed",
+                    removed_branches=removed_branches,
                     preserved_branches=[],
+                    removed_filesystem_grants=removed_filesystems,
+                    preserved_filesystem_grants=[],
                     ownership_uncertain=False,
                 )
         except Exception as error:
@@ -427,5 +443,7 @@ class FlatpakService(BaseService):
                 str(error),
                 removed_branches=[],
                 preserved_branches=[],
+                removed_filesystem_grants=[],
+                preserved_filesystem_grants=[],
                 ownership_uncertain=True,
             )

@@ -24,7 +24,14 @@ class Plugin:
         self.wrapper_service = WrapperService()
 
     async def install_lsfg_vk(self):
-        return self.installation_service.install()
+        result = self.installation_service.install()
+        if not result.get("success"):
+            return result
+        flatpak = self.flatpak_service.ensure_plugin_support()
+        result["flatpak_support"] = flatpak
+        if not flatpak.get("success"):
+            decky.logger.warning(f"Flatpak support setup was not completed: {flatpak.get('error')}")
+        return result
 
     async def check_lsfg_vk_installed(self):
         return self.installation_service.check_installation()
@@ -36,21 +43,7 @@ class Plugin:
         return self.configuration_service.get_game_configs()
 
     async def get_installed_games(self):
-        result = self.steam_service.get_installed_games()
-        if not result.get("success"):
-            return result
-        cache: Dict[str, Dict[str, Any]] = {}
-        for game in result.get("games", []):
-            transport = game.get("transport", {})
-            if transport.get("kind") != "flatpak":
-                continue
-            app_id = transport.get("flatpakAppId")
-            if not app_id:
-                continue
-            if app_id not in cache:
-                cache[app_id] = self.flatpak_service.resolve_app_support(app_id)
-            game["flatpakSupport"] = cache[app_id]
-        return result
+        return self.steam_service.get_installed_games()
 
     async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]):
         return self.configuration_service.update_game_config(appid, game_name, config)
@@ -150,19 +143,21 @@ class Plugin:
     async def get_flatpak_support_status(self):
         return self.flatpak_service.get_flatpak_support_status()
 
-    async def ensure_flatpak_support(self, flatpak_app_id: str):
-        return self.flatpak_service.ensure_app_support(flatpak_app_id)
+    async def ensure_flatpak_support(self):
+        return self.flatpak_service.ensure_plugin_support()
 
-    async def repair_flatpak_support(self, flatpak_app_id: str):
-        return self.flatpak_service.ensure_app_support(flatpak_app_id)
-
-    async def set_flatpak_extension_enabled(self, version: str, enabled: bool):
-        return self.flatpak_service.set_extension_enabled(version, enabled)
+    async def repair_flatpak_support(self):
+        return self.flatpak_service.ensure_plugin_support()
 
     async def _main(self):
         repair = self.wrapper_service.repair()
         if not repair.get("success"):
             decky.logger.error(f"Could not repair lsfg workaround wrapper: {repair.get('error')}")
+        installation = self.installation_service.check_installation()
+        if installation.get("installed"):
+            flatpak = self.flatpak_service.ensure_plugin_support()
+            if not flatpak.get("success"):
+                decky.logger.warning(f"Could not ensure Flatpak support: {flatpak.get('error')}")
         decky.logger.info("decky-lsfg-vk plugin loaded")
 
     async def _unload(self):

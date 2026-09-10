@@ -21,7 +21,10 @@ class PluginMigrationTests(unittest.TestCase):
         sys.modules["tomllib"] = types.SimpleNamespace(loads=Mock())
         try:
             sys.path.insert(0, "py_modules")
+            import lsfg_vk.plugin as plugin_module
             from lsfg_vk.plugin import Plugin
+            previous_plugin_decky = plugin_module.decky
+            plugin_module.decky = decky
 
             plugin = Plugin.__new__(Plugin)
             plugin.installation_service = Mock()
@@ -35,6 +38,8 @@ class PluginMigrationTests(unittest.TestCase):
             plugin.installation_service.install.assert_not_called()
             plugin.flatpak_service.migrate_v2.assert_not_called()
         finally:
+            if "plugin_module" in locals():
+                plugin_module.decky = previous_plugin_decky
             sys.path.remove("py_modules")
             if previous_decky is None:
                 sys.modules.pop("decky", None)

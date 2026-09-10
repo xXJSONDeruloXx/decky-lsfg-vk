@@ -10,8 +10,11 @@ from .constants import (
     WRAPPER_FILENAME,
 )
 
-_FLATPAK_APP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+$")
-_WRAPPER_TOKEN = f"~/{WRAPPER_FILENAME}"
+
+_DIRECT_FLATPAK_TARGETS = {
+    ("/usr/bin/flatpak",),
+    ("~/.lsfg", "/usr/bin/flatpak"),
+}
 
 
 def _split_command(value: Optional[str]) -> Optional[list[str]]:
@@ -23,34 +26,14 @@ def _split_command(value: Optional[str]) -> Optional[list[str]]:
         return None
 
 
-def _is_managed_wrapper(value: str) -> bool:
-    if value in {_WRAPPER_TOKEN, f"$HOME/{WRAPPER_FILENAME}"}:
-        return True
-    path = Path(value)
-    return path.is_absolute() and path.name == WRAPPER_FILENAME
+def classify_shortcut_transport(executable: Optional[str], _launch_options: Optional[str] = None) -> Dict[str, object]:
+    """Recognize only the direct Flatpak executable Target.
 
-
-def classify_shortcut_transport(executable: Optional[str], launch_options: Optional[str] = None) -> Dict[str, object]:
+    Launch scripts and wrapper commands remain host targets.  Their launch
+    options are intentionally opaque to the plugin.
+    """
     executable_tokens = _split_command(executable)
-    option_tokens = _split_command(launch_options)
-    if executable_tokens is None or option_tokens is None or not executable_tokens:
-        return {"kind": "host"}
-    direct_flatpak = executable_tokens[0] in {"flatpak", "/usr/bin/flatpak"}
-    managed_wrapper = len(executable_tokens) == 1 and _is_managed_wrapper(executable_tokens[0])
-    if not direct_flatpak and not managed_wrapper:
-        return {"kind": "host"}
-    arguments = [*executable_tokens[1:], *option_tokens]
-    if not arguments or arguments[0] != "run":
-        return {"kind": "host"}
-    for argument in arguments[1:]:
-        if argument == "--" or argument.startswith("-"):
-            continue
-        return (
-            {"kind": "flatpak", "flatpakAppId": argument}
-            if _FLATPAK_APP_ID.fullmatch(argument)
-            else {"kind": "host"}
-        )
-    return {"kind": "host"}
+    return {"kind": "flatpak"} if tuple(executable_tokens or ()) in _DIRECT_FLATPAK_TARGETS else {"kind": "host"}
 
 
 def _first_string(values: Dict[str, object], *keys: str) -> Optional[str]:
