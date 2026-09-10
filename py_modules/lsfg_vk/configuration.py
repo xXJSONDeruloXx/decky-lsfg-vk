@@ -139,6 +139,19 @@ class ConfigurationService(BaseService):
         except Exception as error:
             return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
 
+    def reset_all_flatpak_configs(self) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            data["profiles"] = {
+                name: profile
+                for name, profile in data["profiles"].items()
+                if not name.startswith(self.FLATPAK_PROFILE_PREFIX)
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]))
+        except Exception as error:
+            return self._error_response(dict, str(error))
+
     def reset_game_config(self, appid: str) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
