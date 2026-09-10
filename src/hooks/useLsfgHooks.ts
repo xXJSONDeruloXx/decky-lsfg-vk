@@ -57,7 +57,7 @@ export function useInstallation(reloadConfig?: () => Promise<void>) {
       const result = await installLsfgVk();
       if (!result.success) {
         setInstallationStatus(`Installation failed: ${result.error}`);
-        showInstallErrorToast(result.error);
+        showInstallErrorToast(result.error ?? undefined);
         return;
       }
       setIsInstalled(true);
@@ -80,7 +80,7 @@ export function useInstallation(reloadConfig?: () => Promise<void>) {
       const result = await uninstallLsfgVk();
       if (!result.success) {
         setInstallationStatus(`Uninstallation failed: ${result.error}`);
-        showUninstallErrorToast(result.error);
+        showUninstallErrorToast(result.error ?? undefined);
         return;
       }
       setIsInstalled(false);

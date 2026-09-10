@@ -5,7 +5,9 @@ export interface ToastOptions {
   body: string;
 }
 
-const showToast = (title: string, body: string): void => toaster.toast({ title, body });
+const showToast = (title: string, body: string): void => {
+  toaster.toast({ title, body });
+};
 export const showSuccessToast = showToast;
 export const showErrorToast = showToast;
 
