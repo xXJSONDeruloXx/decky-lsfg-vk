@@ -89,11 +89,19 @@ export function useGameConfiguration() {
       const installed = installedGames.find((game) => game.appid === appid);
       const name = app.display_name || installed?.name;
       if (!name) return setRunningGame(null);
-      setRunningGame((current) => current?.appid === appid ? current : {
+      const next: GameTarget = {
         ...(installed || { appid, name, nonSteam: false }),
         name,
         configured: games.some((game) => game.appid === appid),
-      });
+      };
+      setRunningGame((current) => (
+        current?.appid === next.appid
+        && current.name === next.name
+        && current.nonSteam === next.nonSteam
+        && current.configured === next.configured
+          ? current
+          : next
+      ));
     };
     poll();
     const interval = window.setInterval(poll, 2000);
@@ -197,13 +205,22 @@ export function useGameConfiguration() {
     }
   }, [installedGames]);
 
-  const save = useCallback(async (next: ConfigurationData, cleanupLaunchOptions = false) => {
-    const selectedTarget = targets.find((target) => target.appid === selectedAppId);
-    if (!selectedTarget?.name) return;
-    if (cleanupLaunchOptions && !(await ensureTargetWorkarounds(selectedTarget))) return;
-    const result = await updateGameConfig(selectedAppId, selectedTarget.name, next);
+  const saveFor = useCallback(async (appid: string, next: ConfigurationData, cleanupLaunchOptions = false) => {
+    const target = targets.find((item) => item.appid === appid);
+    if (!target?.name) return false;
+    if (cleanupLaunchOptions && !(await ensureTargetWorkarounds(target))) return false;
+    const result = await updateGameConfig(appid, target.name, next);
     if (result.success) await load();
-  }, [ensureTargetWorkarounds, load, selectedAppId, targets]);
+    return result.success;
+  }, [ensureTargetWorkarounds, load, targets]);
+
+  const save = useCallback(
+    async (next: ConfigurationData, cleanupLaunchOptions = false) => {
+      if (!selectedAppId) return false;
+      return saveFor(selectedAppId, next, cleanupLaunchOptions);
+    },
+    [saveFor, selectedAppId],
+  );
 
   const enable = useCallback(async (appid: string) => {
     const target = targets.find((item) => item.appid === appid);
@@ -266,5 +283,5 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, targets]);
 
-  return { config, runningConfig, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, repair, resetSelected, resetAll, reload: load };
+  return { config, runningConfig, games, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, enable, enableAll, repair, resetSelected, resetAll, reload: load };
 }
