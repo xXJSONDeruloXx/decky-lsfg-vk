@@ -45,6 +45,7 @@ function usePersistentBoolean(key: string, defaultValue: boolean) {
 export function Content() {
   const {
     config,
+    runningConfig,
     targets,
     runningGame,
     setSelectedAppId,
@@ -135,8 +136,10 @@ export function Content() {
   const nowPlaying = runningGame?.configured ? (
     <NowPlayingTab
       game={runningGame}
-      config={config}
-      onConfigChange={(field, value) => handleConfigChange(field, value)}
+      config={runningConfig}
+      onConfigChange={async (field, value) => {
+        await save({ ...runningConfig, [field]: value }, true);
+      }}
     />
   ) : runningFlatpak ? (
     <FlatpakNowPlayingTab
