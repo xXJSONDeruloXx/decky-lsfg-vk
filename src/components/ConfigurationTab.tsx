@@ -99,11 +99,7 @@ export function ConfigurationTab({
   }
 
   const profileLabel = selectedTarget?.name || "Game profile";
-  const profileTransport = selectedTarget
-    ? selectedTarget.directFlatpak
-      ? "Non-Steam · Direct Flatpak"
-      : selectedTarget.nonSteam ? "Non-Steam" : "Steam"
-    : "Game";
+  const profileTransport = selectedTarget?.nonSteam ? "Non-Steam" : "Steam";
   const profileDescription = selectedTarget
     ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
     : "Game is no longer available";
