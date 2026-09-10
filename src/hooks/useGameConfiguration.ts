@@ -116,6 +116,9 @@ export function useGameConfiguration() {
   }, [games, installedGames, runningGame]);
   const template = useMemo(() => ({ ...getDefaults(), ...globalConfig }), [globalConfig]);
   const config = games.find((game) => game.appid === selectedAppId)?.config || template;
+  const runningConfig = runningGame
+    ? games.find((game) => game.appid === runningGame.appid)?.config || template
+    : template;
 
   const ensureTargetWorkarounds = useCallback(async (target: GameTarget): Promise<boolean> => {
     if (!installedGames.some((game) => game.appid === target.appid)) return true;
@@ -263,5 +266,5 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, targets]);
 
-  return { config, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, repair, resetSelected, resetAll, reload: load };
+  return { config, runningConfig, games, targets, runningGame, selectedAppId, setSelectedAppId, save, enable, enableAll, repair, resetSelected, resetAll, reload: load };
 }
