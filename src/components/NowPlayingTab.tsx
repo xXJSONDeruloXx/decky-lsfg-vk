@@ -11,7 +11,6 @@ interface Props {
     fieldName: keyof ConfigurationData,
     value: boolean | number | string | string[],
   ) => Promise<void>;
-  onEnable: (appid: string) => Promise<boolean>;
   onRepair: (appid: string) => Promise<boolean>;
 }
 
@@ -24,24 +23,12 @@ export function NowPlayingTab({
   game,
   config,
   onConfigChange,
-  onEnable,
   onRepair,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const supportNeedsRepair =
-    game.configured &&
     game.transport.kind === "flatpak" &&
     game.flatpakSupport?.support_status !== "ready";
-
-  const handleEnable = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await onEnable(game.appid);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const handleRepair = async () => {
     if (busy) return;
@@ -60,22 +47,7 @@ export function NowPlayingTab({
           <Field label={game.name} description={targetDescription(game)} />
         </PanelSectionRow>
       </PanelSection>
-      {!game.configured && (
-        <PanelSection>
-          <PanelSectionRow>
-            <Field
-              label="LSFG-VK is available"
-              description="This target is not enabled yet. Create its AppID profile before the next launch."
-            />
-          </PanelSectionRow>
-          <PanelSectionRow>
-            <ButtonItem layout="below" disabled={busy} onClick={() => void handleEnable()}>
-              {busy ? "Enabling..." : "Enable LSFG-VK"}
-            </ButtonItem>
-          </PanelSectionRow>
-        </PanelSection>
-      )}
-      {game.configured && supportNeedsRepair && (
+      {supportNeedsRepair && (
         <PanelSection>
           <PanelSectionRow>
             <Field
@@ -90,13 +62,11 @@ export function NowPlayingTab({
           </PanelSectionRow>
         </PanelSection>
       )}
-      {game.configured && (
-        <GameConfigurationControls
-          config={config}
-          onConfigChange={onConfigChange}
-          showWorkarounds={false}
-        />
-      )}
+      <GameConfigurationControls
+        config={config}
+        onConfigChange={onConfigChange}
+        showWorkarounds={false}
+      />
     </Focusable>
   );
 }

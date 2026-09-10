@@ -56,15 +56,15 @@ export function Content() {
       setTab("Setup");
       return;
     }
-    setTab((current) => current === "Setup" ? (runningGame ? "NowPlaying" : "Games") : current);
-  }, [runningGame?.appid, setupComplete]);
+    setTab((current) => current === "Setup" ? (runningGame?.configured ? "NowPlaying" : "Games") : current);
+  }, [runningGame?.appid, runningGame?.configured, setupComplete]);
 
   useEffect(() => {
     if (!setupComplete) return;
     const appid = runningGame?.appid || null;
     const previous = previousRunningAppId.current;
     previousRunningAppId.current = appid;
-    if (appid && appid !== previous) setTab("NowPlaying");
+    if (appid && appid !== previous) setTab(runningGame?.configured ? "NowPlaying" : "Games");
     else if (!appid && previous) {
       setTab((current) => current === "NowPlaying" ? "Games" : current);
     }
@@ -96,7 +96,7 @@ export function Content() {
 
   const tabs = setupComplete
     ? [
-        ...(runningGame ? [{
+        ...(runningGame?.configured ? [{
           id: "NowPlaying",
           title: tabIcons.nowPlaying,
           content: (
@@ -104,7 +104,6 @@ export function Content() {
               game={runningGame}
               config={config}
               onConfigChange={(field, value) => handleConfigChange(field, value)}
-              onEnable={enable}
               onRepair={repair}
             />
           ),

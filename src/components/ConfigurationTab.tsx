@@ -37,7 +37,6 @@ export function ConfigurationTab({
   const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "fps" | null>(null);
   const [focusConfiguredToggle, setFocusConfiguredToggle] = useState(false);
   const enableRef = useRef<HTMLDivElement>(null);
-  const promptedRunningAppId = useRef<string | null>(null);
   const closeDetails = useCallback(() => {
     setFocusFpsMultiplier(false);
     setFocusDetailAction(null);
@@ -59,18 +58,6 @@ export function ConfigurationTab({
     });
     return () => cancelAnimationFrame(frame);
   }, [focusDetailAction]);
-
-  useEffect(() => {
-    if (!runningGame || runningGame.configured) {
-      promptedRunningAppId.current = null;
-      return;
-    }
-    if (promptedRunningAppId.current !== runningGame.appid && detailAppId === null) {
-      promptedRunningAppId.current = runningGame.appid;
-      setFocusDetailAction("enable");
-      setDetailAppId(runningGame.appid);
-    }
-  }, [detailAppId, runningGame?.appid, runningGame?.configured]);
 
   const selectedTarget = detailAppId ? targets.find((target) => target.appid === detailAppId) : null;
 
@@ -106,7 +93,6 @@ export function ConfigurationTab({
     : "Game is no longer available";
   const handleProfileAction = async () => {
     if (selectedTarget?.configured) {
-      promptedRunningAppId.current = detailAppId;
       await onReset();
       setFocusConfiguredToggle(true);
       closeDetails();
