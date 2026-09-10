@@ -13,7 +13,6 @@ interface Props {
 }
 
 function targetDescription(game: GameTarget): string {
-  if (game.directFlatpak) return "Non-Steam · Direct Flatpak";
   return game.nonSteam ? "Non-Steam" : "Steam";
 }
 
