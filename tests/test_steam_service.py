@@ -26,14 +26,11 @@ class SteamShortcutTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(game["appid"], "123456")
-        self.assertEqual(game["name"], "PCSX2 shortcut")
-        self.assertTrue(game["nonSteam"])
-        self.assertNotIn("directFlatpak", game)
-        self.assertNotIn("transport", game)
-        self.assertEqual(game["executable"], "/usr/bin/flatpak")
-        self.assertEqual(game["arguments"], "run net.pcsx2.PCSX2 --fullscreen")
-        self.assertEqual(game["startDir"], "/home/deck/Games")
+        self.assertEqual(game, {
+            "appid": "123456",
+            "name": "PCSX2 shortcut",
+            "nonSteam": True,
+        })
 
     def test_emudeck_launcher_is_ordinary_non_steam_metadata(self):
         game = SteamService._shortcut_game(
@@ -45,14 +42,11 @@ class SteamShortcutTests(unittest.TestCase):
             }
         )
 
-        self.assertEqual(game["appid"], "987654")
-        self.assertTrue(game["nonSteam"])
-        self.assertNotIn("directFlatpak", game)
-        self.assertEqual(
-            game["executable"],
-            '"/home/deck/Emulation/tools/launchers/retroarch.sh" -L core rom.z64',
-        )
-        self.assertEqual(game["arguments"], "")
+        self.assertEqual(game, {
+            "appid": "987654",
+            "name": "1080 Snowboarding",
+            "nonSteam": True,
+        })
 
     def test_shortcut_rejects_invalid_identity(self):
         self.assertIsNone(SteamService._shortcut_game({"appid": 0, "AppName": "Bad"}))
