@@ -24,7 +24,6 @@ export interface SteamLaunchOptionsSnapshot {
   appId: number;
   nonSteam: boolean;
   options: string;
-  target: string;
   details: SteamAppDetails;
 }
 export interface WrapperIntegrationResult {
@@ -58,7 +57,6 @@ function snapshot(appId: number, nonSteam: boolean, details: SteamAppDetails): S
     appId,
     nonSteam,
     options: nonSteam ? details.strShortcutLaunchOptions || "" : details.strLaunchOptions || "",
-    target: nonSteam ? details.strShortcutExe || "" : "",
     details,
   };
 }
@@ -160,31 +158,6 @@ const isAssignment = (token: LaunchToken) => /^[A-Za-z_][A-Za-z0-9_]*=/.test(tok
 const isLegacyToken = (value: string) => LEGACY_WRAPPER_TOKENS.has(value) || LEGACY_ABSOLUTE_WRAPPER.test(value);
 const isWrapperToken = (value: string, wrapperPath: string) => decodeToken(value) === wrapperPath || isLegacyWrapperToken(value);
 
-function flatpakExecutable(value: string): string | undefined {
-  const decoded = decodeToken(value.trim());
-  return decoded === "flatpak" || decoded === "/usr/bin/flatpak" || decoded === "usr/bin/flatpak"
-    ? "/usr/bin/flatpak"
-    : undefined;
-}
-
-function wrappedFlatpakExecutable(target: string, wrapperPath: string, includeLegacy = true): string | undefined {
-  const tokens = tokenize(target);
-  if (tokens.length !== 2) return undefined;
-  const wrapper = tokens[0].value;
-  if (wrapper !== wrapperPath && !(includeLegacy && isLegacyToken(wrapper))) return undefined;
-  return flatpakExecutable(tokens[1].value);
-}
-
-function directFlatpakExecutable(target: string, wrapperPath: string): string | undefined {
-  const tokens = tokenize(target);
-  if (tokens.length === 1) return flatpakExecutable(tokens[0].value);
-  return wrappedFlatpakExecutable(target, wrapperPath);
-}
-
-function managedFlatpakTarget(wrapperPath: string, executable: string): string {
-  return `${wrapperPath} "${executable.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-
 export const normalizeLaunchOptions = (options: string) => serialize(tokenize(options));
 export const isLegacyWrapperToken = (value: string) => isLegacyToken(decodeToken(value));
 
@@ -280,14 +253,9 @@ export function hasWrapperLaunchIntegration(options: string, wrapperPath = DEFAU
 
 export function isWrapperIntegrationInstalled(
   steam: SteamLaunchOptionsSnapshot,
-  nonSteam: boolean,
-  directFlatpak = false,
+  _nonSteam: boolean,
   wrapperPath = DEFAULT_WRAPPER_PATH,
 ): boolean {
-  if (nonSteam && directFlatpak) {
-    const tokens = tokenize(steam.target);
-    return tokens.length === 2 && tokens[0].value === wrapperPath && flatpakExecutable(tokens[1].value) !== undefined;
-  }
   return hasWrapperLaunchIntegration(steam.options, wrapperPath);
 }
 
@@ -328,18 +296,16 @@ async function writeVerified(
   previous: string,
   next: string,
   write: (value: string) => Promise<void>,
-  read: (value: SteamLaunchOptionsSnapshot) => string,
   message: string,
 ): Promise<SteamLaunchOptionsSnapshot> {
-  const normalized = read === readOptions ? normalizeLaunchOptions : (value: string) => normalizeLaunchOptions(value);
   try {
     await write(next);
-    return await waitFor(appId, nonSteam, (value) => normalized(read(value)) === normalized(next), message);
+    return await waitFor(appId, nonSteam, (value) => normalizeLaunchOptions(value.options) === normalizeLaunchOptions(next), message);
   } catch (error) {
     const failure = asError(error);
     try {
       await write(previous);
-      await waitFor(appId, nonSteam, (value) => normalized(read(value)) === normalized(previous), `Steam did not restore the previous ${read === readOptions ? "launch options" : "shortcut Target"}`);
+      await waitFor(appId, nonSteam, (value) => normalizeLaunchOptions(value.options) === normalizeLaunchOptions(previous), "Steam did not restore the previous launch options");
     } catch (rollback) {
       throw new Error(`${failure.message}; rollback also failed: ${asError(rollback).message}`);
     }
@@ -347,17 +313,9 @@ async function writeVerified(
   }
 }
 
-const readOptions = (value: SteamLaunchOptionsSnapshot) => value.options;
-const readTarget = (value: SteamLaunchOptionsSnapshot) => value.target;
-
 function writeOptions(appId: number, nonSteam: boolean, value: string): Promise<void> {
   const setter = nonSteam ? apps()?.SetShortcutLaunchOptions : apps()?.SetAppLaunchOptions;
   if (!setter) return Promise.reject(new Error(`Steam ${nonSteam ? "shortcut " : ""}launch options API is unavailable`));
-  return Promise.resolve(setter.call(apps(), appId, value));
-}
-function writeTarget(appId: number, value: string): Promise<void> {
-  const setter = apps()?.SetShortcutExe;
-  if (!setter) return Promise.reject(new Error("Steam shortcut Target API is unavailable"));
   return Promise.resolve(setter.call(apps(), appId, value));
 }
 
@@ -371,7 +329,7 @@ export function updateSteamLaunchOptions(
     const next = transform(current.options);
     return next === current.options ? current : writeVerified(
       appId, nonSteam, current.options, next,
-      (value) => writeOptions(appId, nonSteam, value), readOptions,
+      (value) => writeOptions(appId, nonSteam, value),
       "Steam did not accept the launch options",
     );
   });
@@ -382,41 +340,16 @@ export function installWrapperIntegration(
   nonSteam: boolean,
   wrapperPath: string,
   commandTokenAdded = false,
-  directFlatpak = false,
 ): Promise<WrapperIntegrationResult> {
   return queued(appId, nonSteam, async () => {
-    let current = await readSteamLaunchOptions(appId, nonSteam);
-    if (nonSteam && directFlatpak) {
-      const cleaned = cleanupPluginLaunchOptions(current.options, wrapperPath);
-      const launchOptionsChanged = cleaned !== current.options;
-      if (launchOptionsChanged) {
-        current = await writeVerified(
-          appId, true, current.options, cleaned,
-          (value) => writeOptions(appId, true, value), readOptions,
-          "Steam did not accept shortcut launch options",
-        );
-      }
-      const executable = directFlatpakExecutable(current.target, wrapperPath);
-      if (!executable) throw new Error("Flatpak shortcut Target is not a supported direct Flatpak executable");
-      const target = managedFlatpakTarget(wrapperPath, executable);
-      if (normalizeLaunchOptions(current.target) === normalizeLaunchOptions(target)) {
-        return { snapshot: current, commandTokenAdded: false, changed: launchOptionsChanged };
-      }
-      const value = await writeVerified(
-        appId, true, current.target, target,
-        (next) => writeTarget(appId, next), readTarget,
-        "Steam did not accept the shortcut Target",
-      );
-      return { snapshot: value, commandTokenAdded: false, changed: true };
-    }
-
+    const current = await readSteamLaunchOptions(appId, nonSteam);
     const cleaned = cleanupPluginAssignments(cleanupLegacyLaunchOptions(current.options));
     const alreadyInstalled = hasWrapperLaunchIntegration(current.options, wrapperPath);
     const rewrite = installLaunchOption(cleaned, wrapperPath, nonSteam);
     if (rewrite.options === current.options) return { snapshot: current, commandTokenAdded, changed: false };
     const value = await writeVerified(
       appId, nonSteam, current.options, rewrite.options,
-      (options) => writeOptions(appId, nonSteam, options), readOptions,
+      (options) => writeOptions(appId, nonSteam, options),
       "Steam did not accept the launch options",
     );
     return { snapshot: value, commandTokenAdded: alreadyInstalled ? commandTokenAdded : rewrite.commandTokenAdded, changed: true };
@@ -428,34 +361,13 @@ export function removeWrapperIntegration(
   nonSteam: boolean,
   wrapperPath: string,
   commandTokenAdded = false,
-  directFlatpak = false,
 ): Promise<SteamLaunchOptionsSnapshot> {
   return queued(appId, nonSteam, async () => {
-    let current = await readSteamLaunchOptions(appId, nonSteam);
-    if (nonSteam && directFlatpak) {
-      const cleaned = cleanupPluginLaunchOptions(current.options, wrapperPath);
-      if (cleaned !== current.options) {
-        current = await writeVerified(
-          appId, true, current.options, cleaned,
-          (value) => writeOptions(appId, true, value), readOptions,
-          "Steam did not clean shortcut launch options",
-        );
-      }
-      const wrapped = wrappedFlatpakExecutable(current.target, wrapperPath);
-      if (wrapped) {
-        return writeVerified(
-          appId, true, current.target, wrapped,
-          (target) => writeTarget(appId, target), readTarget,
-          "Steam did not restore the shortcut Target",
-        );
-      }
-      if (flatpakExecutable(current.target)) return current;
-      throw new Error("Shortcut Target changed externally; refusing to restore it");
-    }
+    const current = await readSteamLaunchOptions(appId, nonSteam);
     const next = cleanupPluginAssignments(removeWrapperLaunchOption(current.options, wrapperPath, commandTokenAdded));
     return next === current.options ? current : writeVerified(
       appId, nonSteam, current.options, next,
-      (options) => writeOptions(appId, nonSteam, options), readOptions,
+      (options) => writeOptions(appId, nonSteam, options),
       "Steam did not clean the launch options",
     );
   });
