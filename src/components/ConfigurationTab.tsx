@@ -1,4 +1,4 @@
-import { ButtonItem, ConfirmModal, DialogButton, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses, showModal } from "@decky/ui";
+import { ButtonItem, ConfirmModal, DialogButton, Focusable, PanelSection, PanelSectionRow, ToggleField, gamepadDialogClasses, showModal } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
@@ -11,6 +11,8 @@ interface ConfigurationTabProps {
   config: ConfigurationData;
   targets: GameTarget[];
   runningGame: GameTarget | null;
+  showDebugTab: boolean;
+  onShowDebugTabChange: (value: boolean) => void;
   onSelect: (appid: string) => void;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
@@ -24,6 +26,8 @@ export function ConfigurationTab({
   config,
   targets,
   runningGame,
+  showDebugTab,
+  onShowDebugTabChange,
   onSelect,
   onConfigChange,
   onEnable,
@@ -63,22 +67,34 @@ export function ConfigurationTab({
 
   if (detailAppId === null) {
     return (
-      <PanelSection title="Games">
-        <GameConfigurationSelector
-          targets={targets}
-          runningGame={runningGame}
-          onSelect={(appid) => {
-            setFocusConfiguredToggle(false);
-            setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
-            onSelect(appid);
-            setDetailAppId(appid);
-          }}
-          onEnableAll={onEnableAll}
-          onResetAll={onResetAll}
-          focusConfiguredToggle={focusConfiguredToggle}
-          onConfiguredToggleFocused={clearConfiguredToggleFocusRequest}
-        />
-      </PanelSection>
+      <>
+        <PanelSection title="Games">
+          <GameConfigurationSelector
+            targets={targets}
+            runningGame={runningGame}
+            onSelect={(appid) => {
+              setFocusConfiguredToggle(false);
+              setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
+              onSelect(appid);
+              setDetailAppId(appid);
+            }}
+            onEnableAll={onEnableAll}
+            onResetAll={onResetAll}
+            focusConfiguredToggle={focusConfiguredToggle}
+            onConfiguredToggleFocused={clearConfiguredToggleFocusRequest}
+          />
+        </PanelSection>
+        <PanelSection title="Settings">
+          <PanelSectionRow>
+            <ToggleField
+              label="Show debug tab"
+              description="Show the raw configuration and generated files tab for troubleshooting."
+              checked={showDebugTab}
+              onChange={onShowDebugTabChange}
+            />
+          </PanelSectionRow>
+        </PanelSection>
+      </>
     );
   }
 

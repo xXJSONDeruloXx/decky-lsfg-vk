@@ -105,6 +105,19 @@ export interface FileContentResult extends ApiResult {
   path?: string;
 }
 
+export interface DebugFileContent {
+  id: string;
+  label: string;
+  path: string;
+  exists: boolean;
+  content?: string | null;
+  error?: string | null;
+}
+
+export interface DebugFileContentsResult extends ApiResult {
+  files?: DebugFileContent[];
+}
+
 export interface FlatpakExtensionStatus extends ApiResult {
   message: string;
   available: boolean;
@@ -143,3 +156,4 @@ export const setWorkaroundState = callable<[
   TargetTransport | null | undefined,
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
+export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

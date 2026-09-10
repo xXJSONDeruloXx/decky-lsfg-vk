@@ -107,6 +107,43 @@ class Plugin:
                 "error": f"Error reading config file: {error}",
             }
 
+    async def get_debug_file_contents(self):
+        files = (
+            ("config", "LSFG-VK configuration", self.configuration_service.config_file_path),
+            ("workarounds", "Per-app workarounds", self.wrapper_service.sidecar_path),
+            ("wrapper", "Generated launch wrapper", self.wrapper_service.wrapper_path),
+            ("flatpak_extensions", "Flatpak extension ownership", self.flatpak_service.ownership_path),
+        )
+        contents = []
+        for file_id, label, path in files:
+            item = {
+                "id": file_id,
+                "label": label,
+                "path": str(path),
+                "exists": False,
+                "content": None,
+                "error": None,
+            }
+            try:
+                if path.is_symlink():
+                    item["error"] = "Path is a symlink; refusing to read it"
+                elif not path.exists():
+                    item["error"] = "File does not exist"
+                elif not path.is_file():
+                    item["error"] = "Path is not a regular file"
+                else:
+                    item["exists"] = True
+                    item["content"] = path.read_text(encoding="utf-8")
+            except Exception as error:
+                item["error"] = f"Error reading file: {error}"
+            contents.append(item)
+        return {
+            "success": True,
+            "message": "Debug file contents retrieved",
+            "error": None,
+            "files": contents,
+        }
+
     async def get_lossless_scaling_branch_status(self):
         return self.steam_service.get_branch_status()
 

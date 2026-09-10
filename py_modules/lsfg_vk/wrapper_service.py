@@ -35,6 +35,8 @@ class WrapperService(BaseService):
         "DISABLE_GAMESCOPE_WSI",
         "DXVK_HDR",
         "SteamDeck",
+        "DISABLE_LSFGVK",
+        "DISABLE_LSFG",
         "DISABLE_VKBASALT",
         "ENABLE_VKBASALT",
         "MESA_LOADER_DRIVER_OVERRIDE",
@@ -262,6 +264,7 @@ class WrapperService(BaseService):
             self._shell(f"--env=LSFGVK_CONFIG={config_file}"),
             '"--env=LSFGVK_FLATPAK=1"',
             '"--env=SteamAppId=$appid"',
+            '"--unset-env=DISABLE_LSFGVK" "--unset-env=DISABLE_LSFG"',
             '"--unset-env=DISABLE_GAMESCOPE_WSI"',
             '"--unset-env=ENABLE_GAMESCOPE_WSI"' if not state["disableGamescopeWsi"] else
             '"--env=ENABLE_GAMESCOPE_WSI=0"',
