@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import decky
 
@@ -54,15 +54,9 @@ class Plugin:
         self,
         appid: str,
         state: Dict[str, Any],
-        shortcut_exe: Optional[str] = None,
         command_token_added: bool = False,
     ):
-        return self.wrapper_service.set(
-            appid,
-            state,
-            shortcut_exe,
-            command_token_added,
-        )
+        return self.wrapper_service.set(appid, state, command_token_added)
 
     async def remove_workaround_state(self, appid: str):
         return self.wrapper_service.remove(appid)
