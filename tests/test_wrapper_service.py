@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 import tempfile
@@ -24,10 +23,10 @@ class WrapperServiceTests(unittest.TestCase):
         self.home.mkdir(parents=True)
         self.service = WrapperService()
         self.service.user_home = self.home
-        self.service.local_bin_dir = self.home / ".local/bin"
         self.service.config_dir = self.home / ".config/lsfg-vk"
+        self.service.config_file_path = self.service.config_dir / "conf.toml"
         self.service.sidecar_path = self.service.config_dir / "workarounds.json"
-        self.service.wrapper_path = self.service.local_bin_dir / "lsfg"
+        self.service.wrapper_path = self.home / ".lsfg"
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -59,7 +58,7 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertIn(self.service.MARKER, self.service.wrapper_path.read_text(encoding="utf-8"))
         self.assertEqual(self.service.get("123")["state"], self._state(dxvkFrameRate=60, enableZink=True))
 
-    def test_dispatch_clears_managed_values_preserves_other_environment_and_appends_config(self):
+    def test_dispatch_exports_appid_config_and_workarounds(self):
         self.service.set(
             "123",
             self._state(dxvkFrameRate=30, disableSteamdeckMode=True, disableVkbasalt=True, enableZink=True),
@@ -71,12 +70,16 @@ class WrapperServiceTests(unittest.TestCase):
                 "DXVK_CONFIG": "dxgi.syncInterval = 0",
                 "DXVK_FRAME_RATE": "5",
                 "ENABLE_GAMESCOPE_WSI": "1",
+                "DISABLE_LSFGVK": "1",
+                "DISABLE_LSFG": "1",
                 "DISABLE_VKBASALT": "0",
                 "MESA_LOADER_DRIVER_OVERRIDE": "llvmpipe",
                 "MANGOHUD": "1",
             },
         )
         values = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+        self.assertEqual(values["SteamAppId"], "123")
+        self.assertEqual(values["LSFGVK_CONFIG"], str(self.service.config_file_path))
         self.assertEqual(values["ENABLE_GAMESCOPE_WSI"], "0")
         self.assertEqual(values["DXVK_HDR"], "0")
         self.assertEqual(values["SteamDeck"], "0")
@@ -88,6 +91,20 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertEqual(values["MANGOHUD"], "1")
         self.assertNotIn("DXVK_FRAME_RATE", values)
         self.assertNotIn("ENABLE_VKBASALT", values)
+        self.assertNotIn("DISABLE_LSFGVK", values)
+        self.assertNotIn("DISABLE_LSFG", values)
+
+    def test_wrapper_is_transport_agnostic(self):
+        self.service.set("123", self._state())
+        fake = self.home / "target"
+        fake.write_text("#!/bin/sh\nprintf '%s\\n' \"$@\"\n", encoding="utf-8")
+        fake.chmod(0o755)
+        result = self._run(123, str(fake), "run", "org.example.Game")
+        self.assertEqual(result.stdout.splitlines(), ["run", "org.example.Game"])
+        content = self.service.wrapper_path.read_text(encoding="utf-8")
+        self.assertNotIn("flatpakAppId", content)
+        self.assertNotIn("shortcut_exe", content)
+        self.assertNotIn("--filesystem", content)
 
     def test_appid_fallback_and_unmatched_passthrough(self):
         self.service.set("123", self._state(disableGamescopeWsi=False, disableHdr=False))
@@ -101,7 +118,7 @@ class WrapperServiceTests(unittest.TestCase):
         )
         fallback_values = dict(line.split("=", 1) for line in fallback.stdout.splitlines() if "=" in line)
         self.assertEqual(fallback_values["SteamDeck"], "0")
-        self.assertEqual(fallback_values["SteamGameId"], "456")
+        self.assertEqual(fallback_values["SteamAppId"], "456")
 
         passthrough = subprocess.run(
             [str(self.service.wrapper_path), "/usr/bin/env"],
@@ -114,139 +131,19 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertEqual(passthrough_values["KEEP"], "yes")
         self.assertEqual(passthrough_values["DXVK_HDR"], "1")
 
-    def test_flatpak_shortcut_receives_env_arguments_and_original_target(self):
-        fake_flatpak = self.home / ".local/bin/flatpak"
-        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
-        fake_flatpak.write_text(
-            "#!/bin/sh\n"
-            "printf 'ARG:%s\\n' \"$@\"\n",
-            encoding="utf-8",
-        )
-        fake_flatpak.chmod(0o755)
-        self.service.set(
-            "123",
-            self._state(dxvkFrameRate=20, enableZink=True),
-            str(fake_flatpak),
-            False,
-            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
-        )
-        result = self._run(123, "run", "com.example.Game", "--windowed", env={"DXVK_CONFIG": "foo=1"})
-        args = result.stdout.splitlines()
-        self.assertEqual(args[0], "ARG:run")
-        self.assertIn("ARG:--filesystem=" + str(self.service.config_dir) + ":rw", args)
-        self.assertIn("ARG:--filesystem=" + str(self.home / ".local/share/Steam/steamapps/common/Lossless Scaling") + ":ro", args)
-        self.assertIn("ARG:--env=LSFGVK_CONFIG=" + str(self.service.config_file_path), args)
-        self.assertIn("ARG:--env=LSFGVK_FLATPAK=1", args)
-        self.assertIn("ARG:--env=SteamAppId=123", args)
-        self.assertIn("ARG:--env=ENABLE_GAMESCOPE_WSI=0", args)
-        self.assertIn("ARG:--env=DXVK_HDR=0", args)
-        self.assertIn("ARG:--env=__GLX_VENDOR_LIBRARY_NAME=mesa", args)
-        self.assertIn("ARG:--env=MESA_LOADER_DRIVER_OVERRIDE=zink", args)
-        self.assertIn("ARG:--env=GALLIUM_DRIVER=zink", args)
-        self.assertIn("ARG:--env=DXVK_CONFIG=foo=1; dxvk.maxFrameRate = 20", args)
-        self.assertIn("ARG:com.example.Game", args)
-        self.assertIn("ARG:--windowed", args)
-
-    def test_flatpak_full_executable_form_is_preserved(self):
-        fake_flatpak = self.home / ".local/bin/flatpak"
-        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
-        fake_flatpak.write_text(
-            "#!/bin/sh\n"
-            "printf 'ARG:%s\\n' \"$@\"\n",
-            encoding="utf-8",
-        )
-        fake_flatpak.chmod(0o755)
-        response = self.service.set(
-            "123",
-            self._state(),
-            f"{fake_flatpak} run com.example.Game",
-            False,
-            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
-        )
-        self.assertTrue(response["success"])
-        result = self._run(123, "--windowed")
-        args = result.stdout.splitlines()
-        self.assertEqual(args[0], "ARG:run")
-        self.assertIn("ARG:com.example.Game", args)
-        self.assertIn("ARG:--windowed", args)
-
-    def test_host_transport_does_not_store_shortcut_target(self):
-        self.service.set(
-            "123",
-            self._state(),
-            "/usr/bin/flatpak",
-            False,
-            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
-        )
-        response = self.service.set(
-            "123",
-            self._state(),
-            "/usr/bin/ignored",
-            False,
-            {"kind": "host"},
-        )
-        self.assertTrue(response["success"])
-        self.assertIsNone(response["shortcut_exe"])
-        self.assertIsNone(self.service.get("123")["shortcut_exe"])
-
-    def test_flatpak_transport_rejects_non_run_invocation(self):
-        fake_flatpak = self.home / ".local/bin/flatpak"
-        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
-        fake_flatpak.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        fake_flatpak.chmod(0o755)
-        response = self.service.set(
-            "123",
-            self._state(),
-            str(fake_flatpak),
-            False,
-            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
-        )
-        self.assertTrue(response["success"])
-        result = subprocess.run(
-            [str(self.service.wrapper_path), "bash", "launch-game.sh"],
-            env={"PATH": "/usr/bin:/bin", "SteamAppId": "123"},
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(result.returncode, 64)
-        self.assertIn("direct flatpak run", result.stderr)
-
-    def test_flatpak_transport_rejects_external_app_id_change(self):
-        fake_flatpak = self.home / ".local/bin/flatpak"
-        fake_flatpak.parent.mkdir(parents=True, exist_ok=True)
-        fake_flatpak.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        fake_flatpak.chmod(0o755)
-        response = self.service.set(
-            "123",
-            self._state(),
-            str(fake_flatpak),
-            False,
-            {"kind": "flatpak", "flatpakAppId": "com.example.Game"},
-        )
-        self.assertTrue(response["success"])
-        result = subprocess.run(
-            [str(self.service.wrapper_path), "run", "com.other.Game"],
-            env={"PATH": "/usr/bin:/bin", "SteamAppId": "123"},
-            capture_output=True,
-            text=True,
-        )
-        self.assertEqual(result.returncode, 64)
-        self.assertIn("application ID changed externally", result.stderr)
-
     def test_invalid_state_and_foreign_wrapper_fail_closed(self):
         invalid = self.service.set("0", self.service.default_state())
         self.assertFalse(invalid["success"])
         invalid = self.service.set("123", {**self.service.default_state(), "dxvkFrameRate": 61})
         self.assertFalse(invalid["success"])
 
-        self.service.local_bin_dir.mkdir(parents=True, exist_ok=True)
         self.service.wrapper_path.write_text("#!/bin/sh\necho foreign\n", encoding="utf-8")
         response = self.service.set("123", self.service.default_state())
         self.assertFalse(response["success"])
         self.assertIn("unowned", response["error"])
         self.assertEqual(self.service.wrapper_path.read_text(encoding="utf-8"), "#!/bin/sh\necho foreign\n")
 
-    def test_remove_keeps_a_safe_owned_passthrough_wrapper(self):
+    def test_remove_keeps_safe_passthrough_wrapper(self):
         self.service.set("123", self.service.default_state())
         response = self.service.remove("123")
         self.assertTrue(response["success"])
