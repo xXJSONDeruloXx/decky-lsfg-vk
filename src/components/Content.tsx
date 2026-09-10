@@ -118,7 +118,9 @@ export function Content() {
     fieldName: keyof ConfigurationData,
     value: boolean | number | string | string[],
     cleanupLaunchOptions = false,
-  ) => save({ ...config, [fieldName]: value }, cleanupLaunchOptions);
+  ) => {
+    await save({ ...config, [fieldName]: value }, cleanupLaunchOptions);
+  };
 
   const setup = (
     <SetupTab
