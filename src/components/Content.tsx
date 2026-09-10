@@ -32,9 +32,7 @@ function usePersistentBoolean(key: string, defaultValue: boolean) {
   useEffect(() => {
     try {
       localStorage.setItem(key, String(value));
-    } catch {
-      // Persisting the visibility preference is optional.
-    }
+    } catch {}
   }, [key, value]);
 
   return [value, setValue] as const;
@@ -132,7 +130,6 @@ export function Content() {
               game={runningGame}
               config={config}
               onConfigChange={(field, value) => handleConfigChange(field, value)}
-              onRepair={repair}
             />
           ),
         }] : []),
