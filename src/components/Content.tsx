@@ -1,18 +1,22 @@
 import { Tabs } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
-import { FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
+import { FaCube, FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
+import { useFlatpakConfiguration } from "../hooks/useFlatpakConfiguration";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallation } from "../hooks/useLsfgHooks";
 import { tabStyles } from "../styles";
 import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
+import { FlatpakNowPlayingTab } from "./FlatpakNowPlayingTab";
+import { FlatpakTab } from "./FlatpakTab";
 import { NowPlayingTab } from "./NowPlayingTab";
 import { SetupTab } from "./SetupTab";
 
 const tabIcons = {
   nowPlaying: <FaGamepad size={18} />,
   games: <FaList size={18} />,
+  flatpak: <FaCube size={18} />,
   configFile: <FaFileAlt size={18} />,
   setup: <FaTools size={18} />,
 };
@@ -63,38 +67,46 @@ export function Content() {
     install,
     uninstall,
   } = useInstallation(reload);
-  const [tab, setTab] = useState("Setup");
-  const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
-  const previousRunningAppId = useRef<string | null>(null);
   const setupComplete =
     isInstalled &&
     losslessScalingInstalled &&
     steamBranchStatus?.success === true &&
     steamBranchStatus.installed &&
     !steamBranchStatus.needs_switch;
+  const flatpak = useFlatpakConfiguration(setupComplete);
+  const [tab, setTab] = useState("Setup");
+  const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
+  const previousRunningWorkload = useRef<string | null>(null);
+  const runningFlatpak = flatpak.runningApp;
+  const hasNowPlaying = Boolean(runningGame?.configured || runningFlatpak);
+  const runningWorkload = runningGame?.configured
+    ? `steam:${runningGame.appid}`
+    : runningFlatpak ? `flatpak:${runningFlatpak.app_id}` : null;
 
   useEffect(() => {
     if (!setupComplete) {
       setTab("Setup");
       return;
     }
-    setTab((current) => current === "Setup" ? (runningGame?.configured ? "NowPlaying" : "Games") : current);
-  }, [runningGame?.appid, runningGame?.configured, setupComplete]);
+    setTab((current) => current === "Setup" ? (hasNowPlaying ? "NowPlaying" : "Games") : current);
+  }, [hasNowPlaying, setupComplete]);
 
   useEffect(() => {
     if (!setupComplete) return;
-    const appid = runningGame?.appid || null;
-    const previous = previousRunningAppId.current;
-    previousRunningAppId.current = appid;
-    if (appid && appid !== previous) setTab(runningGame?.configured ? "NowPlaying" : "Games");
-    else if (!appid && previous) {
+    const previous = previousRunningWorkload.current;
+    previousRunningWorkload.current = runningWorkload;
+    if (runningWorkload && runningWorkload !== previous) setTab("NowPlaying");
+    else if (!runningWorkload && previous) {
       setTab((current) => current === "NowPlaying" ? "Games" : current);
     }
-  }, [runningGame?.appid, runningGame?.configured, setupComplete]);
+  }, [runningWorkload, setupComplete]);
 
   useEffect(() => {
-    if (isInstalled) void reload();
-  }, [isInstalled, reload]);
+    if (isInstalled) {
+      void reload();
+      void flatpak.reload();
+    }
+  }, [isInstalled, reload, flatpak.reload]);
 
   useEffect(() => {
     if (!showDebugTab && tab === "ConfigFile") setTab("Games");
@@ -120,19 +132,24 @@ export function Content() {
     />
   );
 
+  const nowPlaying = runningGame?.configured ? (
+    <NowPlayingTab
+      game={runningGame}
+      config={config}
+      onConfigChange={(field, value) => handleConfigChange(field, value)}
+    />
+  ) : runningFlatpak ? (
+    <FlatpakNowPlayingTab
+      app={runningFlatpak}
+      busy={flatpak.busyAppId === runningFlatpak.app_id}
+      onConfigChange={flatpak.updateConfig}
+      onWorkaroundChange={flatpak.updateWorkarounds}
+    />
+  ) : null;
+
   const tabs = setupComplete
     ? [
-        ...(runningGame?.configured ? [{
-          id: "NowPlaying",
-          title: tabIcons.nowPlaying,
-          content: (
-            <NowPlayingTab
-              game={runningGame}
-              config={config}
-              onConfigChange={(field, value) => handleConfigChange(field, value)}
-            />
-          ),
-        }] : []),
+        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying }] : []),
         {
           id: "Games",
           title: tabIcons.games,
@@ -150,6 +167,23 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
+            />
+          ),
+        },
+        {
+          id: "Flatpak",
+          title: tabIcons.flatpak,
+          content: (
+            <FlatpakTab
+              apps={flatpak.apps}
+              runningApp={runningFlatpak}
+              loading={flatpak.loading}
+              busyAppId={flatpak.busyAppId}
+              onRefresh={flatpak.reload}
+              onEnable={flatpak.enableApp}
+              onRemove={flatpak.removeApp}
+              onConfigChange={flatpak.updateConfig}
+              onWorkaroundChange={flatpak.updateWorkarounds}
             />
           ),
         },
