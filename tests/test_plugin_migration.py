@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 
 class PluginMigrationTests(unittest.TestCase):
-    def test_migration_only_runs_decky_path_migrations(self):
+    def _load_plugin(self):
         decky = types.SimpleNamespace(
             DECKY_HOME="/decky",
             DECKY_USER_HOME="/home/deck",
@@ -19,10 +19,24 @@ class PluginMigrationTests(unittest.TestCase):
         previous_tomllib = sys.modules.get("tomllib")
         sys.modules["decky"] = decky
         sys.modules["tomllib"] = types.SimpleNamespace(loads=Mock())
-        try:
-            sys.path.insert(0, "py_modules")
-            from lsfg_vk.plugin import Plugin
+        sys.path.insert(0, "py_modules")
+        from lsfg_vk.plugin import Plugin
+        return Plugin, decky, previous_decky, previous_tomllib
 
+    def _restore(self, previous_decky, previous_tomllib):
+        sys.path.remove("py_modules")
+        if previous_decky is None:
+            sys.modules.pop("decky", None)
+        else:
+            sys.modules["decky"] = previous_decky
+        if previous_tomllib is None:
+            sys.modules.pop("tomllib", None)
+        else:
+            sys.modules["tomllib"] = previous_tomllib
+
+    def test_migration_only_runs_decky_path_migrations(self):
+        Plugin, decky, previous_decky, previous_tomllib = self._load_plugin()
+        try:
             plugin = Plugin.__new__(Plugin)
             plugin.installation_service = Mock()
             plugin.flatpak_service = Mock()
@@ -33,17 +47,24 @@ class PluginMigrationTests(unittest.TestCase):
             decky.migrate_settings.assert_called_once()
             decky.migrate_runtime.assert_called_once()
             plugin.installation_service.install.assert_not_called()
-            plugin.flatpak_service.migrate_v2.assert_not_called()
+            plugin.flatpak_service.prepare_app.assert_not_called()
         finally:
-            sys.path.remove("py_modules")
-            if previous_decky is None:
-                sys.modules.pop("decky", None)
-            else:
-                sys.modules["decky"] = previous_decky
-            if previous_tomllib is None:
-                sys.modules.pop("tomllib", None)
-            else:
-                sys.modules["tomllib"] = previous_tomllib
+            self._restore(previous_decky, previous_tomllib)
+
+    def test_uninstall_cleans_owned_flatpak_state(self):
+        Plugin, _decky, previous_decky, previous_tomllib = self._load_plugin()
+        try:
+            plugin = Plugin.__new__(Plugin)
+            plugin.installation_service = Mock()
+            plugin.flatpak_service = Mock()
+            plugin.flatpak_service.remove_plugin_owned_environment.return_value = {"success": True}
+
+            asyncio.run(plugin._uninstall())
+
+            plugin.flatpak_service.remove_plugin_owned_environment.assert_called_once_with()
+            plugin.installation_service.cleanup_on_uninstall.assert_called_once_with()
+        finally:
+            self._restore(previous_decky, previous_tomllib)
 
 
 if __name__ == "__main__":
