@@ -20,6 +20,8 @@ class SteamShortcutTests(unittest.TestCase):
         self.assertTrue(is_direct_flatpak_shortcut("flatpak"))
         self.assertTrue(is_direct_flatpak_shortcut("/usr/bin/flatpak run com.example.Game"))
         self.assertTrue(is_direct_flatpak_shortcut('~/.lsfg "/usr/bin/flatpak"'))
+        self.assertTrue(is_direct_flatpak_shortcut('~/lsfg "usr/bin/flatpak"'))
+        self.assertTrue(is_direct_flatpak_shortcut('~/.local/bin/mako-run "/usr/bin/flatpak"'))
         self.assertFalse(is_direct_flatpak_shortcut("/usr/bin/bash"))
         self.assertFalse(is_direct_flatpak_shortcut("/home/deck/Emulation/tools/launchers/retroarch.sh"))
         self.assertFalse(is_direct_flatpak_shortcut("/home/deck/Emulation/tools/launchers/ppsspp.sh"))
