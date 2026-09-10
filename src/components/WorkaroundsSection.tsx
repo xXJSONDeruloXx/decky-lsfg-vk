@@ -8,7 +8,6 @@ import type { WorkaroundField } from "../hooks/usePerAppWorkarounds";
 interface WorkaroundsSectionProps {
   appId: string;
   nonSteam: boolean;
-  directFlatpak?: boolean;
   onRepair?: () => Promise<boolean>;
 }
 
@@ -78,9 +77,9 @@ function usePersistentCollapsed() {
   return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
-export function WorkaroundsSection({ appId, nonSteam, directFlatpak = false, onRepair }: WorkaroundsSectionProps) {
+export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSectionProps) {
   const [collapsed, toggleCollapsed] = usePersistentCollapsed();
-  const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam, directFlatpak);
+  const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam);
   const [repairing, setRepairing] = useState(false);
   const state = snapshot?.state;
   const controlsDisabled = status !== "ready" || state === undefined || snapshot?.wrapperOwned !== true || snapshot.integrationInstalled !== true;
