@@ -73,22 +73,31 @@ function selectShortcutExecutable(
   return candidates.map((candidate) => candidate?.trim()).find(Boolean);
 }
 
+function usesShortcutTarget(nonSteam: boolean, transport: TargetTransport): boolean {
+  return nonSteam && transport.kind === "flatpak";
+}
+
 function integrationIsInstalled(
   steam: SteamLaunchOptionsSnapshot,
   nonSteam: boolean,
+  transport: TargetTransport,
   wrapperPath: string,
 ): boolean {
-  return nonSteam ? steam.target === wrapperPath : hasWrapperLaunchIntegration(steam.options, wrapperPath);
+  return usesShortcutTarget(nonSteam, transport)
+    ? steam.target === wrapperPath
+    : hasWrapperLaunchIntegration(steam.options, wrapperPath);
 }
 
 function makeSnapshot(
   steam: SteamLaunchOptionsSnapshot,
   result: Awaited<ReturnType<typeof getWorkaroundState>>,
   nonSteam: boolean,
+  transport: TargetTransport,
 ): WorkaroundSnapshot {
   if (!result.state) throw new Error("Workaround state is not initialized for this profile");
   const wrapperPath = result.wrapper_path || getDefaultWrapperPath();
-  if (nonSteam && steam.target === wrapperPath && !result.shortcut_exe) {
+  const selectedTransport = result.transport || transport;
+  if (usesShortcutTarget(nonSteam, selectedTransport) && steam.target === wrapperPath && !result.shortcut_exe) {
     throw new Error("Managed shortcut Target has no saved original executable");
   }
   return {
@@ -96,10 +105,10 @@ function makeSnapshot(
     state: result.state,
     wrapperPath,
     wrapperOwned: result.wrapper_owned === true,
-    integrationInstalled: integrationIsInstalled(steam, nonSteam, wrapperPath),
+    integrationInstalled: integrationIsInstalled(steam, nonSteam, selectedTransport, wrapperPath),
     commandTokenAdded: result.command_token_added === true,
     shortcutExe: result.shortcut_exe,
-    transport: result.transport || { kind: "host" },
+    transport: selectedTransport,
   };
 }
 
@@ -110,10 +119,11 @@ async function adoptWorkaroundState(
   steam: SteamLaunchOptionsSnapshot,
   wrapperPath: string,
 ): Promise<WorkaroundSnapshot> {
-  if (nonSteam && (!steam.target || steam.target === wrapperPath || isLegacyWrapperToken(steam.target))) {
+  const shortcutTarget = usesShortcutTarget(nonSteam, transport);
+  if (shortcutTarget && (!steam.target || steam.target === wrapperPath || isLegacyWrapperToken(steam.target))) {
     throw new Error("Shortcut Target is a wrapper but its original Target is unknown");
   }
-  const originalExecutable = nonSteam
+  const originalExecutable = shortcutTarget
     ? selectShortcutExecutable(transport, steam.target)
     : null;
   const initial = await setWorkaroundState(
@@ -130,18 +140,20 @@ async function adoptWorkaroundState(
       Number(appId),
       nonSteam,
       wrapperPath,
+      false,
+      transport.kind,
     );
     const finalized = await setWorkaroundState(
       appId,
       DEFAULT_WORKAROUND_STATE,
-      nonSteam
+      shortcutTarget
         ? (selectShortcutExecutable(transport, integration.originalExecutable, originalExecutable) || null)
         : null,
       integration.commandTokenAdded,
       transport,
     );
     if (!finalized.success) throw new Error(finalized.error || "Could not finalize workaround state");
-    return makeSnapshot(integration.snapshot, finalized, nonSteam);
+    return makeSnapshot(integration.snapshot, finalized, nonSteam, transport);
   } catch (error) {
     let rollbackSucceeded = true;
     if (integration) {
@@ -150,10 +162,11 @@ async function adoptWorkaroundState(
           Number(appId),
           nonSteam,
           wrapperPath,
-          nonSteam
+          shortcutTarget
             ? (selectShortcutExecutable(transport, integration?.originalExecutable, originalExecutable) || undefined)
             : undefined,
           integration?.commandTokenAdded ?? false,
+          transport.kind,
         );
       } catch {
         // Leave the owned integration in place rather than guessing at cleanup.
@@ -194,7 +207,7 @@ export function usePerAppWorkarounds(
         result.wrapper_path || getDefaultWrapperPath(),
       );
     }
-    return makeSnapshot(steam, result, nonSteam);
+    return makeSnapshot(steam, result, nonSteam, transport);
   }, [appId, nonSteam, numericAppId, transport]);
 
   const applySnapshot = useCallback((next: WorkaroundSnapshot) => {
@@ -230,7 +243,7 @@ export function usePerAppWorkarounds(
           setSnapshot((current) => current ? {
             ...current,
             steam,
-            integrationInstalled: integrationIsInstalled(steam, nonSteam, current.wrapperPath),
+            integrationInstalled: integrationIsInstalled(steam, nonSteam, current.transport, current.wrapperPath),
           } : current);
         },
         (subscriptionError) => {

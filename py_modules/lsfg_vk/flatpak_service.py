@@ -24,6 +24,8 @@ from .constants import (
 class FlatpakService(BaseService):
     EXTENSION_ID = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
     SUPPORTED_RUNTIMES = ("23.08", "24.08", "25.08")
+    DERIVED_RUNTIME_IDS = {"org.gnome.Platform", "org.kde.Platform"}
+    RUNTIME_METADATA_SECTION = "Extension org.freedesktop.Platform.GL"
     OWNERSHIP_FILENAME = "flatpak_extensions.json"
     OWNERSHIP_VERSION = 1
     APP_ID_PATTERN = re.compile(
@@ -94,6 +96,26 @@ class FlatpakService(BaseService):
         return cls._validate_runtime(parts[2])
 
     @classmethod
+    def runtime_branch_from_metadata(cls, metadata: str) -> str:
+        section = None
+        versions = []
+        for raw_line in metadata.splitlines() if isinstance(metadata, str) else []:
+            line = raw_line.strip()
+            if line.startswith("[") and line.endswith("]"):
+                section = line[1:-1].strip()
+                continue
+            if section != cls.RUNTIME_METADATA_SECTION:
+                continue
+            key, separator, value = line.partition("=")
+            if separator and key.strip() == "versions":
+                versions.extend(part.strip() for part in value.split(";"))
+        for value in versions:
+            for branch in cls.SUPPORTED_RUNTIMES:
+                if value == branch or value.startswith(f"{branch}-"):
+                    return branch
+        raise ValueError("Could not determine a supported Freedesktop base runtime from Flatpak metadata")
+
+    @classmethod
     def _extension_ref(cls, branch: str) -> str:
         return f"{cls.EXTENSION_ID}/x86_64/{cls._validate_runtime(branch)}"
 
@@ -105,18 +127,22 @@ class FlatpakService(BaseService):
         }[self._validate_runtime(branch)]
         return Path(__file__).resolve().parent.parent.parent / BIN_DIR / filename
 
-    def _installed_extension_branches(self) -> Set[str]:
-        result = self._run_flatpak_command(
-            ["list", "--runtime", "--columns=application,arch,branch"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+    def _installed_extension_branches(self, scope: Optional[str] = None) -> Set[str]:
+        scopes = ("user", "system") if scope is None else (scope,)
+        if any(item not in ("user", "system") for item in scopes):
+            raise ValueError("Flatpak installation scope must be user or system")
         installed = set()
-        for line in result.stdout.splitlines():
-            fields = line.split("\t") if "\t" in line else line.split()
-            if len(fields) >= 3 and fields[0] == self.EXTENSION_ID and fields[1] == "x86_64":
-                installed.add(fields[2])
+        for item in scopes:
+            result = self._run_flatpak_command(
+                ["list", f"--{item}", "--runtime", "--columns=application,arch,branch"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            for line in result.stdout.splitlines():
+                fields = line.split("\t") if "\t" in line else line.split()
+                if len(fields) >= 3 and fields[0] == self.EXTENSION_ID and fields[1] == "x86_64":
+                    installed.add(fields[2])
         return installed
 
     def _owned_branches(self) -> Set[str]:
@@ -188,7 +214,26 @@ class FlatpakService(BaseService):
         if result.returncode != 0:
             raise OSError(result.stderr.strip() or f"Could not inspect Flatpak app {app_id}")
         runtime = result.stdout.strip().splitlines()[0] if result.stdout.strip() else ""
-        return runtime, self.runtime_branch_from_ref(runtime)
+        parts = runtime.split("/")
+        if len(parts) != 3:
+            raise ValueError(f"Unsupported Flatpak runtime reference: {runtime}")
+        if parts[0] == "org.freedesktop.Platform":
+            branch = self._validate_runtime(parts[2])
+        elif parts[0] in self.DERIVED_RUNTIME_IDS:
+            metadata_result = self._run_flatpak_command(
+                ["info", "--show-metadata", runtime],
+                capture_output=True,
+                text=True,
+            )
+            if metadata_result.returncode != 0:
+                raise OSError(
+                    metadata_result.stderr.strip()
+                    or f"Could not inspect Flatpak runtime {runtime}"
+                )
+            branch = self.runtime_branch_from_metadata(metadata_result.stdout)
+        else:
+            raise ValueError(f"Unsupported Flatpak runtime reference: {runtime}")
+        return runtime, branch
 
     def resolve_app_support(self, app_id: str):
         try:
@@ -249,7 +294,7 @@ class FlatpakService(BaseService):
                 )
                 if result.returncode != 0:
                     raise OSError(result.stderr.strip() or "Flatpak installation failed")
-                if branch not in self._installed_extension_branches():
+                if branch not in self._installed_extension_branches("user"):
                     raise RuntimeError(f"Flatpak install completed but {self._extension_ref(branch)} was not visible afterwards")
                 owned = self._owned_branches()
                 owned.add(branch)
@@ -259,7 +304,7 @@ class FlatpakService(BaseService):
             return self._error_response(dict, str(error), runtime_branch=branch, installed=False, enabled=False)
 
     def _remove_extension(self, branch: str) -> bool:
-        if branch not in self._installed_extension_branches():
+        if branch not in self._installed_extension_branches("user"):
             return False
         result = self._run_flatpak_command(
             ["uninstall", "--user", "--noninteractive", self._extension_ref(branch)],
@@ -268,7 +313,7 @@ class FlatpakService(BaseService):
         )
         if result.returncode != 0:
             raise OSError(result.stderr.strip() or "Flatpak uninstall failed")
-        if branch in self._installed_extension_branches():
+        if branch in self._installed_extension_branches("user"):
             raise RuntimeError(f"Flatpak uninstall completed but {self._extension_ref(branch)} is still installed")
         return True
 
@@ -288,12 +333,15 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             with self._lock:
-                removed = self._remove_extension(branch)
                 owned = self._owned_branches()
-                if branch in owned:
-                    owned.remove(branch)
-                    self._write_owned_branches(owned)
-                return self._extension_result(branch, False, removed, "uninstalled")
+                if branch not in owned:
+                    installed = branch in self._installed_extension_branches()
+                    return self._extension_result(branch, installed, False, "preserved (not plugin-owned)")
+                removed = self._remove_extension(branch)
+                owned.remove(branch)
+                self._write_owned_branches(owned)
+                installed = branch in self._installed_extension_branches()
+                return self._extension_result(branch, installed, removed, "uninstalled")
         except Exception as error:
             return self._error_response(
                 dict,

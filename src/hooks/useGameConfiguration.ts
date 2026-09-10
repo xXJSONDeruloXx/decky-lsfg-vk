@@ -48,11 +48,6 @@ function selectShortcutExecutable(
     .map((candidate) => candidate?.trim())
     .find((candidate) => candidate && candidate.startsWith("/"));
   if (absolute) return absolute;
-
-  // Steam's app-details API can report a Flatpak Target as just "flatpak"
-  // even when the shortcut's canonical VDF executable is /usr/bin/flatpak.
-  // Keep the stored original executable absolute so SetShortcutExe and the
-  // generated dispatcher agree on the same direct transport.
   if (target.transport.kind === "flatpak") return "/usr/bin/flatpak";
   return candidates.map((candidate) => candidate?.trim()).find(Boolean);
 }
@@ -158,25 +153,26 @@ export function useGameConfiguration() {
       const oldShortcutExe = existing.shortcut_exe || undefined;
       const oldCommandTokenAdded = existing.command_token_added === true;
       const oldTransport = existing.transport || target.transport;
-      if (target.nonSteam && oldState && current.target === wrapperPath && !oldShortcutExe) {
+      const usesShortcutTarget = target.nonSteam && target.transport.kind === "flatpak";
+      if (usesShortcutTarget && oldState && current.target === wrapperPath && !oldShortcutExe) {
         throw new Error("Managed shortcut Target has no saved original executable");
       }
-      if (target.nonSteam && oldState && current.target !== wrapperPath && current.target !== oldShortcutExe) {
+      if (usesShortcutTarget && oldState && current.target !== wrapperPath && current.target !== oldShortcutExe) {
         throw new Error("Shortcut Target changed externally; refusing to replace it");
       }
-      if (target.nonSteam && !oldState && current.target === wrapperPath) {
+      if (usesShortcutTarget && !oldState && current.target === wrapperPath) {
         throw new Error("Shortcut Target is already the managed wrapper but its original Target is unknown");
       }
       const state = oldState || { ...DEFAULT_WORKAROUND_STATE };
-      const originalExecutable = target.nonSteam
+      const originalExecutable = usesShortcutTarget
         ? selectShortcutExecutable(
           target,
           oldShortcutExe,
-          target.transport.kind === "flatpak" ? target.executable : undefined,
+          target.executable,
           current.target,
         )
         : undefined;
-      const initialIntegration = target.nonSteam
+      const initialIntegration = usesShortcutTarget
         ? current.target === wrapperPath
         : hasWrapperLaunchIntegration(current.options, wrapperPath);
       const initialStateResult = await setWorkaroundState(
@@ -190,16 +186,22 @@ export function useGameConfiguration() {
 
       let integration: Awaited<ReturnType<typeof installWrapperIntegration>> | null = null;
       try {
-        integration = await installWrapperIntegration(appId, target.nonSteam, wrapperPath, oldCommandTokenAdded);
+        integration = await installWrapperIntegration(
+          appId,
+          target.nonSteam,
+          wrapperPath,
+          oldCommandTokenAdded,
+          target.transport.kind,
+        );
         const finalStateResult = await setWorkaroundState(
           target.appid,
           state,
-          target.nonSteam
+          usesShortcutTarget
             ? (selectShortcutExecutable(
               target,
               integration.originalExecutable,
               originalExecutable,
-              target.transport.kind === "flatpak" ? target.executable : undefined,
+              target.executable,
             ) || null)
             : null,
           integration.commandTokenAdded,
@@ -215,15 +217,16 @@ export function useGameConfiguration() {
               appId,
               target.nonSteam,
               wrapperPath,
-              target.nonSteam
+              usesShortcutTarget
                 ? (selectShortcutExecutable(
                   target,
                   integration?.originalExecutable,
                   originalExecutable,
-                  target.transport.kind === "flatpak" ? target.executable : undefined,
+                  target.executable,
                 ) || undefined)
                 : undefined,
               integration?.commandTokenAdded ?? oldCommandTokenAdded,
+              target.transport.kind,
             );
           } catch (rollbackError) {
             showErrorToast("Workaround rollback failed", asError(rollbackError).message);
@@ -257,6 +260,7 @@ export function useGameConfiguration() {
       const existing = await getWorkaroundState(target.appid);
       if (!existing.success) throw new Error(existing.error || "Could not read workaround state");
       const wrapperPath = existing.wrapper_path || getDefaultWrapperPath();
+      const usesShortcutTarget = target.nonSteam && target.transport.kind === "flatpak";
       if (existing.state) {
         await removeWrapperIntegration(
           appId,
@@ -264,10 +268,11 @@ export function useGameConfiguration() {
           wrapperPath,
           existing.shortcut_exe || undefined,
           existing.command_token_added === true,
+          target.transport.kind,
         );
       } else {
         const current = await readSteamLaunchOptions(appId, target.nonSteam);
-        if (target.nonSteam && (current.target === wrapperPath || isLegacyWrapperToken(current.target))) {
+        if (usesShortcutTarget && (current.target === wrapperPath || isLegacyWrapperToken(current.target))) {
           throw new Error("Shortcut Target is a frame-generation wrapper but its original Target is unknown");
         }
         await cleanupLegacySteamLaunchOptions(appId, target.nonSteam, wrapperPath);
