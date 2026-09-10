@@ -4,7 +4,6 @@ import json
 import re
 import shlex
 import threading
-from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from .base_service import BaseService
@@ -85,22 +84,12 @@ class WrapperService(BaseService):
     def _validate_entry(cls, raw: Any) -> Dict[str, Any]:
         if not isinstance(raw, dict):
             raise ValueError("Workaround AppID entry must be an object")
-        entry: Dict[str, Any] = {
+        entry = {
             "state": cls._validate_state(raw.get("state")),
             "command_token_added": raw.get("command_token_added", False),
         }
         if type(entry["command_token_added"]) is not bool:
             raise ValueError("command_token_added must be a boolean")
-        shortcut_exe = raw.get("shortcut_exe")
-        if shortcut_exe is not None:
-            if (
-                not isinstance(shortcut_exe, str)
-                or not shortcut_exe.startswith("/")
-                or "\x00" in shortcut_exe
-                or Path(shortcut_exe).name != "flatpak"
-            ):
-                raise ValueError("shortcut_exe must be an absolute flatpak executable path")
-            entry["shortcut_exe"] = shortcut_exe
         return entry
 
     @classmethod
@@ -273,7 +262,6 @@ class WrapperService(BaseService):
             "state": dict(entry["state"]) if entry else None,
             "wrapper_path": self.WRAPPER_TOKEN,
             "wrapper_owned": self._wrapper_marker() if document["apps"] else False,
-            "shortcut_exe": entry.get("shortcut_exe") if entry else None,
             "command_token_added": entry.get("command_token_added", False) if entry else False,
         }
 
@@ -299,7 +287,6 @@ class WrapperService(BaseService):
         self,
         appid: str,
         state: Dict[str, Any],
-        shortcut_exe: Optional[str] = None,
         command_token_added: bool = False,
     ) -> Dict[str, Any]:
         try:
@@ -310,17 +297,10 @@ class WrapperService(BaseService):
             with self._lock:
                 self._assert_wrapper_owned_or_absent()
                 document, _, _ = self._read_document()
-                previous_entry = document["apps"].get(normalized)
-                entry: Dict[str, Any] = {
+                document["apps"][normalized] = {
                     "state": validated_state,
                     "command_token_added": command_token_added,
                 }
-                selected_exe = shortcut_exe
-                if selected_exe is None and previous_entry:
-                    selected_exe = previous_entry.get("shortcut_exe")
-                if selected_exe is not None:
-                    entry = self._validate_entry({**entry, "shortcut_exe": selected_exe})
-                document["apps"][normalized] = entry
                 self._write_pair(document)
                 return self._response(document, normalized)
         except Exception as error:
