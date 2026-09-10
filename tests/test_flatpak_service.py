@@ -25,16 +25,19 @@ class FlatpakServiceTests(unittest.TestCase):
         self.service.user_home = self.home
         self.service.config_dir = self.home / ".config/lsfg-vk"
         self.service.config_file_path = self.service.config_dir / "conf.toml"
+        self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
         self.service.check_flatpak_available = Mock(return_value=True)
         self.service._run_flatpak_command = Mock(side_effect=self._run_flatpak_command)
         self.runtime_ref = "org.freedesktop.Platform/x86_64/24.08"
         self.runtime_metadata = ""
         self.user_branches = set()
         self.system_branches = set()
-        self.install_branch = "24.08"
-        self.bundle = self.home / "lsfg-vk-24.08.flatpak"
+        self.apps = {"com.example.Game": "Example Game"}
+        self.bundle = self.home / "lsfg-vk.flatpak"
         self.bundle.write_bytes(b"bundle")
         self.service._bundled_extension_path = Mock(return_value=self.bundle)
+        self.dll_dir = self.home / ".local/share/Steam/steamapps/common/Lossless Scaling"
+        self.service._dll_directory = Mock(return_value=self.dll_dir)
 
     def tearDown(self):
         self.tempdir.cleanup()
@@ -47,252 +50,225 @@ class FlatpakServiceTests(unittest.TestCase):
     def _extension_line(branch):
         return f"org.freedesktop.Platform.VulkanLayer.lsfgvk\tx86_64\t{branch}\n"
 
+    @staticmethod
+    def _parse_override(content):
+        section = None
+        filesystems = []
+        unset_environment = []
+        environment = {}
+        other = []
+        for raw in content.splitlines():
+            line = raw.strip()
+            if line.startswith("[") and line.endswith("]"):
+                section = line[1:-1]
+                continue
+            key, separator, value = line.partition("=")
+            if not separator:
+                continue
+            if section == "Context" and key == "filesystems":
+                filesystems.extend(item for item in value.split(";") if item)
+            elif section == "Context" and key == "unset-environment":
+                unset_environment.extend(item for item in value.split(";") if item)
+            elif section == "Environment":
+                environment[key] = value
+            else:
+                other.append((section, key, value))
+        return filesystems, unset_environment, environment, other
+
+    @staticmethod
+    def _serialize_override(filesystems, unset_environment, environment):
+        lines = ["[Context]"]
+        if filesystems:
+            lines.append("filesystems=" + ";".join(filesystems) + ";")
+        if unset_environment:
+            lines.append("unset-environment=" + ";".join(unset_environment) + ";")
+        if environment:
+            lines.append("")
+            lines.append("[Environment]")
+            lines.extend(f"{key}={value}" for key, value in environment.items())
+        return "\n".join(lines) + "\n"
+
+    def _apply_override(self, args):
+        app_id = args[-1]
+        path = self.service._override_path(app_id)
+        content = path.read_text(encoding="utf-8") if path.exists() else ""
+        filesystems, unset_environment, environment, _ = self._parse_override(content)
+        for arg in args[2:-1]:
+            if arg.startswith("--filesystem="):
+                value = arg.split("=", 1)[1]
+                if value not in filesystems:
+                    filesystems.append(value)
+            elif arg.startswith("--env="):
+                key, value = arg.split("=", 1)[1].split("=", 1)
+                environment[key] = value
+                if key in unset_environment:
+                    unset_environment.remove(key)
+            elif arg.startswith("--unset-env="):
+                key = arg.split("=", 1)[1]
+                environment.pop(key, None)
+                if key not in unset_environment:
+                    unset_environment.append(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            self._serialize_override(filesystems, unset_environment, environment),
+            encoding="utf-8",
+        )
+        return self._result()
+
     def _run_flatpak_command(self, args, **_kwargs):
-        if args[0] == "info" and args[1] == "--show-runtime":
+        if args[:2] == ["info", "--show-runtime"]:
             return self._result(self.runtime_ref + "\n")
-        if args[0] == "info" and args[1] == "--show-metadata":
+        if args[:2] == ["info", "--show-metadata"]:
             return self._result(self.runtime_metadata)
+        if args[:2] == ["list", "--app"]:
+            return self._result("".join(f"{name}\t{app_id}\n" for app_id, name in self.apps.items()))
         if args[0] == "list":
             branches = self.user_branches if "--user" in args else self.system_branches
             return self._result("".join(self._extension_line(branch) for branch in sorted(branches)))
         if args[0] == "install":
-            self.user_branches.add(self.install_branch)
+            self.user_branches.add(self.runtime_ref.rsplit("/", 1)[-1])
             return self._result()
         if args[0] == "uninstall":
             self.user_branches.discard(args[-1].rsplit("/", 1)[-1])
             return self._result()
+        if args[:3] == ["override", "--user", "--show"]:
+            path = self.service._override_path(args[-1])
+            return self._result(path.read_text(encoding="utf-8") if path.exists() else "")
+        if args[:2] == ["override", "--user"]:
+            return self._apply_override(args)
         raise AssertionError(f"Unexpected Flatpak command: {args}")
 
-    def test_runtime_branch_mapping_is_strict_and_branch_specific(self):
-        self.assertEqual(
-            FlatpakService.runtime_branch_from_ref(
-                "org.freedesktop.Platform/x86_64/24.08"
-            ),
-            "24.08",
-        )
-        self.assertEqual(
-            FlatpakService.runtime_branch_from_ref(
-                "org.freedesktop.Platform//25.08"
-            ),
-            "25.08",
-        )
-        with self.assertRaises(ValueError):
-            FlatpakService.runtime_branch_from_ref("org.gnome.Sdk/x86_64/46")
-        with self.assertRaises(ValueError):
-            FlatpakService.runtime_branch_from_ref(
-                "org.freedesktop.Platform/x86_64/26.08"
-            )
+    def test_resolves_freedesktop_and_derived_runtimes(self):
+        runtime, branch = self.service._resolve_runtime("com.example.Game")
+        self.assertEqual(runtime, self.runtime_ref)
+        self.assertEqual(branch, "24.08")
 
-    def test_runtime_branch_mapping_reads_documented_gl_metadata(self):
-        metadata = """
-[Extension org.freedesktop.Platform.GL]
-versions=25.08;25.08-extra;1.4
-version=1.4
-"""
-        self.assertEqual(FlatpakService.runtime_branch_from_metadata(metadata), "25.08")
-        with self.assertRaises(ValueError):
-            FlatpakService.runtime_branch_from_metadata(
-                "[Extension org.freedesktop.Platform.GL]\nversions=26.08;26.08-extra;1.4\n"
-            )
+        self.runtime_ref = "org.kde.Platform/x86_64/6.10"
+        self.runtime_metadata = "[Extension org.freedesktop.Platform.GL]\nversions=25.08;25.08-extra;1.4\n"
+        runtime, branch = self.service._resolve_runtime("com.example.Game")
+        self.assertEqual(runtime, self.runtime_ref)
+        self.assertEqual(branch, "25.08")
 
-    def test_resolve_reads_required_runtime_instead_of_any_installed_branch(self):
-        self.user_branches = {"23.08"}
-
-        response = self.service.resolve_app_support("com.example.Game")
+    def test_prepare_app_installs_runtime_and_persists_narrow_override(self):
+        response = self.service.prepare_app("com.example.Game")
 
         self.assertTrue(response["success"])
+        self.assertTrue(response["prepared"])
+        self.assertTrue(response["owned"])
         self.assertEqual(response["runtime_branch"], "24.08")
-        self.assertEqual(response["support_status"], "needs-runtime")
-        self.assertFalse(response["extension_installed"])
-        self.assertEqual(
-            self.service._run_flatpak_command.call_args_list[0].args[0],
-            ["info", "--show-runtime", "com.example.Game"],
-        )
-        self.assertEqual(
-            self.service._run_flatpak_command.call_args_list[1].args[0],
-            ["list", "--user", "--runtime", "--columns=application,arch,branch"],
-        )
-        self.assertEqual(
-            self.service._run_flatpak_command.call_args_list[2].args[0],
-            ["list", "--system", "--runtime", "--columns=application,arch,branch"],
-        )
-
-    def test_resolve_maps_kde_and_gnome_runtimes_from_gl_metadata(self):
-        metadata = "[Extension org.freedesktop.Platform.GL]\nversions=25.08;25.08-extra;1.4\n"
-        for runtime in ("org.kde.Platform/x86_64/6.10", "org.gnome.Platform/x86_64/49"):
-            with self.subTest(runtime=runtime):
-                self.service._run_flatpak_command.reset_mock()
-                self.runtime_ref = runtime
-                self.runtime_metadata = metadata
-                response = self.service.resolve_app_support("com.example.Game")
-                self.assertEqual(response["runtime_branch"], "25.08")
-                self.assertEqual(response["support_status"], "needs-runtime")
-                self.assertEqual(
-                    self.service._run_flatpak_command.call_args_list[1].args[0],
-                    ["info", "--show-metadata", runtime],
-                )
-
-    def test_system_extension_is_ready_without_installing_a_user_copy(self):
-        self.system_branches = {"24.08"}
-
-        response = self.service.ensure_app_support("com.example.Game")
-
-        self.assertTrue(response["success"])
-        self.assertEqual(response["support_status"], "ready")
-        self.assertEqual(
-            [call.args[0][0] for call in self.service._run_flatpak_command.call_args_list],
-            ["info", "list", "list"],
-        )
-        self.assertFalse(any(call.args[0][0] == "install" for call in self.service._run_flatpak_command.call_args_list))
-
-    def test_install_records_only_a_new_user_owned_branch(self):
-        response = self.service.install_extension("24.08")
-
-        self.assertTrue(response["success"])
-        self.assertTrue(response["enabled"])
-        self.assertTrue(response["installed"])
-        install_args = self.service._run_flatpak_command.call_args_list[2].args[0]
-        self.assertEqual(install_args[:4], ["install", "--user", "--noninteractive", "--or-update"])
-        self.assertEqual(
-            json.loads(self.service.ownership_path.read_text(encoding="utf-8")),
-            {"version": 1, "plugin_owned_branches": ["24.08"]},
-        )
-
-    def test_preexisting_branch_is_not_claimed_or_removed(self):
-        self.user_branches = {"24.08"}
-
-        install_response = self.service.install_extension("24.08")
-        cleanup_response = self.service.remove_plugin_owned_extensions()
-
-        self.assertTrue(install_response["success"])
-        self.assertTrue(install_response["enabled"])
-        self.assertTrue(install_response["installed"])
-        self.assertFalse(self.service.ownership_path.exists())
-        self.assertTrue(cleanup_response["success"])
-        self.assertEqual(self.service._run_flatpak_command.call_count, 2)
-
-    def test_extension_toggle_preserves_preexisting_branch(self):
-        self.user_branches = {"24.08"}
-
-        enable_response = self.service.set_extension_enabled("24.08", True)
-        disable_response = self.service.set_extension_enabled("24.08", False)
-
-        self.assertTrue(enable_response["success"])
-        self.assertTrue(enable_response["enabled"])
-        self.assertTrue(enable_response["installed"])
-        self.assertTrue(disable_response["success"])
-        self.assertTrue(disable_response["enabled"])
-        self.assertTrue(disable_response["installed"])
-        self.assertFalse(disable_response["removed"])
         self.assertEqual(self.user_branches, {"24.08"})
-        self.assertEqual(
-            [call.args[0][0] for call in self.service._run_flatpak_command.call_args_list],
-            ["list", "list", "list", "list"],
-        )
+        status = self.service._app_override_status("com.example.Game")
+        self.assertTrue(status["prepared"])
+        content = self.service._override_path("com.example.Game").read_text(encoding="utf-8")
+        self.assertIn(str(self.service.config_dir) + ":ro", content)
+        self.assertIn(str(self.dll_dir) + ":ro", content)
+        self.assertIn("LSFGVK_CONFIG=" + str(self.service.config_file_path), content)
+        self.assertIn("LSFGVK_FLATPAK=1", content)
+        self.assertNotIn("ENABLE_GAMESCOPE_WSI", content)
+        state = json.loads(self.service.ownership_path.read_text(encoding="utf-8"))
+        self.assertEqual(state["plugin_owned_branches"], ["24.08"])
+        self.assertIn("com.example.Game", state["prepared_apps"])
 
-    def test_extension_toggle_removes_owned_user_branch_but_preserves_system_branch(self):
-        self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
-        self.service.ownership_path.write_text(
-            json.dumps({"version": 1, "plugin_owned_branches": ["24.08"]}),
+    def test_prepare_is_idempotent(self):
+        first = self.service.prepare_app("com.example.Game")
+        first_content = self.service._override_path("com.example.Game").read_bytes()
+        second = self.service.prepare_app("com.example.Game")
+
+        self.assertTrue(first["success"])
+        self.assertTrue(second["success"])
+        self.assertEqual(first_content, self.service._override_path("com.example.Game").read_bytes())
+        install_calls = [call for call in self.service._run_flatpak_command.call_args_list if call.args[0][0] == "install"]
+        self.assertEqual(len(install_calls), 1)
+
+    def test_preinstalled_runtime_is_not_owned(self):
+        self.system_branches = {"24.08"}
+        response = self.service.prepare_app("com.example.Game")
+
+        self.assertTrue(response["success"])
+        state = json.loads(self.service.ownership_path.read_text(encoding="utf-8"))
+        self.assertEqual(state["plugin_owned_branches"], [])
+        self.assertIn("com.example.Game", state["prepared_apps"])
+
+    def test_external_preparation_is_preserved(self):
+        path = self.service._override_path("com.example.Game")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            self._serialize_override(
+                [str(self.service.config_dir) + ":ro", str(self.dll_dir) + ":ro"],
+                ["DISABLE_LSFGVK", "DISABLE_LSFG"],
+                {
+                    "LSFGVK_CONFIG": str(self.service.config_file_path),
+                    "LSFGVK_FLATPAK": "1",
+                },
+            ),
             encoding="utf-8",
         )
-        self.user_branches = {"24.08"}
         self.system_branches = {"24.08"}
 
-        disable_response = self.service.set_extension_enabled("24.08", False)
-        repeat_response = self.service.set_extension_enabled("24.08", False)
+        response = self.service.prepare_app("com.example.Game")
 
-        self.assertTrue(disable_response["success"])
-        self.assertTrue(disable_response["enabled"])
-        self.assertTrue(disable_response["removed"])
-        self.assertTrue(repeat_response["success"])
-        self.assertTrue(repeat_response["enabled"])
-        self.assertTrue(repeat_response["installed"])
-        self.assertEqual(self.user_branches, set())
-        self.assertEqual(self.system_branches, {"24.08"})
+        self.assertTrue(response["success"])
+        self.assertTrue(response["prepared"])
+        self.assertFalse(response["owned"])
         self.assertFalse(self.service.ownership_path.exists())
-        uninstall_commands = [
-            call.args[0]
-            for call in self.service._run_flatpak_command.call_args_list
-            if call.args[0][0] == "uninstall"
-        ]
-        self.assertEqual(len(uninstall_commands), 1)
+
+    def test_remove_restores_exact_previous_override(self):
+        original = "[Context]\nfilesystems=~/Documents;\n\n[Environment]\nFOO=bar\n"
+        path = self.service._override_path("com.example.Game")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(original, encoding="utf-8")
+        self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
+
+        response = self.service.remove_app_override("com.example.Game")
+
+        self.assertTrue(response["success"])
+        self.assertEqual(path.read_text(encoding="utf-8"), original)
+        self.assertFalse(self.service.ownership_path.exists())
+
+    def test_remove_deletes_override_created_by_plugin(self):
+        self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
+        path = self.service._override_path("com.example.Game")
+        self.assertTrue(path.exists())
+
+        response = self.service.remove_app_override("com.example.Game")
+
+        self.assertTrue(response["success"])
+        self.assertFalse(path.exists())
+
+    def test_remove_fails_closed_after_external_change(self):
+        self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
+        path = self.service._override_path("com.example.Game")
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write("EXTERNAL=1\n")
+
+        response = self.service.remove_app_override("com.example.Game")
+
+        self.assertFalse(response["success"])
+        self.assertIn("changed after preparation", response["error"])
+        self.assertTrue(path.exists())
+        self.assertTrue(self.service.ownership_path.exists())
+
+    def test_full_cleanup_removes_only_owned_state(self):
+        self.system_branches = {"23.08"}
+        self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
+        self.assertEqual(self.user_branches, {"24.08"})
+
+        response = self.service.remove_plugin_owned_environment()
+
+        self.assertTrue(response["success"])
+        self.assertEqual(response["removed_apps"], ["com.example.Game"])
+        self.assertEqual(response["removed_branches"], ["24.08"])
+        self.assertEqual(self.user_branches, set())
+        self.assertEqual(self.system_branches, {"23.08"})
+        self.assertFalse(self.service.ownership_path.exists())
 
     def test_corrupt_ownership_metadata_fails_closed(self):
-        self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
         self.service.ownership_path.write_text("{not-json", encoding="utf-8")
 
-        response = self.service.remove_plugin_owned_extensions()
+        response = self.service.remove_plugin_owned_environment()
 
         self.assertFalse(response["success"])
-        self.assertTrue(response["ownership_uncertain"])
         self.assertEqual(self.service._run_flatpak_command.call_count, 0)
-
-    def test_dangling_ownership_symlink_fails_closed(self):
-        self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
-        self.service.ownership_path.symlink_to(self.home / "missing-metadata")
-
-        response = self.service.remove_plugin_owned_extensions()
-
-        self.assertFalse(response["success"])
-        self.assertTrue(response["ownership_uncertain"])
-        self.assertEqual(self.service._run_flatpak_command.call_count, 0)
-
-    def test_ensure_app_support_installs_only_the_app_runtime_branch(self):
-        response = self.service.ensure_app_support("com.example.Game")
-
-        self.assertTrue(response["success"])
-        self.assertEqual(response["support_status"], "ready")
-        self.assertEqual(response["runtime_branch"], "24.08")
-        install_args = next(
-            call.args[0]
-            for call in self.service._run_flatpak_command.call_args_list
-            if call.args[0][0] == "install"
-        )
-        self.assertEqual(install_args[0], "install")
-        self.assertIn("--user", install_args)
-        self.assertNotIn("23.08", install_args)
-        self.assertEqual(
-            json.loads(self.service.ownership_path.read_text(encoding="utf-8")),
-            {"version": 1, "plugin_owned_branches": ["24.08"]},
-        )
-
-    def test_two_shortcuts_using_one_flatpak_share_one_extension_branch(self):
-        first = self.service.ensure_app_support("net.pcsx2.PCSX2")
-        second = self.service.ensure_app_support("net.pcsx2.PCSX2.Dev")
-
-        self.assertEqual(first["support_status"], "ready")
-        self.assertEqual(second["support_status"], "ready")
-        install_commands = [
-            call.args[0]
-            for call in self.service._run_flatpak_command.call_args_list
-            if call.args[0][0] == "install"
-        ]
-        self.assertEqual(len(install_commands), 1)
-        self.assertEqual(
-            json.loads(self.service.ownership_path.read_text(encoding="utf-8")),
-            {"version": 1, "plugin_owned_branches": ["24.08"]},
-        )
-
-    def test_cleanup_removes_all_owned_branches_without_reusing_stale_metadata(self):
-        self.service.ownership_path.parent.mkdir(parents=True, exist_ok=True)
-        self.service.ownership_path.write_text(
-            json.dumps({"version": 1, "plugin_owned_branches": ["23.08", "24.08"]}),
-            encoding="utf-8",
-        )
-        self.user_branches = {"23.08", "24.08"}
-
-        response = self.service.remove_plugin_owned_extensions()
-
-        self.assertTrue(response["success"])
-        self.assertEqual(response["removed_branches"], ["23.08", "24.08"])
-        self.assertFalse(self.service.ownership_path.exists())
-        uninstall_commands = [
-            call.args[0]
-            for call in self.service._run_flatpak_command.call_args_list
-            if call.args[0][0] == "uninstall"
-        ]
-        self.assertEqual(len(uninstall_commands), 2)
 
 
 if __name__ == "__main__":
