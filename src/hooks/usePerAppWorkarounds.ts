@@ -43,7 +43,6 @@ export interface WorkaroundSnapshot {
   wrapperOwned: boolean;
   integrationInstalled: boolean;
   commandTokenAdded: boolean;
-  directFlatpak: boolean;
 }
 
 interface PerAppWorkarounds {
@@ -62,7 +61,6 @@ function makeSnapshot(
   steam: SteamLaunchOptionsSnapshot,
   result: Awaited<ReturnType<typeof getWorkaroundState>>,
   nonSteam: boolean,
-  directFlatpak: boolean,
 ): WorkaroundSnapshot {
   if (!result.state) throw new Error("Workaround state is not initialized for this profile");
   const wrapperPath = result.wrapper_path || getDefaultWrapperPath();
@@ -71,34 +69,26 @@ function makeSnapshot(
     state: result.state,
     wrapperPath,
     wrapperOwned: result.wrapper_owned === true,
-    integrationInstalled: isWrapperIntegrationInstalled(steam, nonSteam, directFlatpak, wrapperPath),
+    integrationInstalled: isWrapperIntegrationInstalled(steam, nonSteam, wrapperPath),
     commandTokenAdded: result.command_token_added === true,
-    directFlatpak,
   };
 }
 
 async function adoptWorkaroundState(
   appId: string,
   nonSteam: boolean,
-  directFlatpak: boolean,
   wrapperPath: string,
 ): Promise<WorkaroundSnapshot> {
   let integration: Awaited<ReturnType<typeof installWrapperIntegration>> | null = null;
   try {
-    integration = await installWrapperIntegration(
-      Number(appId),
-      nonSteam,
-      wrapperPath,
-      false,
-      directFlatpak,
-    );
+    integration = await installWrapperIntegration(Number(appId), nonSteam, wrapperPath, false);
     const finalized = await setWorkaroundState(
       appId,
       DEFAULT_WORKAROUND_STATE,
       integration.commandTokenAdded,
     );
     if (!finalized.success) throw new Error(finalized.error || "Could not finalize workaround state");
-    return makeSnapshot(integration.snapshot, finalized, nonSteam, directFlatpak);
+    return makeSnapshot(integration.snapshot, finalized, nonSteam);
   } catch (error) {
     let rollbackSucceeded = true;
     if (integration?.changed) {
@@ -108,7 +98,6 @@ async function adoptWorkaroundState(
           nonSteam,
           wrapperPath,
           integration.commandTokenAdded,
-          directFlatpak,
         );
       } catch {
         rollbackSucceeded = false;
@@ -122,11 +111,7 @@ async function adoptWorkaroundState(
   }
 }
 
-export function usePerAppWorkarounds(
-  appId: string,
-  nonSteam: boolean,
-  directFlatpak = false,
-): PerAppWorkarounds {
+export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWorkarounds {
   const [status, setStatus] = useState<WorkaroundLoadStatus>("loading");
   const [snapshot, setSnapshot] = useState<WorkaroundSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,12 +128,11 @@ export function usePerAppWorkarounds(
       return adoptWorkaroundState(
         appId,
         nonSteam,
-        directFlatpak,
         result.wrapper_path || getDefaultWrapperPath(),
       );
     }
-    return makeSnapshot(steam, result, nonSteam, directFlatpak);
-  }, [appId, directFlatpak, nonSteam, numericAppId]);
+    return makeSnapshot(steam, result, nonSteam);
+  }, [appId, nonSteam, numericAppId]);
 
   const applySnapshot = useCallback((next: WorkaroundSnapshot) => {
     setSnapshot(next);
@@ -183,12 +167,7 @@ export function usePerAppWorkarounds(
           setSnapshot((current) => current ? {
             ...current,
             steam,
-            integrationInstalled: isWrapperIntegrationInstalled(
-              steam,
-              nonSteam,
-              current.directFlatpak,
-              current.wrapperPath,
-            ),
+            integrationInstalled: isWrapperIntegrationInstalled(steam, nonSteam, current.wrapperPath),
           } : current);
         },
         (subscriptionError) => {
