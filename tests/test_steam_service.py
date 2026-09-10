@@ -25,6 +25,13 @@ class SteamTransportTests(unittest.TestCase):
         )
         self.assertEqual(
             classify_shortcut_transport(
+                "flatpak",
+                "run com.example.PCSX2 --fullscreen",
+            ),
+            {"kind": "flatpak", "flatpakAppId": "com.example.PCSX2"},
+        )
+        self.assertEqual(
+            classify_shortcut_transport(
                 "/usr/bin/flatpak run com.example.PCSX2",
                 "--fullscreen",
             ),

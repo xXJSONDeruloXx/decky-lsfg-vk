@@ -35,7 +35,7 @@ def classify_shortcut_transport(executable: Optional[str], launch_options: Optio
     option_tokens = _split_command(launch_options)
     if executable_tokens is None or option_tokens is None or not executable_tokens:
         return {"kind": "host"}
-    direct_flatpak = executable_tokens[0] == "/usr/bin/flatpak"
+    direct_flatpak = executable_tokens[0] in {"flatpak", "/usr/bin/flatpak"}
     managed_wrapper = len(executable_tokens) == 1 and _is_managed_wrapper(executable_tokens[0])
     if not direct_flatpak and not managed_wrapper:
         return {"kind": "host"}

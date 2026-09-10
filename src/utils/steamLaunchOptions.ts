@@ -166,8 +166,10 @@ const usesShortcutTarget = (nonSteam: boolean, transport: TargetTransport) => no
 
 function selectFlatpakExecutable(transport: TargetTransport, candidate?: string | null): string | undefined {
   if (transport.kind !== "flatpak") return undefined;
-  const value = candidate?.trim();
-  return value ? (value.startsWith("/") ? value : "/usr/bin/flatpak") : undefined;
+  const value = candidate?.trim() ? decodeToken(candidate.trim()) : "";
+  if (value === "flatpak") return "/usr/bin/flatpak";
+  if (value === "/usr/bin/flatpak") return value;
+  return undefined;
 }
 
 export const normalizeLaunchOptions = (options: string) => serialize(tokenize(options));
@@ -405,6 +407,9 @@ export function installWrapperIntegration(
         throw new Error("Shortcut Target changed externally; refusing to replace it");
       }
       const currentOriginal = selectFlatpakExecutable(transport, current.target);
+      if (!currentOriginal || (originalExecutable && !savedOriginal)) {
+        throw new Error("Flatpak shortcut Target is not a supported executable");
+      }
       const value = await writeVerified(
         appId, true, current.target, wrapperPath,
         (target) => writeTarget(appId, target), readTarget,

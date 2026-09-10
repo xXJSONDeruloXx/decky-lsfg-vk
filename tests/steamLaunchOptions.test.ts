@@ -83,7 +83,7 @@ test("reads the matching app-details field and installs/removes Steam integratio
   const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
   let appOptions = "FOO=bar %command%";
   let shortcutOptions = "--windowed";
-  let shortcutTarget = "/usr/bin/example-game";
+  let shortcutTarget = '"flatpak"';
   const appWrites: string[] = [];
   const shortcutWrites: string[] = [];
   const targetWrites: string[] = [];
@@ -123,12 +123,12 @@ test("reads the matching app-details field and installs/removes Steam integratio
     assert.equal(shortcutWrites.length, 0);
 
     const shortcut = await installWrapperIntegration(43, true, wrapper, false, { kind: "flatpak", flatpakAppId: "com.example.Game" });
-    assert.equal(shortcut.originalExecutable, "/usr/bin/example-game");
+    assert.equal(shortcut.originalExecutable, "/usr/bin/flatpak");
     assert.equal(shortcut.snapshot.target, wrapper);
     assert.deepEqual(targetWrites, [wrapper]);
     const restored = await removeWrapperIntegration(43, true, wrapper, shortcut.originalExecutable, false, { kind: "flatpak", flatpakAppId: "com.example.Game" });
-    assert.equal(restored.target, "/usr/bin/example-game");
-    assert.deepEqual(targetWrites, [wrapper, "/usr/bin/example-game"]);
+    assert.equal(restored.target, "/usr/bin/flatpak");
+    assert.deepEqual(targetWrites, [wrapper, "/usr/bin/flatpak"]);
     assert.equal(shortcutWrites.length, 0);
 
     const cleaned = await removeWrapperIntegration(42, false, wrapper, undefined, installed.commandTokenAdded);
@@ -198,12 +198,13 @@ test("fails closed when shortcut Target ownership or setters are unavailable", a
   (globalThis as Record<string, unknown>).SteamClient = {
     Apps: {
       RegisterForAppDetails(_appId: number, callback: (details: SteamAppDetails) => void) {
-        callback({ strShortcutExe: "/usr/bin/other", strShortcutLaunchOptions: "" });
+        callback({ strShortcutExe: _appId === 99 ? "/usr/bin/flatpak" : "garbage", strShortcutLaunchOptions: "" });
         return { unregister() {} };
       },
     },
   };
   try {
+    await assert.rejects(installWrapperIntegration(98, true, wrapper, false, { kind: "flatpak", flatpakAppId: "com.example.Game" }), /supported executable/);
     await assert.rejects(installWrapperIntegration(99, true, wrapper, false, { kind: "flatpak", flatpakAppId: "com.example.Game" }), /Target API is unavailable/);
     await assert.rejects(removeWrapperIntegration(99, true, wrapper, "/usr/bin/original", false, { kind: "flatpak", flatpakAppId: "com.example.Game" }), /Target changed externally/);
   } finally {
@@ -218,7 +219,7 @@ test("restores launch options and shortcut Target when a setter fails after chan
   const previousWindow = (globalThis as Record<string, unknown>).window;
   const previousSteamClient = (globalThis as Record<string, unknown>).SteamClient;
   let appOptions = "FOO=bar %command%";
-  let shortcutTarget = "/usr/bin/original";
+  let shortcutTarget = "/usr/bin/flatpak";
   const appWrites: string[] = [];
   const targetWrites: string[] = [];
   const apps = {
@@ -247,8 +248,8 @@ test("restores launch options and shortcut Target when a setter fails after chan
     assert.deepEqual(appWrites, [`FOO=bar ${wrapper} %command%`, "FOO=bar %command%"]);
 
     await assert.rejects(installWrapperIntegration(43, true, wrapper, false, { kind: "flatpak", flatpakAppId: "com.example.Game" }), /simulated Target write failure/);
-    assert.equal(shortcutTarget, "/usr/bin/original");
-    assert.deepEqual(targetWrites, [wrapper, "/usr/bin/original"]);
+    assert.equal(shortcutTarget, "/usr/bin/flatpak");
+    assert.deepEqual(targetWrites, [wrapper, "/usr/bin/flatpak"]);
   } finally {
     if (previousWindow === undefined) delete (globalThis as Record<string, unknown>).window;
     else (globalThis as Record<string, unknown>).window = previousWindow;
