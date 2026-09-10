@@ -113,6 +113,6 @@ class ConfigurationManager:
                 **profile,
                 **global_config,
             })
-            if config["active_in"]:
+            if name or config["active_in"]:
                 profiles[name] = config
         return {"profiles": profiles, "global_config": global_config}
