@@ -213,6 +213,7 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertFalse(self.service.ownership_path.exists())
 
     def test_remove_restores_exact_previous_override(self):
+        self.system_branches = {"24.08"}
         original = "[Context]\nfilesystems=~/Documents;\n\n[Environment]\nFOO=bar\n"
         path = self.service._override_path("com.example.Game")
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -226,6 +227,7 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertFalse(self.service.ownership_path.exists())
 
     def test_remove_deletes_override_created_by_plugin(self):
+        self.system_branches = {"24.08"}
         self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
         path = self.service._override_path("com.example.Game")
         self.assertTrue(path.exists())
@@ -234,8 +236,10 @@ class FlatpakServiceTests(unittest.TestCase):
 
         self.assertTrue(response["success"])
         self.assertFalse(path.exists())
+        self.assertFalse(self.service.ownership_path.exists())
 
     def test_remove_fails_closed_after_external_change(self):
+        self.system_branches = {"24.08"}
         self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
         path = self.service._override_path("com.example.Game")
         with path.open("a", encoding="utf-8") as handle:
