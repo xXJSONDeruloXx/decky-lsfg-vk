@@ -11,6 +11,8 @@ from .constants import (
 )
 
 _WRAPPER_TOKEN = f"~/{WRAPPER_FILENAME}"
+_LEGACY_WRAPPER_NAMES = {"lsfg", "lsfg-vk-experimental", "mako-run", "mako-launch"}
+_FLATPAK_TOKENS = {"flatpak", "/usr/bin/flatpak", "usr/bin/flatpak"}
 
 
 def _split_command(value: Optional[str]) -> Optional[list[str]]:
@@ -22,24 +24,19 @@ def _split_command(value: Optional[str]) -> Optional[list[str]]:
         return None
 
 
-def _is_managed_wrapper(value: str) -> bool:
+def _is_wrapper(value: str) -> bool:
     if value in {_WRAPPER_TOKEN, f"$HOME/{WRAPPER_FILENAME}"}:
         return True
-    path = Path(value)
-    return path.is_absolute() and path.name == WRAPPER_FILENAME
+    return Path(value).name in _LEGACY_WRAPPER_NAMES or Path(value).name == WRAPPER_FILENAME
 
 
 def is_direct_flatpak_shortcut(executable: Optional[str]) -> bool:
     tokens = _split_command(executable)
     if not tokens:
         return False
-    if tokens[0] in {"flatpak", "/usr/bin/flatpak"}:
+    if tokens[0] in _FLATPAK_TOKENS:
         return True
-    return (
-        len(tokens) == 2
-        and _is_managed_wrapper(tokens[0])
-        and tokens[1] == "/usr/bin/flatpak"
-    )
+    return len(tokens) == 2 and _is_wrapper(tokens[0]) and tokens[1] in _FLATPAK_TOKENS
 
 
 def _first_string(values: Dict[str, object], *keys: str) -> Optional[str]:
