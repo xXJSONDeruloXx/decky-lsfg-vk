@@ -66,7 +66,6 @@ export interface WorkaroundStateResult extends ApiResult {
   state?: WorkaroundState | null;
   wrapper_path?: string;
   wrapper_owned?: boolean;
-  shortcut_exe?: string | null;
   command_token_added?: boolean;
 }
 
@@ -160,7 +159,6 @@ export const getWorkaroundState = callable<[string], WorkaroundStateResult>("get
 export const setWorkaroundState = callable<[
   string,
   WorkaroundState,
-  string | null | undefined,
   boolean,
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
