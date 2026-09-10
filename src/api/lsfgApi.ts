@@ -102,21 +102,6 @@ export interface DebugFileContentsResult extends ApiResult {
   files?: DebugFileContent[];
 }
 
-export interface FlatpakExtensionStatus extends ApiResult {
-  message: string;
-  available: boolean;
-  extension_id: string;
-  supported_branches: string[];
-  installed_branches: string[];
-}
-
-export interface FlatpakExtensionToggleResult extends ApiResult {
-  message: string;
-  runtime_branch: string;
-  enabled: boolean;
-  installed: boolean;
-}
-
 export interface FlatpakApp {
   app_id: string;
   app_name: string;
@@ -145,11 +130,9 @@ export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-export const getFlatpakSupportStatus = callable<[], FlatpakExtensionStatus>("get_flatpak_support_status");
 export const getFlatpakApps = callable<[], FlatpakAppsResult>("get_flatpak_apps");
 export const prepareFlatpakApp = callable<[string], FlatpakAppResult>("prepare_flatpak_app");
 export const removeFlatpakApp = callable<[string], FlatpakAppResult>("remove_flatpak_app");
-export const setFlatpakExtensionEnabled = callable<[string, boolean], FlatpakExtensionToggleResult>("set_flatpak_extension_enabled");
 export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
