@@ -1,5 +1,5 @@
 import { Tabs } from "@decky/ui";
-import { useEffect, useRef, useState, type FocusEvent } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import { FaCube, FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { useFlatpakConfiguration } from "../hooks/useFlatpakConfiguration";
@@ -141,6 +141,10 @@ export function Content() {
     />
   );
 
+  const tabContent = (content: ReactNode) => (
+    <div className="lsfg-vk-tab-content">{content}</div>
+  );
+
   const nowPlaying = nowPlayingTarget?.kind === "steam" ? (
     <NowPlayingTab
       game={nowPlayingTarget.game}
@@ -159,11 +163,11 @@ export function Content() {
 
   const tabs = setupComplete
     ? [
-        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying }] : []),
+        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: tabContent(nowPlaying) }] : []),
         {
           id: "Games",
           title: tabIcons.games,
-          content: (
+          content: tabContent(
             <ConfigurationTab
               config={config}
               targets={targets}
@@ -177,13 +181,13 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
-            />
+            />,
           ),
         },
         {
           id: "Flatpak",
           title: tabIcons.flatpak,
-          content: (
+          content: tabContent(
             <FlatpakTab
               apps={flatpak.apps}
               runningApp={runningFlatpak}
@@ -194,13 +198,13 @@ export function Content() {
               onRemove={flatpak.removeApp}
               onConfigChange={flatpak.updateConfig}
               onWorkaroundChange={flatpak.updateWorkarounds}
-            />
+            />,
           ),
         },
-        ...(showDebugTab ? [{ id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> }] : []),
-        { id: "Setup", title: tabIcons.setup, content: setup },
+        ...(showDebugTab ? [{ id: "ConfigFile", title: tabIcons.configFile, content: tabContent(<ConfigFileTab />) }] : []),
+        { id: "Setup", title: tabIcons.setup, content: tabContent(setup) },
       ]
-    : [{ id: "Setup", title: tabIcons.setup, content: setup }];
+    : [{ id: "Setup", title: tabIcons.setup, content: tabContent(setup) }];
 
   const availableTabIds = new Set(tabs.map(({ id }) => id));
   const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Games" : "Setup";

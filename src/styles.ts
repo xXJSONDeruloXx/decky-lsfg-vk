@@ -10,6 +10,10 @@ export const tabStyles = `
     padding-right: 8px !important;
   }
 
+  .lsfg-vk-tabs .lsfg-vk-tab-content {
+    padding-bottom: 96px; // workaround for in-game bottom bar padding behaving differently than in launcher, remove later?
+  }
+
   .lsfg-vk-tabs [role="tablist"] {
     display: flex;
     flex-wrap: nowrap;
