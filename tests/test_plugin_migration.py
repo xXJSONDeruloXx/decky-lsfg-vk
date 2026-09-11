@@ -66,13 +66,14 @@ class PluginMigrationTests(unittest.TestCase):
             plugin.wrapper_service = Mock()
             plugin.flatpak_service.remove_plugin_owned_environment.return_value = {"success": True}
             plugin.configuration_service.reset_all_flatpak_configs.return_value = {"success": True}
-            plugin.wrapper_service.purge.return_value = {"success": True}
+            plugin.wrapper_service.neutralize.return_value = {"success": True}
 
             asyncio.run(plugin._uninstall())
 
             plugin.flatpak_service.remove_plugin_owned_environment.assert_called_once_with()
             plugin.configuration_service.reset_all_flatpak_configs.assert_called_once_with()
-            plugin.wrapper_service.purge.assert_called_once_with()
+            plugin.wrapper_service.neutralize.assert_called_once_with()
+            plugin.wrapper_service.purge.assert_not_called()
             plugin.installation_service.cleanup_on_uninstall.assert_called_once_with()
         finally:
             self._restore(previous_decky, previous_tomllib, previous_plugin)

@@ -187,6 +187,24 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertTrue(self.service.wrapper_path.exists())
         self.assertTrue(self.service.sidecar_path.exists())
 
+    def test_neutralize_leaves_dependency_free_passthrough_wrapper(self):
+        self.service.set("123", self._state())
+        response = self.service.neutralize()
+        self.assertTrue(response["success"])
+        self.assertFalse(self.service.sidecar_path.exists())
+        self.assertTrue(self.service.wrapper_path.exists())
+        content = self.service.wrapper_path.read_text(encoding="utf-8")
+        self.assertIn(self.service.MARKER, content)
+        self.assertNotIn("LSFGVK_CONFIG", content)
+        self.assertEqual(self._run(123, "/usr/bin/printf", "ok").stdout, "ok")
+
+    def test_neutralize_refuses_foreign_wrapper(self):
+        self.service.wrapper_path.write_text("#!/bin/sh\necho foreign\n", encoding="utf-8")
+        response = self.service.neutralize()
+        self.assertFalse(response["success"])
+        self.assertIn("unowned", response["error"])
+        self.assertEqual(self.service.wrapper_path.read_text(encoding="utf-8"), "#!/bin/sh\necho foreign\n")
+
 
 if __name__ == "__main__":
     unittest.main()

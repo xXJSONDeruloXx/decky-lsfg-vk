@@ -34,14 +34,14 @@ class Plugin:
     async def check_lsfg_vk_installed(self):
         return self.installation_service.check_installation()
 
-    def _cleanup_runtime_state(self):
+    def _cleanup_runtime_state(self, preserve_wrapper: bool = False):
         flatpak = self.flatpak_service.remove_plugin_owned_environment()
         if not flatpak.get("success"):
             return flatpak.get("error") or "Could not clean up Flatpak support"
         profiles = self.configuration_service.reset_all_flatpak_configs()
         if not profiles.get("success"):
             return profiles.get("error") or "Could not remove Flatpak profiles"
-        wrapper = self.wrapper_service.purge()
+        wrapper = self.wrapper_service.neutralize() if preserve_wrapper else self.wrapper_service.purge()
         if not wrapper.get("success"):
             return wrapper.get("error") or "Could not remove workaround state"
         return None
@@ -190,7 +190,7 @@ class Plugin:
     async def _uninstall(self):
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         try:
-            error = self._cleanup_runtime_state()
+            error = self._cleanup_runtime_state(preserve_wrapper=True)
             if error:
                 decky.logger.warning(f"Preserving lsfg-vk files because uninstall cleanup failed: {error}")
                 return

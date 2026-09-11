@@ -427,3 +427,38 @@ class WrapperService(BaseService):
                 "error": str(error),
                 "removed_files": removed or None,
             }
+
+    def neutralize(self) -> Dict[str, Any]:
+        """Leave an owned passthrough wrapper for Decky-level uninstall.
+
+        Decky can remove this plugin without giving the frontend a chance to
+        clean Steam launch options first.  Keeping a dependency-free wrapper
+        prevents those options from turning into a broken executable path.
+        """
+        try:
+            with self._lock:
+                _document, sidecar_exists, _ = self._read_document()
+                self._assert_wrapper_owned_or_absent()
+                self._write_file(
+                    self.wrapper_path,
+                    "#!/bin/sh\n"
+                    f"{self.MARKER}\n"
+                    "# Safe passthrough retained for existing Steam launch options.\n"
+                    "exec \"$@\"\n",
+                    0o755,
+                )
+                if sidecar_exists:
+                    self.sidecar_path.unlink()
+            return {
+                "success": True,
+                "message": "Replaced lsfg-vk wrapper with a safe passthrough",
+                "error": None,
+                "removed_files": [str(self.sidecar_path)] if sidecar_exists else [],
+            }
+        except Exception as error:
+            return {
+                "success": False,
+                "message": "",
+                "error": str(error),
+                "removed_files": None,
+            }
