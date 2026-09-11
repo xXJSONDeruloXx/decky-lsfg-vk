@@ -1,6 +1,5 @@
 # Decky LSFG-VK
 
-> **Note:**  
 > This is an **unofficial community plugin**. It is independently developed and **not officially supported** by the creators of Lossless Scaling or lsfg-vk. For support, please use the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3).
 
 
@@ -14,26 +13,26 @@
 </p>
 
 
-## What is this?
-
-A Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://lsfg-vk.dev/)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
+Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk** ([Lossless Scaling Frame Generation Vulkan layer](https://lsfg-vk.dev/)) on Steam Deck, allowing you to use the Lossless Scaling frame generation features on Linux with a controller friendly UI in SteamOS, Bazzite, or any other Linux platform compatible with Decky Loader.
 
 ## Installation
 
 1. **Download the plugin** from the [releases tab](https://github.com/xXJSONDeruloXx/decky-lsfg-vk/releases)
-   - Download the "decky-lsfg-vk.zip" file to your Steam Deck
+   - Download the "Decky LSFG-VK.zip" file to your Steam Deck
 2. **Install manually through Decky**:
    - In Game Mode, go to the settings cog in the top right of the Decky Loader tab
    - Enable "Developer Mode"
    - Go to "Developer" tab and select "Install Plugin from Zip"
-   - Select the downloaded "decky-lsfg-vk.zip" file
+   - Select the downloaded "Decky LSFG-VK.zip" file
 
 ## How to Use
 
 1. **Purchase and install** [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/) from Steam
+2. **Switch Branch** In the Lossless Scaling Steam app, go to Properties > Game Versions & Betas > select "lsfg-vk" branch, and let Steam download the new version
 2. **Open the plugin** from the Decky menu
 3. **Click "Install lsfg-vk"** to automatically set up the lsfg-vk vulkan layer
 4. **Configure settings** using the plugin's UI - select Default or a running/configured game and adjust the upstream lsfg-vk settings
+5. **Configure Flatpak apps** in the Flatpak tab individually or with **Enable all** and **Remove all profiles**
 6. **Launch your game** - frame generation activates when the game's Steam AppID matches an assigned upstream profile
 
 ### Core Settings
