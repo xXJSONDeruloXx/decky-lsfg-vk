@@ -12,12 +12,34 @@ from .constants import (
 class SteamService(BaseService):
     DEFAULT_BRANCH = "public"
     MANIFEST_FILENAME = f"appmanifest_{STEAM_LOSSLESS_SCALING_APP_ID}.acf"
+    # Valve compatibility tools, runtimes, Steamworks redistributables, and LSFG.
     GAME_SELECTOR_EXCLUDED_APPIDS = {
-        "858280", "961940", "1054830", "1113280", "1245040", "1420170",
-        "1493710", "1580130", "1887720", "2180100", "228980", "2348590",
-        "2805730", "3029110", "3127680", "3658110", "4183110", "4185400",
-        "4427310", "4628710", "4628740", "4690330", "993090", "1070560",
-        "1391110", "1628350",
+        "858280",   # Proton 3.7
+        "961940",   # Proton 3.16
+        "1054830",  # Proton 4.2
+        "1113280",  # Proton 4.11
+        "1245040",  # Proton 5.0
+        "1420170",  # Proton 5.13
+        "1493710",  # Proton Experimental
+        "1580130",  # Proton 6.3
+        "1887720",  # Proton 7
+        "2180100",  # Proton Hotfix
+        "228980",   # Steamworks Common Redistributables
+        "2348590",  # Proton 8
+        "2805730",  # Proton 9
+        "3029110",  # Lepton
+        "3127680",  # fex
+        "3658110",  # Proton 10
+        "4183110",  # Steam Linux Runtime 4.0
+        "4185400",  # Steam Linux Runtime 4.0 for arm64
+        "4427310",  # Proton Experimental (ARM64)
+        "4628710",  # Proton 11 / Proton Next
+        "4628740",  # Proton 11 (ARM64)
+        "4690330",  # Legacy Steam Runtime
+        "993090",   # Lossless Scaling
+        "1070560",  # Steam Linux Runtime 1.0
+        "1391110",  # Steam Linux Runtime 2.0
+        "1628350",  # Steam Linux Runtime 3.0
     }
 
     def _steam_roots(self):
@@ -99,11 +121,15 @@ class SteamService(BaseService):
         name = shortcut.get("AppName") or shortcut.get("appname")
         if not isinstance(appid, int) or appid == 0 or not isinstance(name, str) or not name:
             return None
-        return {
+        game = {
             "appid": str(appid & 0xFFFFFFFF),
             "name": name,
             "nonSteam": True,
         }
+        executable = shortcut.get("Exe") or shortcut.get("exe")
+        if isinstance(executable, str) and executable.strip().strip('"') in {"flatpak", "/usr/bin/flatpak"}:
+            game["isFlatpakShortcut"] = True
+        return game
 
     def _shortcut_games(self):
         games = {}

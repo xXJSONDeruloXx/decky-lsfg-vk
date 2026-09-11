@@ -6,6 +6,7 @@ export interface CollapsibleItem {
   id: string;
   label: string;
   description: string;
+  disabled?: boolean;
 }
 
 export const collapsibleItemGroupStyles = `
@@ -91,7 +92,8 @@ export function CollapsibleItemGroup({
           <Field
             label={item.label}
             description={item.description}
-            onActivate={() => onSelect(item.id)}
+            disabled={item.disabled}
+            onActivate={item.disabled ? undefined : () => onSelect(item.id)}
             highlightOnFocus
           />
         </PanelSectionRow>

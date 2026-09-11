@@ -41,6 +41,7 @@ export interface InstalledGame {
   appid: string;
   name: string;
   nonSteam: boolean;
+  isFlatpakShortcut?: boolean;
 }
 
 export interface GlobalConfig {

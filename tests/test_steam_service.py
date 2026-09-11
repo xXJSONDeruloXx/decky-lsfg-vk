@@ -15,7 +15,7 @@ from lsfg_vk.steam_service import SteamService
 
 
 class SteamShortcutTests(unittest.TestCase):
-    def test_direct_flatpak_shortcut_is_ordinary_non_steam_metadata(self):
+    def test_direct_flatpak_shortcut_is_marked(self):
         game = SteamService._shortcut_game(
             {
                 "appid": 123456,
@@ -30,6 +30,24 @@ class SteamShortcutTests(unittest.TestCase):
             "appid": "123456",
             "name": "PCSX2 shortcut",
             "nonSteam": True,
+            "isFlatpakShortcut": True,
+        })
+
+    def test_bare_flatpak_shortcut_is_marked(self):
+        game = SteamService._shortcut_game(
+            {
+                "appid": 654321,
+                "AppName": "Faugus shortcut",
+                "Exe": '"flatpak"',
+                "LaunchOptions": "run io.github.Faugus.faugus-launcher --game elliot",
+            }
+        )
+
+        self.assertEqual(game, {
+            "appid": "654321",
+            "name": "Faugus shortcut",
+            "nonSteam": True,
+            "isFlatpakShortcut": True,
         })
 
     def test_emudeck_launcher_is_ordinary_non_steam_metadata(self):

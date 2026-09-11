@@ -153,7 +153,25 @@ function tokenize(options: string): LaunchToken[] {
 }
 
 const serialize = (tokens: readonly LaunchToken[]) => tokens.map(({ raw }) => raw).join(" ");
-const commandIndex = (tokens: readonly LaunchToken[]) => tokens.findIndex((token) => token.raw.toLowerCase() === COMMAND_TOKEN);
+function isCommandToken(token: LaunchToken): boolean {
+  return token.value.toLowerCase() === COMMAND_TOKEN;
+}
+
+function isMalformedCommandToken(token: LaunchToken): boolean {
+  const value = token.value.toLowerCase();
+  return value === "%command" || value === "command%";
+}
+
+function normalizeCommandTokens(tokens: LaunchToken[]): void {
+  for (const token of tokens) {
+    if (isCommandToken(token) || isMalformedCommandToken(token)) {
+      token.raw = COMMAND_TOKEN;
+      token.value = COMMAND_TOKEN;
+    }
+  }
+}
+
+const commandIndex = (tokens: readonly LaunchToken[]) => tokens.findIndex(isCommandToken);
 const isAssignment = (token: LaunchToken) => /^[A-Za-z_][A-Za-z0-9_]*=/.test(token.value);
 const isLegacyToken = (value: string) => LEGACY_WRAPPER_TOKENS.has(value) || LEGACY_ABSOLUTE_WRAPPER.test(value);
 const isWrapperToken = (value: string, wrapperPath: string) => decodeToken(value) === wrapperPath || isLegacyWrapperToken(value);
@@ -173,9 +191,9 @@ function removeMatchingWrappers(tokens: LaunchToken[], predicate: (value: string
 function installLaunchOption(
   options: string,
   wrapperPath = DEFAULT_WRAPPER_PATH,
-  shortcutLaunchOptions = false,
 ) {
   const tokens = tokenize(options);
+  normalizeCommandTokens(tokens);
   removeMatchingWrappers(tokens, isLegacyToken);
   let command = commandIndex(tokens);
   if (command >= 0) {
@@ -185,11 +203,15 @@ function installLaunchOption(
     tokens.splice(command, 0, { raw: wrapperPath, value: wrapperPath });
     return { options: serialize(tokens), commandTokenAdded: false };
   }
+
+  const existingWrapper = tokens.findIndex((token) => decodeToken(token.value) === wrapperPath);
+  if (existingWrapper >= 0) {
+    tokens.splice(existingWrapper + 1, 0, { raw: COMMAND_TOKEN, value: COMMAND_TOKEN });
+    return { options: serialize(tokens), commandTokenAdded: true };
+  }
+
   let insertion = 0;
   while (insertion < tokens.length && isAssignment(tokens[insertion])) insertion++;
-  if (!shortcutLaunchOptions && insertion < tokens.length && !tokens[insertion].value.startsWith("-")) {
-    throw new Error("Launch options do not contain %command%; refusing to guess a launcher command");
-  }
   tokens.splice(insertion, 0,
     { raw: wrapperPath, value: wrapperPath },
     { raw: COMMAND_TOKEN, value: COMMAND_TOKEN },
@@ -207,6 +229,7 @@ export function removeWrapperLaunchOption(
   commandTokenAdded = false,
 ): string {
   const tokens = tokenize(options);
+  normalizeCommandTokens(tokens);
   if (removeMatchingWrappers(tokens, (value) => isWrapperToken(value, wrapperPath)) && commandTokenAdded) {
     const command = commandIndex(tokens);
     if (command >= 0) tokens.splice(command, 1);
@@ -345,14 +368,18 @@ export function installWrapperIntegration(
     const current = await readSteamLaunchOptions(appId, nonSteam);
     const cleaned = cleanupPluginAssignments(cleanupLegacyLaunchOptions(current.options));
     const alreadyInstalled = hasWrapperLaunchIntegration(current.options, wrapperPath);
-    const rewrite = installLaunchOption(cleaned, wrapperPath, nonSteam);
+    const rewrite = installLaunchOption(cleaned, wrapperPath);
     if (rewrite.options === current.options) return { snapshot: current, commandTokenAdded, changed: false };
     const value = await writeVerified(
       appId, nonSteam, current.options, rewrite.options,
       (options) => writeOptions(appId, nonSteam, options),
       "Steam did not accept the launch options",
     );
-    return { snapshot: value, commandTokenAdded: alreadyInstalled ? commandTokenAdded : rewrite.commandTokenAdded, changed: true };
+    return {
+      snapshot: value,
+      commandTokenAdded: alreadyInstalled ? commandTokenAdded : commandTokenAdded || rewrite.commandTokenAdded,
+      changed: true,
+    };
   });
 }
 

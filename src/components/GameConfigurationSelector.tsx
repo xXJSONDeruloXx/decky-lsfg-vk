@@ -20,6 +20,7 @@ const ENABLED_COLLAPSED_KEY = "lsfg-enabled-games-collapsed-v4";
 const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed-v3";
 
 function targetDescription(game: GameTarget): string {
+  if (game.isFlatpakShortcut) return "Non-Steam | Use Flatpak Tab";
   return game.source === "unknown"
     ? "Unknown source · excluded from bulk actions"
     : sourceLabel(game.source);
@@ -43,8 +44,8 @@ export function GameConfigurationSelector({
   });
   const enabledGames = sortGames(targets.filter((game) => game.configured));
   const availableGames = sortGames(targets.filter((game) => !game.configured));
-  const enableableGames = availableGames.filter((game) => game.source === source);
-  const removableGames = enabledGames.filter((game) => game.source === source);
+  const enableableGames = availableGames.filter((game) => game.source === source && !game.isFlatpakShortcut);
+  const removableGames = enabledGames.filter((game) => game.source === source && !game.isFlatpakShortcut);
   const sourceName = source === "nonSteam" ? "non-Steam shortcuts" : "Steam games";
   const emptyDescription = source === "nonSteam"
     ? "Steam has not reported any eligible non-Steam shortcuts"
@@ -53,6 +54,7 @@ export function GameConfigurationSelector({
     id: game.appid,
     label: game.name,
     description: targetDescription(game),
+    disabled: game.isFlatpakShortcut,
   });
   const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed(`${ENABLED_COLLAPSED_KEY}-${source}`);
   const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(`${AVAILABLE_COLLAPSED_KEY}-${source}`);

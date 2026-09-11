@@ -39,3 +39,12 @@ test("unknown configured profiles are visible in both source tabs", () => {
   assert.deepEqual(steamTargets.map((target) => target.appid).sort(), ["123", "456"]);
   assert.deepEqual(nonSteamTargets.map((target) => target.appid).sort(), ["456", "789"]);
 });
+
+test("direct Flatpak shortcuts remain non-Steam targets", () => {
+  const targets = mergeGameTargets([], [
+    { appid: "123", name: "Flatpak shortcut", nonSteam: true, isFlatpakShortcut: true },
+  ], []);
+
+  assert.equal(targets[0].source, "nonSteam");
+  assert.equal(targets[0].isFlatpakShortcut, true);
+});

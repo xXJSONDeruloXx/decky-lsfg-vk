@@ -28,7 +28,7 @@ test("inserts one wrapper immediately before an existing command macro", () => {
   });
 });
 
-test("normalizes blank and argument-only shortcut fields", () => {
+test("normalizes blank, malformed, and argument-only launch fields", () => {
   assert.deepEqual(installWrapperLaunchOption("", wrapper), {
     options: `${wrapper} %command%`,
     commandTokenAdded: true,
@@ -37,8 +37,22 @@ test("normalizes blank and argument-only shortcut fields", () => {
     options: `FOO=bar ${wrapper} %command% --windowed`,
     commandTokenAdded: true,
   });
-  assert.throws(() => installWrapperLaunchOption("gamemoderun --windowed", wrapper), /refusing to guess/);
-  assert.throws(() => installWrapperLaunchOption('"%command%"', wrapper), /refusing to guess/);
+  assert.deepEqual(installWrapperLaunchOption("gamemoderun --windowed", wrapper), {
+    options: `${wrapper} %command% gamemoderun --windowed`,
+    commandTokenAdded: true,
+  });
+  assert.deepEqual(installWrapperLaunchOption('"%command%"', wrapper), {
+    options: `${wrapper} %command%`,
+    commandTokenAdded: false,
+  });
+  assert.deepEqual(installWrapperLaunchOption(`${wrapper} %command`, wrapper), {
+    options: `${wrapper} %command%`,
+    commandTokenAdded: false,
+  });
+  assert.deepEqual(installWrapperLaunchOption(`${wrapper} --windowed`, wrapper), {
+    options: `${wrapper} %command% --windowed`,
+    commandTokenAdded: true,
+  });
 });
 
 test("preserves assignments quoting suffixes and released wrapper cleanup", () => {
