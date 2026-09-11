@@ -1,5 +1,5 @@
-import { Field, PanelSection, PanelSectionRow, Tabs } from "@decky/ui";
-import { useEffect, useRef, useState } from "react";
+import { Tabs } from "@decky/ui";
+import { useEffect, useRef, useState, type FocusEvent } from "react";
 import { FaCube, FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { useFlatpakConfiguration } from "../hooks/useFlatpakConfiguration";
@@ -79,6 +79,7 @@ export function Content() {
   const flatpak = useFlatpakConfiguration(setupComplete);
   const [tab, setTab] = useState("Setup");
   const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
+  const [contentFocused, setContentFocused] = useState(false);
   const previousRunningWorkload = useRef<string | null>(null);
   const runningFlatpak = flatpak.runningApp;
   const nowPlayingTarget = resolveNowPlayingTarget(runningGame, runningFlatpak);
@@ -154,13 +155,11 @@ export function Content() {
       launcher={nowPlayingTarget.launcher}
       onConfigChange={flatpak.updateConfig}
     />
-  ) : (
-    <NowPlayingTabPlaceholder />
-  );
+  ) : null;
 
   const tabs = setupComplete
     ? [
-        { id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying },
+        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying }] : []),
         {
           id: "Games",
           title: tabIcons.games,
@@ -205,11 +204,16 @@ export function Content() {
 
   const availableTabIds = new Set(tabs.map(({ id }) => id));
   const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Games" : "Setup";
+  const handleFocusCapture = (event: FocusEvent<HTMLDivElement>) => {
+    const focusedElement = event.target as HTMLElement | null;
+    setContentFocused(!focusedElement?.closest?.('[role="tab"]'));
+  };
 
   return (
     <div
-      className="lsfg-vk-tabs"
+      className={`lsfg-vk-tabs${contentFocused ? " lsfg-vk-tabs--content-focused" : ""}`}
       style={{ height: "95%", width: "300px", position: "fixed", marginTop: "-12px", overflow: "hidden" }}
+      onFocusCapture={handleFocusCapture}
     >
       <style>{tabStyles}</style>
       <Tabs
@@ -219,18 +223,6 @@ export function Content() {
         }}
         tabs={tabs}
       />
-    </div>
-  );
-}
-
-function NowPlayingTabPlaceholder() {
-  return (
-    <div>
-      <PanelSection title="Now Playing">
-        <PanelSectionRow>
-          <Field label="Nothing running" description="Start an enabled Steam, non-Steam, or Flatpak target to configure it here." />
-        </PanelSectionRow>
-      </PanelSection>
     </div>
   );
 }

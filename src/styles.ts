@@ -31,4 +31,17 @@ export const tabStyles = `
     display: block;
     margin: 0;
   }
+
+  .lsfg-vk-tabs--content-focused [role="tablist"][aria-orientation="horizontal"],
+  .lsfg-vk-tabs--content-focused [role="tablist"][aria-orientation="horizontal"] > div,
+  .lsfg-vk-tabs--content-focused [role="tablist"][aria-orientation="horizontal"] > div > div,
+  .lsfg-vk-tabs--content-focused [role="tablist"][aria-orientation="horizontal"] [role="tab"] {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .lsfg-vk-tabs--content-focused [role="tablist"][aria-orientation="horizontal"] > div > div {
+    scroll-behavior: auto !important;
+    scroll-snap-type: none !important;
+  }
 `;
