@@ -13,7 +13,10 @@ import {
   showUninstallSuccessToast,
 } from "../utils/toastUtils";
 
-export function useInstallation(reloadConfig?: () => Promise<void>) {
+export function useInstallation(
+  reloadConfig?: () => Promise<void>,
+  beforeUninstall?: () => Promise<boolean>,
+) {
   const [isInstalled, setIsInstalled] = useState(false);
   const [installationStatus, setInstallationStatus] = useState("");
   const [losslessScalingInstalled, setLosslessScalingInstalled] = useState(false);
@@ -77,6 +80,10 @@ export function useInstallation(reloadConfig?: () => Promise<void>) {
     setIsUninstalling(true);
     setInstallationStatus("Uninstalling lsfg-vk...");
     try {
+      if (beforeUninstall && !(await beforeUninstall())) {
+        setInstallationStatus("Uninstallation cancelled: could not clean up launch options");
+        return;
+      }
       const result = await uninstallLsfgVk();
       if (!result.success) {
         setInstallationStatus(`Uninstallation failed: ${result.error}`);

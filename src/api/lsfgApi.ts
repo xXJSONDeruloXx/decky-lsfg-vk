@@ -64,11 +64,27 @@ export interface WorkaroundStateResult extends ApiResult {
   wrapper_path?: string;
   wrapper_owned?: boolean;
   command_token_added?: boolean;
+  non_steam?: boolean;
+}
+
+export interface WorkaroundApp {
+  appid: string;
+  non_steam: boolean;
+  command_token_added: boolean;
+}
+
+export interface WorkaroundAppsResult extends ApiResult {
+  apps?: WorkaroundApp[];
+  wrapper_path?: string;
 }
 
 export interface GameConfigsResult extends ApiResult {
   global_config?: GlobalConfig;
   games?: GameConfigEntry[];
+}
+
+export interface GlobalConfigResult extends ApiResult {
+  global_config?: GlobalConfig;
 }
 
 export interface GameConfigResult extends ApiResult {
@@ -149,11 +165,14 @@ export const getInstalledGames = callable<[], InstalledGamesResult>("get_install
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
 export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
 export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
+export const updateGlobalConfig = callable<[GlobalConfig], GlobalConfigResult>("update_global_config");
 export const getWorkaroundState = callable<[string], WorkaroundStateResult>("get_workaround_state");
 export const setWorkaroundState = callable<[
   string,
   WorkaroundState,
   boolean,
+  boolean,
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
+export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
 export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

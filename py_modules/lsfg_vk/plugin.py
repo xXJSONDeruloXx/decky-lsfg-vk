@@ -34,20 +34,34 @@ class Plugin:
     async def check_lsfg_vk_installed(self):
         return self.installation_service.check_installation()
 
-    async def uninstall_lsfg_vk(self):
+    def _cleanup_runtime_state(self):
         flatpak = self.flatpak_service.remove_plugin_owned_environment()
         if not flatpak.get("success"):
+            return flatpak.get("error") or "Could not clean up Flatpak support"
+        profiles = self.configuration_service.reset_all_flatpak_configs()
+        if not profiles.get("success"):
+            return profiles.get("error") or "Could not remove Flatpak profiles"
+        wrapper = self.wrapper_service.purge()
+        if not wrapper.get("success"):
+            return wrapper.get("error") or "Could not remove workaround state"
+        return None
+
+    async def uninstall_lsfg_vk(self):
+        error = self._cleanup_runtime_state()
+        if error:
             return {
                 "success": False,
                 "message": "",
-                "error": flatpak.get("error") or "Could not clean up Flatpak support",
+                "error": error,
                 "removed_files": None,
             }
-        self.configuration_service.reset_all_flatpak_configs()
         return self.installation_service.uninstall()
 
     async def get_game_configs(self):
         return self.configuration_service.get_game_configs()
+
+    async def update_global_config(self, config: Dict[str, Any]):
+        return self.configuration_service.update_global_config(config)
 
     async def get_installed_games(self):
         return self.steam_service.get_installed_games()
@@ -64,13 +78,17 @@ class Plugin:
     async def get_workaround_state(self, appid: str):
         return self.wrapper_service.get(appid)
 
+    async def get_workaround_apps(self):
+        return self.wrapper_service.list_apps()
+
     async def set_workaround_state(
         self,
         appid: str,
         state: Dict[str, Any],
         command_token_added: bool = False,
+        non_steam: bool = False,
     ):
-        return self.wrapper_service.set(appid, state, command_token_added)
+        return self.wrapper_service.set(appid, state, command_token_added, non_steam)
 
     async def remove_workaround_state(self, appid: str):
         return self.wrapper_service.remove(appid)
@@ -172,13 +190,13 @@ class Plugin:
     async def _uninstall(self):
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
         try:
-            result = self.flatpak_service.remove_plugin_owned_environment()
-            if result.get("success"):
-                self.configuration_service.reset_all_flatpak_configs()
-            else:
-                decky.logger.warning(result.get("error"))
+            error = self._cleanup_runtime_state()
+            if error:
+                decky.logger.warning(f"Preserving lsfg-vk files because uninstall cleanup failed: {error}")
+                return
         except Exception as error:
-            decky.logger.error(f"Error during Flatpak cleanup: {error}")
+            decky.logger.error(f"Error during lsfg-vk cleanup: {error}")
+            return
         self.installation_service.cleanup_on_uninstall()
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 

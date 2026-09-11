@@ -162,6 +162,25 @@ class InstallationService(BaseService):
         for path in (self.legacy_lib_file, self.legacy_json_file):
             self._remove_if_exists(path)
 
+    def _prune_empty_directories(self) -> None:
+        # Only prune directories created by this plugin.  Never remove a
+        # non-empty directory because the user's other tools may use it.
+        candidates = (
+            self.config_dir,
+            self.local_bin_dir,
+            self.local_lib_dir,
+            self.local_share_dir,
+            self.user_home / LOCAL_SHARE / "applications",
+            self.user_home / LOCAL_SHARE / "icons/hicolor/256x256/apps",
+        )
+        for directory in candidates:
+            try:
+                if directory.is_dir() and not directory.is_symlink():
+                    directory.rmdir()
+                    self.log.info(f"Removed empty directory {directory}")
+            except OSError:
+                continue
+
     def check_installation(self) -> InstallationCheckResponse:
         try:
             installation_error = None
@@ -200,9 +219,12 @@ class InstallationService(BaseService):
                     self.user_home / LOCAL_SHARE / "icons/hicolor/256x256/apps" / UI_ICON_FILENAME,
                     self.legacy_lib_file,
                     self.legacy_json_file,
+                    self.legacy_script_path,
+                    self.config_file_path,
                 )
                 if self._remove_if_exists(path)
             ]
+            self._prune_empty_directories()
             if not removed:
                 return self._success_response(
                     UninstallationResponse,
@@ -221,9 +243,14 @@ class InstallationService(BaseService):
                 removed_files=None,
             )
 
-    def cleanup_on_uninstall(self) -> None:
+    def cleanup_on_uninstall(self) -> bool:
         try:
-            self.uninstall()
+            result = self.uninstall()
+            if not result.get("success"):
+                self.log.error(f"Error cleaning up lsfg-vk files during uninstall: {result.get('error')}")
+                return False
+            return True
         except Exception as error:
             self.log.error(f"Error cleaning up lsfg-vk files during uninstall: {error}")
             self.log.error(traceback.format_exc())
+            return False

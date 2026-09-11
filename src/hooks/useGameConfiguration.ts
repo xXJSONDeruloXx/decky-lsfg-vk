@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
-import { getGameConfigs, getInstalledGames, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
+import { getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { getDefaultWrapperPath, installWrapperIntegration, removeWrapperIntegration } from "../utils/steamLaunchOptions";
 import { showErrorToast } from "../utils/toastUtils";
@@ -153,6 +153,7 @@ export function useGameConfiguration() {
         target.appid,
         state,
         integration.commandTokenAdded,
+        target.nonSteam,
       );
       if (!saved.success) throw new Error(saved.error || "Could not save workaround state");
       return true;
@@ -205,6 +206,40 @@ export function useGameConfiguration() {
     }
   }, [installedGames]);
 
+  const cleanupAllWorkarounds = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await getWorkaroundApps();
+      if (!result.success) throw new Error(result.error || "Could not read workaround state");
+      const targetsByAppId = new Map(targets.map((target) => [target.appid, target]));
+      const cleaned = new Set<string>();
+      const wrapperPath = result.wrapper_path || getDefaultWrapperPath();
+
+      for (const entry of result.apps || []) {
+        const target = targetsByAppId.get(entry.appid);
+        const nonSteam = target?.nonSteam ?? entry.non_steam;
+        await removeWrapperIntegration(
+          Number(entry.appid),
+          nonSteam,
+          wrapperPath,
+          entry.command_token_added,
+        );
+        const removed = await removeWorkaroundState(entry.appid);
+        if (!removed.success) throw new Error(removed.error || "Could not remove workaround state");
+        cleaned.add(entry.appid);
+      }
+
+      // Also clean configured targets whose sidecar entry was lost. This
+      // removes an old wrapper and only the plugin-managed launch pieces.
+      for (const target of targets.filter((item) => item.configured && installedGames.some((game) => game.appid === item.appid))) {
+        if (!cleaned.has(target.appid) && !(await removeTargetWorkarounds(target))) return false;
+      }
+      return true;
+    } catch (error) {
+      showErrorToast("Could not clean up game launch options", asError(error).message);
+      return false;
+    }
+  }, [installedGames, removeTargetWorkarounds, targets]);
+
   const saveFor = useCallback(async (appid: string, next: ConfigurationData, cleanupLaunchOptions = false) => {
     const target = targets.find((item) => item.appid === appid);
     if (!target?.name) return false;
@@ -221,6 +256,13 @@ export function useGameConfiguration() {
     },
     [saveFor, selectedAppId],
   );
+
+  const updateGlobal = useCallback(async (next: GlobalConfig): Promise<boolean> => {
+    const result = await saveGlobalConfig(next);
+    if (!result.success) return false;
+    setGlobalConfig(result.global_config || next);
+    return true;
+  }, []);
 
   const enable = useCallback(async (appid: string) => {
     const target = targets.find((item) => item.appid === appid);
@@ -283,5 +325,5 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, targets]);
 
-  return { config, runningConfig, games, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, enable, enableAll, repair, resetSelected, resetAll, reload: load };
+  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, cleanupAllWorkarounds, reload: load };
 }

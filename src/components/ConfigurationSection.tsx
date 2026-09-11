@@ -1,6 +1,6 @@
 import { PanelSectionRow, ToggleField, SliderField } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
-import { FLOW_SCALE, PERFORMANCE_MODE, OVERRIDE_PRESENT_MODE, PRESERVE_SWAPCHAIN_IMAGE_COUNT, NO_FP16 } from "../config/configSchema";
+import { FLOW_SCALE, PERFORMANCE_MODE, OVERRIDE_PRESENT_MODE, PRESERVE_SWAPCHAIN_IMAGE_COUNT } from "../config/configSchema";
 
 interface ConfigurationSectionProps {
   config: ConfigurationData;
@@ -11,9 +11,6 @@ export function ConfigurationSection({ config, onConfigChange }: ConfigurationSe
   return <>
     <PanelSectionRow>
       <SliderField label={`Flow Scale (${Math.round(config.flow_scale * 100)}%)`} value={config.flow_scale} min={0.25} max={1} step={0.01} onChange={(value) => onConfigChange(FLOW_SCALE, value)} />
-    </PanelSectionRow>
-    <PanelSectionRow>
-      <ToggleField label="FP16 Acceleration" checked={!config.no_fp16} onChange={(value) => onConfigChange(NO_FP16, !value)} />
     </PanelSectionRow>
     <PanelSectionRow>
       <ToggleField label="Performance Mode" checked={config.performance_mode} onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)} />

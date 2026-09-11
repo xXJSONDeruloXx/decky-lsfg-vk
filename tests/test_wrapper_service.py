@@ -158,6 +158,35 @@ class WrapperServiceTests(unittest.TestCase):
         )
         self.assertEqual(result.stdout, "ok")
 
+    def test_purge_removes_owned_wrapper_and_state(self):
+        self.service.set("123", self._state(), non_steam=True)
+        self.assertTrue(self.service.get("123")["non_steam"])
+        self.assertEqual(self.service.list_apps()["apps"][0]["non_steam"], True)
+        response = self.service.purge()
+        self.assertTrue(response["success"])
+        self.assertEqual(response["removed_files"], [str(self.service.wrapper_path), str(self.service.sidecar_path)])
+        self.assertFalse(self.service.wrapper_path.exists())
+        self.assertFalse(self.service.sidecar_path.exists())
+
+    def test_purge_refuses_foreign_wrapper(self):
+        self.service.wrapper_path.write_text("#!/bin/sh\necho foreign\n", encoding="utf-8")
+        response = self.service.purge()
+        self.assertFalse(response["success"])
+        self.assertIn("unowned", response["error"])
+        self.assertTrue(self.service.wrapper_path.exists())
+
+    def test_purge_refuses_invalid_state(self):
+        self.service.config_dir.mkdir(parents=True, exist_ok=True)
+        self.service.sidecar_path.write_text("not json", encoding="utf-8")
+        self.service.wrapper_path.write_text(
+            f"#!/bin/sh\n{self.service.MARKER}\nexec \"$@\"\n",
+            encoding="utf-8",
+        )
+        response = self.service.purge()
+        self.assertFalse(response["success"])
+        self.assertTrue(self.service.wrapper_path.exists())
+        self.assertTrue(self.service.sidecar_path.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

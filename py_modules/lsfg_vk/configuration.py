@@ -72,20 +72,30 @@ class ConfigurationService(BaseService):
             self.log.error(f"Error reading game configs: {error}")
             return self._error_response(dict, str(error), games=[])
 
+    def update_global_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            merged_config = {**data["global_config"], **config}
+            validated = self._public_config(merged_config)
+            data["global_config"] = {
+                "dll": validated["dll"],
+                "no_fp16": validated["no_fp16"],
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]))
+        except Exception as error:
+            return self._error_response(dict, str(error), global_config=None)
+
     def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()
             old_name, _ = self._profile_for_appid(data, appid)
             name = self._profile_name(data, appid, game_name)
-            merged_config = {**data["global_config"], **config}
+            merged_config = {**data["global_config"], **{key: value for key, value in config.items() if key != "no_fp16"}}
             if not config.get("dll"):
                 merged_config["dll"] = data["global_config"].get("dll", "")
             validated = self._public_config(merged_config)
             validated["active_in"] = [str(appid)]
-            data["global_config"] = {
-                "dll": validated["dll"],
-                "no_fp16": validated["no_fp16"],
-            }
             if old_name and old_name != name:
                 data["profiles"].pop(old_name, None)
             data["profiles"][name] = validated
@@ -114,15 +124,11 @@ class ConfigurationService(BaseService):
         try:
             data = self._get_profile_data()
             name = self.flatpak_profile_name(app_id)
-            merged_config = {**data["global_config"], **config}
+            merged_config = {**data["global_config"], **{key: value for key, value in config.items() if key != "no_fp16"}}
             if not config.get("dll"):
                 merged_config["dll"] = data["global_config"].get("dll", "")
             validated = self._public_config(merged_config)
             validated["active_in"] = []
-            data["global_config"] = {
-                "dll": validated["dll"],
-                "no_fp16": validated["no_fp16"],
-            }
             data["profiles"][name] = validated
             self._save_profile_data(data)
             return self._success_response(dict, app_id=str(app_id), profile=name, exists=True, config=validated)

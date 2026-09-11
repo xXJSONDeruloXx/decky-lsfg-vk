@@ -1,4 +1,4 @@
-import { ButtonItem, ConfirmModal, DialogButton, Focusable, PanelSection, PanelSectionRow, ToggleField, gamepadDialogClasses, showModal } from "@decky/ui";
+import { ButtonItem, ConfirmModal, DialogButton, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses, showModal } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
@@ -11,8 +11,6 @@ interface ConfigurationTabProps {
   config: ConfigurationData;
   targets: GameTarget[];
   runningGame: GameTarget | null;
-  showDebugTab: boolean;
-  onShowDebugTabChange: (value: boolean) => void;
   onSelect: (appid: string) => void;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
@@ -26,8 +24,6 @@ export function ConfigurationTab({
   config,
   targets,
   runningGame,
-  showDebugTab,
-  onShowDebugTabChange,
   onSelect,
   onConfigChange,
   onEnable,
@@ -83,15 +79,6 @@ export function ConfigurationTab({
             focusConfiguredToggle={focusConfiguredToggle}
             onConfiguredToggleFocused={clearConfiguredToggleFocusRequest}
           />
-        </PanelSection>
-        <PanelSection title="Settings">
-          <PanelSectionRow>
-            <ToggleField
-              label="Show debug tab"
-              checked={showDebugTab}
-              onChange={onShowDebugTabChange}
-            />
-          </PanelSectionRow>
         </PanelSection>
       </>
     );

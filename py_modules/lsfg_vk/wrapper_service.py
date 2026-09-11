@@ -87,9 +87,12 @@ class WrapperService(BaseService):
         entry = {
             "state": cls._validate_state(raw.get("state")),
             "command_token_added": raw.get("command_token_added", False),
+            "non_steam": raw.get("non_steam", False),
         }
         if type(entry["command_token_added"]) is not bool:
             raise ValueError("command_token_added must be a boolean")
+        if type(entry["non_steam"]) is not bool:
+            raise ValueError("non_steam must be a boolean")
         return entry
 
     @classmethod
@@ -263,6 +266,7 @@ class WrapperService(BaseService):
             "wrapper_path": self.WRAPPER_TOKEN,
             "wrapper_owned": self._wrapper_marker() if document["apps"] else False,
             "command_token_added": entry.get("command_token_added", False) if entry else False,
+            "non_steam": entry.get("non_steam", False) if entry else False,
         }
 
     def get(self, appid: str) -> Dict[str, Any]:
@@ -281,6 +285,7 @@ class WrapperService(BaseService):
                 "state": None,
                 "wrapper_path": self.WRAPPER_TOKEN,
                 "wrapper_owned": False,
+                "non_steam": False,
             }
 
     def set(
@@ -288,18 +293,22 @@ class WrapperService(BaseService):
         appid: str,
         state: Dict[str, Any],
         command_token_added: bool = False,
+        non_steam: bool = False,
     ) -> Dict[str, Any]:
         try:
             normalized = self._valid_appid(appid)
             validated_state = self._validate_state(state)
             if type(command_token_added) is not bool:
                 raise ValueError("command_token_added must be a boolean")
+            if type(non_steam) is not bool:
+                raise ValueError("non_steam must be a boolean")
             with self._lock:
                 self._assert_wrapper_owned_or_absent()
                 document, _, _ = self._read_document()
                 document["apps"][normalized] = {
                     "state": validated_state,
                     "command_token_added": command_token_added,
+                    "non_steam": non_steam,
                 }
                 self._write_pair(document)
                 return self._response(document, normalized)
@@ -312,6 +321,7 @@ class WrapperService(BaseService):
                 "state": None,
                 "wrapper_path": self.WRAPPER_TOKEN,
                 "wrapper_owned": False,
+                "non_steam": False,
             }
 
     def remove(self, appid: str) -> Dict[str, Any]:
@@ -334,6 +344,7 @@ class WrapperService(BaseService):
                 "state": None,
                 "wrapper_path": self.WRAPPER_TOKEN,
                 "wrapper_owned": False,
+                "non_steam": False,
             }
 
     def repair(self) -> Dict[str, Any]:
@@ -352,4 +363,67 @@ class WrapperService(BaseService):
                 "error": str(error),
                 "wrapper_path": self.WRAPPER_TOKEN,
                 "wrapper_owned": False,
+            }
+
+    def list_apps(self) -> Dict[str, Any]:
+        try:
+            with self._lock:
+                document, _, _ = self._read_document()
+                self._assert_wrapper_owned_or_absent()
+                apps = [
+                    {
+                        "appid": appid,
+                        "non_steam": entry.get("non_steam", False),
+                        "command_token_added": entry.get("command_token_added", False),
+                    }
+                    for appid, entry in document["apps"].items()
+                ]
+                return {
+                    "success": True,
+                    "message": "",
+                    "error": None,
+                    "apps": apps,
+                    "wrapper_path": self.WRAPPER_TOKEN,
+                }
+        except Exception as error:
+            return {
+                "success": False,
+                "message": "",
+                "error": str(error),
+                "apps": [],
+                "wrapper_path": self.WRAPPER_TOKEN,
+            }
+
+    def purge(self) -> Dict[str, Any]:
+        """Remove the plugin-owned wrapper and its sidecar during uninstall.
+
+        This is deliberately separate from ``remove``: normal profile removal
+        leaves a safe passthrough wrapper for the remaining profiles, while an
+        uninstall should remove the wrapper entirely.  Both files are
+        validated before anything is removed so a user's replacement wrapper
+        or damaged state is left untouched.
+        """
+        removed = []
+        try:
+            with self._lock:
+                _document, sidecar_exists, _ = self._read_document()
+                wrapper_owned = self._assert_wrapper_owned_or_absent()
+                if wrapper_owned:
+                    self.wrapper_path.unlink()
+                    removed.append(str(self.wrapper_path))
+                if sidecar_exists:
+                    self.sidecar_path.unlink()
+                    removed.append(str(self.sidecar_path))
+            return {
+                "success": True,
+                "message": "Removed lsfg-vk workaround state",
+                "error": None,
+                "removed_files": removed,
+            }
+        except Exception as error:
+            return {
+                "success": False,
+                "message": "",
+                "error": str(error),
+                "removed_files": removed or None,
             }

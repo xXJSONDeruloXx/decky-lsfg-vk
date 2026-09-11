@@ -47,16 +47,19 @@ export function Content() {
   const {
     config,
     runningConfig,
+    globalConfig,
     targets,
     runningGame,
     setSelectedAppId,
     save,
     saveFor,
+    updateGlobal,
     enable,
     enableAll,
     repair,
     resetSelected,
     resetAll,
+    cleanupAllWorkarounds,
     reload,
   } = useGameConfiguration();
   const {
@@ -69,7 +72,7 @@ export function Content() {
     isUninstalling,
     install,
     uninstall,
-  } = useInstallation(reload);
+  } = useInstallation(reload, cleanupAllWorkarounds);
   const setupComplete =
     isInstalled &&
     losslessScalingInstalled &&
@@ -78,7 +81,7 @@ export function Content() {
     !steamBranchStatus.needs_switch;
   const flatpak = useFlatpakConfiguration(setupComplete);
   const [tab, setTab] = useState("Setup");
-  const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
+  const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, false);
   const [contentFocused, setContentFocused] = useState(false);
   const previousRunningWorkload = useRef<string | null>(null);
   const runningFlatpak = flatpak.runningApp;
@@ -136,6 +139,10 @@ export function Content() {
       steamBranchStatus={steamBranchStatus}
       isInstalling={isInstalling}
       isUninstalling={isUninstalling}
+      globalConfig={globalConfig}
+      showDebugTab={showDebugTab}
+      onGlobalConfigChange={updateGlobal}
+      onShowDebugTabChange={setShowDebugTab}
       onInstall={() => void install()}
       onUninstall={() => void uninstall()}
     />
@@ -172,8 +179,6 @@ export function Content() {
               config={config}
               targets={targets}
               runningGame={runningGame}
-              showDebugTab={showDebugTab}
-              onShowDebugTabChange={setShowDebugTab}
               onSelect={setSelectedAppId}
               onConfigChange={(field, value) => handleConfigChange(field, value, true)}
               onEnable={enable}

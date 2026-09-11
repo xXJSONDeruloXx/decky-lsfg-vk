@@ -75,6 +75,25 @@ preserve_swapchain_image_count = false
         self.assertIn("Steam Game", data["profiles"])
         self.assertNotIn("flatpak:org.example.Game", data["profiles"])
 
+    def test_global_config_update_does_not_change_profile_values(self):
+        self.service.update_game_config("123", "Steam Game", {"multiplier": 2})
+
+        result = self.service.update_global_config({"no_fp16": True})
+        data = self.service._get_profile_data()
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result["global_config"]["no_fp16"])
+        self.assertTrue(data["global_config"]["no_fp16"])
+        self.assertEqual(data["profiles"]["Steam Game"]["multiplier"], 2)
+
+    def test_profile_update_cannot_overwrite_global_fp16_setting(self):
+        self.service.update_global_config({"no_fp16": True})
+
+        self.service.update_game_config("123", "Steam Game", {"multiplier": 3, "no_fp16": False})
+
+        data = self.service._get_profile_data()
+        self.assertTrue(data["global_config"]["no_fp16"])
+
 
 if __name__ == "__main__":
     unittest.main()

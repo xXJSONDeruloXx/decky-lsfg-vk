@@ -86,6 +86,7 @@ async function adoptWorkaroundState(
       appId,
       DEFAULT_WORKAROUND_STATE,
       integration.commandTokenAdded,
+      nonSteam,
     );
     if (!finalized.success) throw new Error(finalized.error || "Could not finalize workaround state");
     return makeSnapshot(integration.snapshot, finalized, nonSteam);
@@ -206,6 +207,7 @@ export function usePerAppWorkarounds(appId: string, nonSteam: boolean): PerAppWo
         appId,
         nextState,
         current.commandTokenAdded,
+        nonSteam,
       );
       if (!result.success || !result.state) throw new Error(result.error || "Could not save workaround state");
       applySnapshot({
