@@ -9,6 +9,11 @@ export interface CollapsibleItem {
 }
 
 export const collapsibleItemGroupStyles = `
+  .LSFG_GameGroupCollapseButton_Container {
+    margin-top: -2px;
+    margin-bottom: 4px;
+  }
+
   .LSFG_GameGroupCollapseButton_Container > div > div > div > button,
   .LSFG_GameGroupCollapseButton_Container > div > div > div > div > button {
     height: 24px !important;
@@ -71,7 +76,6 @@ export function CollapsibleItemGroup({
         <div
           ref={toggleRef}
           className="LSFG_GameGroupCollapseButton_Container"
-          style={{ marginTop: "-2px", marginBottom: "4px" }}
         >
           <ButtonItem
             layout="below"
