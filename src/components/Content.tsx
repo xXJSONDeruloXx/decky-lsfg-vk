@@ -200,7 +200,9 @@ export function Content() {
               busyAppId={flatpak.busyAppId}
               onRefresh={flatpak.reload}
               onEnable={flatpak.enableApp}
+              onEnableAll={flatpak.enableAll}
               onRemove={flatpak.removeApp}
+              onRemoveAll={flatpak.removeAll}
               onConfigChange={flatpak.updateConfig}
               onWorkaroundChange={flatpak.updateWorkarounds}
             />,

@@ -95,6 +95,27 @@ export function useFlatpakConfiguration(enabled: boolean) {
   const removeApp = useCallback(async (appId: string) => (
     await operate(appId, () => removeFlatpakApp(appId))
   ).success, [operate]);
+  const enableAll = useCallback(async (): Promise<void> => {
+    if (busyAppId) return;
+    const available = apps.filter((app) => (
+      !app.enabled && !(app.prepared && !app.owned) && !app.error
+    ));
+    for (const app of available) {
+      const result = await operate(app.app_id, () => enableFlatpakApp(app.app_id), false);
+      if (!result.success) break;
+    }
+    await reload();
+    await pollRunning();
+  }, [apps, busyAppId, operate, pollRunning, reload]);
+  const removeAll = useCallback(async (): Promise<void> => {
+    if (busyAppId) return;
+    for (const app of apps.filter((item) => item.enabled)) {
+      const result = await operate(app.app_id, () => removeFlatpakApp(app.app_id), false);
+      if (!result.success) break;
+    }
+    await reload();
+    await pollRunning();
+  }, [apps, busyAppId, operate, pollRunning, reload]);
   const updateConfig = useCallback(
     async (appId: string, config: LsfgConfig) => {
       const result = await operate(appId, () => updateFlatpakConfig(appId, config), false);
@@ -130,7 +151,9 @@ export function useFlatpakConfiguration(enabled: boolean) {
     busyAppId,
     reload,
     enableApp,
+    enableAll,
     removeApp,
+    removeAll,
     updateConfig,
     updateWorkarounds,
   };

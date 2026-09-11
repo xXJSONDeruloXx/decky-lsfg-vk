@@ -1,4 +1,4 @@
-import { ButtonItem, DialogButton, Field, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses } from "@decky/ui";
+import { ButtonItem, ConfirmModal, DialogButton, Field, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses, showModal } from "@decky/ui";
 import { useCallback, useMemo, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import type { FlatpakApp, LsfgConfig, WorkaroundState } from "../api/lsfgApi";
@@ -15,7 +15,9 @@ interface Props {
   busyAppId: string;
   onRefresh: () => Promise<void>;
   onEnable: (appId: string) => Promise<boolean>;
+  onEnableAll: () => Promise<void>;
   onRemove: (appId: string) => Promise<boolean>;
+  onRemoveAll: () => Promise<void>;
   onConfigChange: (appId: string, config: LsfgConfig) => Promise<boolean>;
   onWorkaroundChange: (appId: string, state: WorkaroundState) => Promise<boolean>;
 }
@@ -30,7 +32,9 @@ export function FlatpakTab({
   busyAppId,
   onRefresh,
   onEnable,
+  onEnableAll,
   onRemove,
+  onRemoveAll,
   onConfigChange,
   onWorkaroundChange,
 }: Props) {
@@ -51,6 +55,33 @@ export function FlatpakTab({
     () => apps.filter((app) => !app.enabled).sort((a, b) => a.app_name.localeCompare(b.app_name)),
     [apps],
   );
+  const enableableApps = useMemo(
+    () => availableApps.filter((app) => !(app.prepared && !app.owned) && !app.error),
+    [availableApps],
+  );
+  const confirmEnableAll = () => {
+    showModal(
+      <ConfirmModal
+        strTitle="Enable all available Flatpaks?"
+        strDescription="Create individual LSFG-VK profiles for every Flatpak app this plugin can manage. Apps prepared externally or unavailable will be skipped."
+        strOKButtonText="Enable all"
+        strCancelButtonText="Cancel"
+        onOK={() => void onEnableAll()}
+        onCancel={() => {}}
+      />,
+    );
+  };
+  const confirmRemoveAll = () => {
+    showModal(
+      <ConfirmModal
+        strTitle="Remove all Flatpak profiles?"
+        strOKButtonText="Remove all"
+        strCancelButtonText="Cancel"
+        onOK={() => void onRemoveAll()}
+        onCancel={() => {}}
+      />,
+    );
+  };
   const itemFor = (app: FlatpakApp) => ({
     id: app.app_id,
     label: app.app_name,
@@ -79,6 +110,26 @@ export function FlatpakTab({
           onToggle={toggleAvailable}
           onSelect={setSelectedAppId}
         />
+        {enableableApps.length > 0 && (
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              disabled={loading || Boolean(busyAppId)}
+              onClick={confirmEnableAll}
+            >
+              Enable all available Flatpaks
+            </ButtonItem>
+          </PanelSectionRow>
+        )}
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            disabled={loading || Boolean(busyAppId) || enabledApps.length === 0}
+            onClick={confirmRemoveAll}
+          >
+            Remove all profiles
+          </ButtonItem>
+        </PanelSectionRow>
         {apps.length === 0 && !loading && (
           <PanelSectionRow>
             <Field label="No Flatpak applications found" />
