@@ -1,8 +1,9 @@
-import { Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
+import { Focusable } from "@decky/ui";
 import type { FlatpakApp, LsfgConfig } from "../api/lsfgApi";
 import type { GameTarget } from "../hooks/useGameConfiguration";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
+import { NowPlayingSummary } from "./NowPlayingSummary";
 
 interface Props {
   app: FlatpakApp;
@@ -21,21 +22,15 @@ export function FlatpakNowPlayingTab({ app, launcher, onConfigChange }: Props) {
 
   return (
     <Focusable>
-      <PanelSection title="Now Playing">
-        <PanelSectionRow>
-          <Field
-            label={launcher?.name || app.app_name}
-            description={launcher
-              ? `${launcher.nonSteam ? "Steam shortcut" : "Steam"} · Running in ${app.app_name} · Flatpak`
-              : `Flatpak · ${app.app_id}`}
-          />
-        </PanelSectionRow>
-        {launcher && (
-          <PanelSectionRow>
-            <Field label="Controls" description={`${app.app_name} profile · ${app.app_id}`} />
-          </PanelSectionRow>
-        )}
-      </PanelSection>
+      <NowPlayingSummary
+        title={launcher?.name || app.app_name}
+        details={[
+          launcher ? (launcher.nonSteam ? "Steam shortcut" : "Steam") : "Flatpak",
+          launcher && launcher.name !== app.app_name ? `Running in ${app.app_name}` : null,
+          launcher ? "Flatpak" : null,
+          `Controls: ${app.app_name} profile`,
+        ].filter((detail): detail is string => detail !== null)}
+      />
       <FpsMultiplierControl config={app.config} onConfigChange={changeConfig} />
       <ConfigurationSection config={app.config} onConfigChange={changeConfig} />
     </Focusable>
