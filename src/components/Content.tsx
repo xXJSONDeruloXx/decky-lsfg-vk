@@ -86,7 +86,7 @@ export function Content() {
   const hasNowPlaying = Boolean(nowPlayingTarget);
   const runningWorkload = nowPlayingTarget
     ? nowPlayingTarget.kind === "flatpak"
-      ? `flatpak:${nowPlayingTarget.app.app_id}`
+      ? `flatpak:${nowPlayingTarget.app.app_id}:${nowPlayingTarget.launcher?.appid ?? ""}`
       : `steam:${nowPlayingTarget.game.appid}`
     : null;
 

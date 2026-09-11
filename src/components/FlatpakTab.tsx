@@ -1,8 +1,8 @@
 import { ButtonItem, DialogButton, Field, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses } from "@decky/ui";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import type { FlatpakApp, LsfgConfig, WorkaroundState } from "../api/lsfgApi";
-import { CollapsibleItemGroup, collapsibleItemGroupStyles } from "./CollapsibleItemGroup";
+import { CollapsibleItemGroup, collapsibleItemGroupStyles, usePersistentCollapsed } from "./CollapsibleItemGroup";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FlatpakWorkaroundsSection } from "./FlatpakWorkaroundsSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
@@ -23,24 +23,6 @@ interface Props {
 const ENABLED_COLLAPSED_KEY = "lsfg-flatpak-enabled-collapsed-v2";
 const AVAILABLE_COLLAPSED_KEY = "lsfg-flatpak-available-collapsed-v2";
 
-function usePersistentCollapsed(key: string) {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(key) !== "false";
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, String(collapsed));
-    } catch {}
-  }, [collapsed, key]);
-
-  return [collapsed, () => setCollapsed((value) => !value)] as const;
-}
-
 export function FlatpakTab({
   apps,
   runningApp,
@@ -60,7 +42,6 @@ export function FlatpakTab({
   const close = useCallback(() => setSelectedAppId(null), []);
   const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed(ENABLED_COLLAPSED_KEY);
   const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(AVAILABLE_COLLAPSED_KEY);
-  const enabledToggleRef = useRef<HTMLDivElement>(null);
 
   const enabledApps = useMemo(
     () => apps.filter((app) => app.enabled).sort((a, b) => a.app_name.localeCompare(b.app_name)),
@@ -90,7 +71,6 @@ export function FlatpakTab({
           collapsed={enabledCollapsed}
           onToggle={toggleEnabled}
           onSelect={setSelectedAppId}
-          toggleRef={enabledToggleRef}
         />
         <CollapsibleItemGroup
           title="Available"

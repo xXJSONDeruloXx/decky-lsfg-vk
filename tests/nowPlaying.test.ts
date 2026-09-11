@@ -54,8 +54,12 @@ test("Flatpak runtime wins while a Steam shortcut is running", () => {
   assert.equal(target?.kind === "flatpak" ? target.launcher?.name : null, "1080 Snowboarding");
 });
 
-test("Flatpak runtime wins over a native Steam game", () => {
-  assert.equal(resolveNowPlayingTarget(game(false), flatpak("org.example.Game"))?.kind, "flatpak");
+test("native Steam game wins over an unrelated Flatpak", () => {
+  assert.equal(resolveNowPlayingTarget(game(false), flatpak("org.example.Game"))?.kind, "steam");
+});
+
+test("unconfigured native Steam game blocks unrelated Flatpak Now Playing", () => {
+  assert.equal(resolveNowPlayingTarget(game(false, false), flatpak("org.example.Game")), null);
 });
 
 test("direct Flatpak launch creates a Flatpak Now Playing target", () => {
@@ -63,6 +67,23 @@ test("direct Flatpak launch creates a Flatpak Now Playing target", () => {
 
   assert.equal(target?.kind, "flatpak");
   assert.equal(target?.kind === "flatpak" ? target.launcher : null, null);
+});
+
+test("multiple inactive Flatpaks do not create an arbitrary Now Playing target", () => {
+  const apps = [flatpak("org.example.one"), flatpak("org.example.two")];
+  const running = [
+    { app_id: "org.example.one", active: false, pid: "100", start_time: 500 },
+    { app_id: "org.example.two", active: false, pid: "200", start_time: 600 },
+  ];
+
+  assert.equal(selectMostRecentRunningFlatpak(apps, running), null);
+});
+
+test("one inactive Flatpak remains a usable fallback", () => {
+  const apps = [flatpak("org.example.one")];
+  const running = [{ app_id: "org.example.one", active: false, pid: "100", start_time: 500 }];
+
+  assert.equal(selectMostRecentRunningFlatpak(apps, running)?.app_id, "org.example.one");
 });
 
 test("configured Steam target remains the fallback", () => {

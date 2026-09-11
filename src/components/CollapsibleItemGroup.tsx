@@ -1,5 +1,5 @@
 import { ButtonItem, Field, PanelSectionRow } from "@decky/ui";
-import { type RefObject } from "react";
+import { useEffect, useState, type RefObject } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 
 export interface CollapsibleItem {
@@ -24,6 +24,24 @@ export const collapsibleItemGroupStyles = `
     margin: 0;
   }
 `;
+
+export function usePersistentCollapsed(key: string) {
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, String(collapsed));
+    } catch {}
+  }, [collapsed, key]);
+
+  return [collapsed, () => setCollapsed((value) => !value)] as const;
+}
 
 interface Props {
   title: string;

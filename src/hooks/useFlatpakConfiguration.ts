@@ -120,9 +120,7 @@ export function useFlatpakConfiguration(enabled: boolean) {
     [operate],
   );
 
-  const runningApp = useMemo(() => {
-    return selectMostRecentRunningFlatpak(apps, runningApps);
-  }, [apps, runningApps]);
+  const runningApp = useMemo(() => selectMostRecentRunningFlatpak(apps, runningApps), [apps, runningApps]);
 
   return {
     apps,

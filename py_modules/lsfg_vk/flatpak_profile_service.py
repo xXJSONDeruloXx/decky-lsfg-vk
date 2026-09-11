@@ -378,12 +378,6 @@ class FlatpakProfileService:
                         fields[2].strip() if len(fields) > 2 else ""
                     ),
                 })
-            running.sort(key=lambda item: (
-                not item["active"],
-                -(item["start_time"] if isinstance(item["start_time"], int) else -1),
-                -int(item["pid"]) if str(item["pid"]).isdigit() else 1,
-                item["app_id"],
-            ))
             return {"success": True, "message": "", "error": None, "apps": running}
         except Exception as error:
             return {"success": False, "message": "", "error": str(error), "apps": []}

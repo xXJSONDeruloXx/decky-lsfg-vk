@@ -1,7 +1,7 @@
 import { ButtonItem, ConfirmModal, Field, PanelSectionRow, showModal } from "@decky/ui";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { GameTarget } from "../hooks/useGameConfiguration";
-import { CollapsibleItemGroup, collapsibleItemGroupStyles } from "./CollapsibleItemGroup";
+import { CollapsibleItemGroup, collapsibleItemGroupStyles, usePersistentCollapsed } from "./CollapsibleItemGroup";
 
 interface Props {
   targets: GameTarget[];
@@ -15,24 +15,6 @@ interface Props {
 
 const ENABLED_COLLAPSED_KEY = "lsfg-enabled-games-collapsed-v4";
 const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed-v3";
-
-function usePersistentCollapsed(key: string) {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(key) !== "false";
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(key, String(collapsed));
-    } catch {}
-  }, [collapsed, key]);
-
-  return [collapsed, () => setCollapsed((value) => !value)] as const;
-}
 
 function targetDescription(game: GameTarget): string {
   return game.nonSteam ? "Non-Steam" : "Steam";

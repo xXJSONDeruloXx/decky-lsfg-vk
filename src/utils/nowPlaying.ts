@@ -29,25 +29,34 @@ export function selectMostRecentRunningFlatpak(
       running,
       app: apps.find((app) => app.app_id === running.app_id) || null,
     }))
-    .filter((candidate): candidate is { running: RunningFlatpakApp; app: FlatpakApp } => candidate.app !== null)
-    .sort((a, b) => {
-      if (a.running.active !== b.running.active) return a.running.active ? -1 : 1;
-      const startDifference = numericValue(b.running.start_time) - numericValue(a.running.start_time);
-      if (startDifference !== 0) return startDifference;
-      const pidDifference = numericPid(b.running.pid) - numericPid(a.running.pid);
-      if (pidDifference !== 0) return pidDifference;
-      return a.running.app_id.localeCompare(b.running.app_id);
-    });
+    .filter((candidate): candidate is { running: RunningFlatpakApp; app: FlatpakApp } => candidate.app !== null);
+  const activeCandidates = candidates.filter(({ running }) => running.active);
+  const eligibleCandidates = activeCandidates.length > 0
+    ? activeCandidates
+    : candidates.length === 1
+      ? candidates
+      : [];
 
-  return candidates[0]?.app || null;
+  eligibleCandidates.sort((a, b) => {
+    const startDifference = numericValue(b.running.start_time) - numericValue(a.running.start_time);
+    if (startDifference !== 0) return startDifference;
+    const pidDifference = numericPid(b.running.pid) - numericPid(a.running.pid);
+    if (pidDifference !== 0) return pidDifference;
+    return a.running.app_id.localeCompare(b.running.app_id);
+  });
+
+  return eligibleCandidates[0]?.app || null;
 }
 
 export function resolveNowPlayingTarget(
   runningGame: GameTarget | null,
   runningFlatpak: FlatpakApp | null,
 ): NowPlayingTarget | null {
+  if (runningGame && !runningGame.nonSteam) {
+    return runningGame.configured ? { kind: "steam", game: runningGame } : null;
+  }
   if (runningFlatpak) {
-    return { kind: "flatpak", app: runningFlatpak, launcher: runningGame };
+    return { kind: "flatpak", app: runningFlatpak, launcher: runningGame?.nonSteam ? runningGame : null };
   }
   if (runningGame?.configured) return { kind: "steam", game: runningGame };
   return null;
