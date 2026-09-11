@@ -1,5 +1,5 @@
 import type { FlatpakApp, RunningFlatpakApp } from "../api/lsfgApi";
-import type { GameTarget } from "../hooks/useGameConfiguration";
+import type { GameTarget } from "./gameTargets";
 
 export type NowPlayingTarget =
   | {
@@ -9,6 +9,10 @@ export type NowPlayingTarget =
     }
   | {
       kind: "steam";
+      game: GameTarget;
+    }
+  | {
+      kind: "nonSteam";
       game: GameTarget;
     };
 
@@ -65,12 +69,18 @@ export function resolveNowPlayingTarget(
   runningGame: GameTarget | null,
   runningFlatpak: FlatpakApp | null,
 ): NowPlayingTarget | null {
-  if (runningGame && !runningGame.nonSteam) {
+  if (runningGame?.source === "steam") {
     return runningGame.configured ? { kind: "steam", game: runningGame } : null;
   }
   if (runningFlatpak) {
-    return { kind: "flatpak", app: runningFlatpak, launcher: runningGame?.nonSteam ? runningGame : null };
+    return {
+      kind: "flatpak",
+      app: runningFlatpak,
+      launcher: runningGame?.source === "nonSteam" ? runningGame : null,
+    };
   }
-  if (runningGame?.configured) return { kind: "steam", game: runningGame };
+  if (runningGame?.source === "nonSteam" && runningGame.configured) {
+    return { kind: "nonSteam", game: runningGame };
+  }
   return null;
 }

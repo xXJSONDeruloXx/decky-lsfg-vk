@@ -8,8 +8,7 @@ deploy:
     ./scripts/deploy-to-deck.sh
 
 test:
-    node --experimental-strip-types --test tests/steamLaunchOptions.test.ts tests/nowPlaying.test.ts
-    python3.12 -m unittest discover -s tests -p 'test_*.py'
+    pnpm test
 
 watch:
     ssh deck@192.168.0.6 "journalctl -f"

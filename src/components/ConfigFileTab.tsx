@@ -80,7 +80,7 @@ export function ConfigFileTab() {
 
   if (!result) {
     return (
-      <PanelSection title={t("NERD_CONFIG_FILE", "Configuration File")}>
+      <PanelSection title={t("NERD_CONFIG_FILE", "Config / Debug")}>
         <PanelSectionRow>
           <Spinner />
         </PanelSectionRow>
@@ -108,7 +108,7 @@ export function ConfigFileTab() {
           }
         `}
       </style>
-      <PanelSection title={t("NERD_CONFIG_FILE", "Configuration File")}>
+      <PanelSection title={t("NERD_CONFIG_FILE", "Config / Debug")}>
         {result.error && (
           <PanelSectionRow>
             <Field label="Error" description={result.error} />

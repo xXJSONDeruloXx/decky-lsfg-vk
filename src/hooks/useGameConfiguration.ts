@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
-import { getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetAllGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundState } from "../api/lsfgApi";
+import { getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundApp, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { getDefaultWrapperPath, installWrapperIntegration, removeWrapperIntegration } from "../utils/steamLaunchOptions";
+import { getTargetSource, mergeGameTargets, type GameTarget, type KnownGameSource } from "../utils/gameTargets";
 import { showErrorToast } from "../utils/toastUtils";
 
-export interface GameTarget extends InstalledGame { configured: boolean; }
+export type { GameSource, GameTarget, KnownGameSource } from "../utils/gameTargets";
 
 async function getSteamShortcuts(): Promise<InstalledGame[]> {
   const apps = (globalThis as any).SteamClient?.Apps;
@@ -56,20 +57,29 @@ export function useGameConfiguration() {
   const [games, setGames] = useState<GameConfigEntry[]>([]);
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig>({ dll: "", no_fp16: false });
   const [installedGames, setInstalledGames] = useState<InstalledGame[]>([]);
+  const [workaroundApps, setWorkaroundApps] = useState<WorkaroundApp[]>([]);
   const [configsLoaded, setConfigsLoaded] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState("");
   const [runningGame, setRunningGame] = useState<GameTarget | null>(null);
+  const [bulkOperationBusy, setBulkOperationBusy] = useState(false);
+  const bulkOperationLock = useRef(false);
   const previousRunningAppId = useRef<string | null>(null);
   const previousQuickAccessVisible = useRef<boolean | null>(null);
   const quickAccessVisible = useQuickAccessVisible();
 
   const load = useCallback(async () => {
-    const [result, installed, shortcuts] = await Promise.all([getGameConfigs(), getInstalledGames(), getSteamShortcuts()]);
+    const [result, installed, shortcuts, workaroundResult] = await Promise.all([
+      getGameConfigs(),
+      getInstalledGames(),
+      getSteamShortcuts(),
+      getWorkaroundApps(),
+    ]);
     if (result.success) {
       setGlobalConfig(result.global_config || { dll: "", no_fp16: false });
       setGames(result.games || []);
     }
     setInstalledGames(mergeInstalledGames(installed.success ? installed.games || [] : [], shortcuts));
+    setWorkaroundApps(workaroundResult.success ? workaroundResult.apps || [] : []);
     setConfigsLoaded(true);
   }, []);
 
@@ -89,15 +99,19 @@ export function useGameConfiguration() {
       const installed = installedGames.find((game) => game.appid === appid);
       const name = app.display_name || installed?.name;
       if (!name) return setRunningGame(null);
+      const source = getTargetSource(appid, installedGames, workaroundApps);
       const next: GameTarget = {
-        ...(installed || { appid, name, nonSteam: false }),
+        ...(installed || { appid, name, nonSteam: source === "nonSteam" }),
         name,
+        nonSteam: source === "nonSteam",
+        source,
         configured: games.some((game) => game.appid === appid),
       };
       setRunningGame((current) => (
         current?.appid === next.appid
         && current.name === next.name
         && current.nonSteam === next.nonSteam
+        && current.source === next.source
         && current.configured === next.configured
           ? current
           : next
@@ -106,7 +120,7 @@ export function useGameConfiguration() {
     poll();
     const interval = window.setInterval(poll, 2000);
     return () => window.clearInterval(interval);
-  }, [configsLoaded, games, installedGames]);
+  }, [configsLoaded, games, installedGames, workaroundApps]);
 
   useEffect(() => {
     const appid = runningGame?.appid || null;
@@ -117,11 +131,8 @@ export function useGameConfiguration() {
   }, [runningGame?.appid]);
 
   const targets = useMemo<GameTarget[]>(() => {
-    const configured = installedGames.map((game) => ({ ...game, configured: games.some((item) => item.appid === game.appid) }));
-    for (const game of games) if (!configured.some((item) => item.appid === game.appid)) configured.push({ appid: game.appid, name: game.profile, nonSteam: false, configured: true });
-    if (runningGame && !configured.some((game) => game.appid === runningGame.appid)) configured.unshift(runningGame);
-    return configured;
-  }, [games, installedGames, runningGame]);
+    return mergeGameTargets(games, installedGames, workaroundApps, runningGame);
+  }, [games, installedGames, runningGame, workaroundApps]);
   const template = useMemo(() => ({ ...getDefaults(), ...globalConfig }), [globalConfig]);
   const config = games.find((game) => game.appid === selectedAppId)?.config || template;
   const runningConfig = runningGame
@@ -129,6 +140,10 @@ export function useGameConfiguration() {
     : template;
 
   const ensureTargetWorkarounds = useCallback(async (target: GameTarget): Promise<boolean> => {
+    if (target.source === "unknown") {
+      showErrorToast("Could not initialize workarounds", "The target source is unknown; re-discover the game before enabling it");
+      return false;
+    }
     if (!installedGames.some((game) => game.appid === target.appid)) return true;
     const appId = Number(target.appid);
     let integration: Awaited<ReturnType<typeof installWrapperIntegration>> | null = null;
@@ -185,18 +200,21 @@ export function useGameConfiguration() {
   }, [installedGames]);
 
   const removeTargetWorkarounds = useCallback(async (target: GameTarget): Promise<boolean> => {
-    if (!installedGames.some((game) => game.appid === target.appid)) return true;
+    const installed = installedGames.some((game) => game.appid === target.appid);
+    if (target.source === "unknown" && installed) return true;
     const appId = Number(target.appid);
     try {
       const existing = await getWorkaroundState(target.appid);
       if (!existing.success) throw new Error(existing.error || "Could not read workaround state");
       const wrapperPath = existing.wrapper_path || getDefaultWrapperPath();
-      await removeWrapperIntegration(
-        appId,
-        target.nonSteam,
-        wrapperPath,
-        existing.command_token_added === true,
-      );
+      if (installed) {
+        await removeWrapperIntegration(
+          appId,
+          target.nonSteam,
+          wrapperPath,
+          existing.command_token_added === true,
+        );
+      }
       const removed = await removeWorkaroundState(target.appid);
       if (!removed.success) throw new Error(removed.error || "Could not remove workaround state");
       return true;
@@ -206,20 +224,29 @@ export function useGameConfiguration() {
     }
   }, [installedGames]);
 
+  const acquireBulkOperation = useCallback(() => {
+    if (bulkOperationLock.current) return false;
+    bulkOperationLock.current = true;
+    setBulkOperationBusy(true);
+    return true;
+  }, []);
+
+  const releaseBulkOperation = useCallback(() => {
+    bulkOperationLock.current = false;
+    setBulkOperationBusy(false);
+  }, []);
+
   const cleanupAllWorkarounds = useCallback(async (): Promise<boolean> => {
     try {
       const result = await getWorkaroundApps();
       if (!result.success) throw new Error(result.error || "Could not read workaround state");
-      const targetsByAppId = new Map(targets.map((target) => [target.appid, target]));
       const cleaned = new Set<string>();
       const wrapperPath = result.wrapper_path || getDefaultWrapperPath();
 
       for (const entry of result.apps || []) {
-        const target = targetsByAppId.get(entry.appid);
-        const nonSteam = target?.nonSteam ?? entry.non_steam;
         await removeWrapperIntegration(
           Number(entry.appid),
-          nonSteam,
+          entry.non_steam,
           wrapperPath,
           entry.command_token_added,
         );
@@ -274,23 +301,32 @@ export function useGameConfiguration() {
     return result.success;
   }, [ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
 
-  const enableAll = useCallback(async (): Promise<void> => {
-    const available = targets.filter((target) => !target.configured && target.name);
-    if (available.length === 0) return;
-    for (const target of available) {
-      if (!(await ensureTargetWorkarounds(target))) return;
-      const result = await updateGameConfig(target.appid, target.name, template);
-      if (!result.success) {
-        await removeTargetWorkarounds(target);
-        showErrorToast(
-          "Could not enable all games",
-          result.error || `Could not create a profile for ${target.name}`,
-        );
-        return;
+  const enableAll = useCallback(async (source: KnownGameSource): Promise<void> => {
+    if (!acquireBulkOperation()) return;
+    try {
+      const available = targets.filter((target) => target.source === source && !target.configured && target.name);
+      if (available.length === 0) return;
+      for (const target of available) {
+        if (!(await ensureTargetWorkarounds(target))) {
+          await load();
+          return;
+        }
+        const result = await updateGameConfig(target.appid, target.name, template);
+        if (!result.success) {
+          await removeTargetWorkarounds(target);
+          showErrorToast(
+            "Could not enable all games",
+            result.error || `Could not create a profile for ${target.name}`,
+          );
+          await load();
+          return;
+        }
       }
+      await load();
+    } finally {
+      releaseBulkOperation();
     }
-    await load();
-  }, [ensureTargetWorkarounds, load, removeTargetWorkarounds, targets, template]);
+  }, [acquireBulkOperation, ensureTargetWorkarounds, load, removeTargetWorkarounds, releaseBulkOperation, targets, template]);
 
   const repair = useCallback(async (appid: string): Promise<boolean> => {
     const target = targets.find((item) => item.appid === appid);
@@ -313,17 +349,30 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, selectedAppId, targets]);
 
-  const resetAll = useCallback(async () => {
-    for (const target of targets.filter((item) => item.configured)) {
-      if (!(await removeTargetWorkarounds(target))) return;
-    }
-    const result = await resetAllGameConfigs();
-    if (result.success) {
-      setRunningGame((current) => current ? { ...current, configured: false } : current);
+  const resetAll = useCallback(async (source: KnownGameSource) => {
+    if (!acquireBulkOperation()) return;
+    try {
+      const selectedTargets = targets.filter((item) => item.configured && item.source === source);
+      if (selectedTargets.length === 0) return;
+      for (const target of selectedTargets) {
+        if (!(await removeTargetWorkarounds(target))) {
+          await load();
+          return;
+        }
+      }
+      const result = await resetGameConfigs(selectedTargets.map((target) => target.appid));
+      if (!result.success) {
+        showErrorToast("Could not remove all profiles", result.error || "Could not remove the selected profiles");
+        await load();
+        return;
+      }
+      setRunningGame((current) => current?.source === source ? { ...current, configured: false } : current);
       setSelectedAppId("");
       await load();
+    } finally {
+      releaseBulkOperation();
     }
-  }, [load, removeTargetWorkarounds, targets]);
+  }, [acquireBulkOperation, load, removeTargetWorkarounds, releaseBulkOperation, targets]);
 
-  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, cleanupAllWorkarounds, reload: load };
+  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, bulkOperationBusy, cleanupAllWorkarounds, reload: load };
 }

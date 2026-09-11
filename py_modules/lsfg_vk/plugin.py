@@ -72,6 +72,9 @@ class Plugin:
     async def reset_game_config(self, appid: str):
         return self.configuration_service.reset_game_config(appid)
 
+    async def reset_game_configs(self, appids):
+        return self.configuration_service.reset_game_configs(appids)
+
     async def reset_all_game_configs(self):
         return self.configuration_service.reset_all_game_configs()
 

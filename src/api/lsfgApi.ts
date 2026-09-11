@@ -164,6 +164,7 @@ export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs"
 export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
 export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
 export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
+export const resetGameConfigs = callable<[string[]], GameConfigsResult>("reset_game_configs");
 export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
 export const updateGlobalConfig = callable<[GlobalConfig], GlobalConfigResult>("update_global_config");
 export const getWorkaroundState = callable<[string], WorkaroundStateResult>("get_workaround_state");

@@ -3,7 +3,7 @@ import tempfile
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 sys.modules.setdefault(
@@ -63,6 +63,21 @@ preserve_swapchain_image_count = false
         self.assertNotIn("Steam Game", data["profiles"])
         self.assertIn("flatpak:org.example.Game", data["profiles"])
         self.assertEqual(data["profiles"]["flatpak:org.example.Game"]["multiplier"], 3)
+
+    def test_scoped_game_reset_is_one_write_and_preserves_other_profiles(self):
+        self.service.update_game_config("123", "Steam Game", {"multiplier": 2})
+        self.service.update_game_config("456", "Non-Steam Game", {"multiplier": 3})
+        self.service.update_flatpak_config("org.example.Game", {"multiplier": 4})
+
+        with patch.object(self.service, "_save_profile_data", wraps=self.service._save_profile_data) as save:
+            result = self.service.reset_game_configs(["123"])
+
+        data = self.service._get_profile_data()
+        self.assertTrue(result["success"])
+        self.assertEqual(save.call_count, 1)
+        self.assertNotIn("Steam Game", data["profiles"])
+        self.assertIn("Non-Steam Game", data["profiles"])
+        self.assertIn("flatpak:org.example.Game", data["profiles"])
 
     def test_flatpak_reset_all_preserves_steam_profiles(self):
         self.service.update_game_config("123", "Steam Game", {"multiplier": 2})

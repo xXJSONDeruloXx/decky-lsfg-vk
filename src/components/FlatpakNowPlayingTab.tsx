@@ -1,6 +1,6 @@
 import { Focusable } from "@decky/ui";
 import type { FlatpakApp, LsfgConfig } from "../api/lsfgApi";
-import type { GameTarget } from "../hooks/useGameConfiguration";
+import type { GameTarget } from "../utils/gameTargets";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import { NowPlayingSummary } from "./NowPlayingSummary";
@@ -25,7 +25,7 @@ export function FlatpakNowPlayingTab({ app, launcher, onConfigChange }: Props) {
       <NowPlayingSummary
         title={launcher?.name || app.app_name}
         details={[
-          launcher ? (launcher.nonSteam ? "Steam shortcut" : "Steam") : "Flatpak",
+          launcher ? (launcher.source === "nonSteam" ? "Steam shortcut" : "Steam") : "Flatpak",
           launcher && launcher.name !== app.app_name ? `Running in ${app.app_name}` : null,
           launcher ? "Flatpak" : null,
           `Controls: ${app.app_name} profile`,

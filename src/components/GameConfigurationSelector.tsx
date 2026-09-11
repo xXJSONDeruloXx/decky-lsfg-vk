@@ -1,14 +1,17 @@
 import { ButtonItem, ConfirmModal, Field, PanelSectionRow, showModal } from "@decky/ui";
 import { useEffect, useRef } from "react";
-import { GameTarget } from "../hooks/useGameConfiguration";
+import type { GameTarget, KnownGameSource } from "../utils/gameTargets";
+import { sourceLabel } from "../utils/gameTargets";
 import { CollapsibleItemGroup, collapsibleItemGroupStyles, usePersistentCollapsed } from "./CollapsibleItemGroup";
 
 interface Props {
   targets: GameTarget[];
   runningGame: GameTarget | null;
+  source: KnownGameSource;
+  bulkOperationBusy: boolean;
   onSelect: (appid: string) => void;
-  onEnableAll: () => Promise<void>;
-  onResetAll: () => Promise<void>;
+  onEnableAll: (source: KnownGameSource) => Promise<void>;
+  onResetAll: (source: KnownGameSource) => Promise<void>;
   focusConfiguredToggle?: boolean;
   onConfiguredToggleFocused?: () => void;
 }
@@ -17,12 +20,16 @@ const ENABLED_COLLAPSED_KEY = "lsfg-enabled-games-collapsed-v4";
 const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed-v3";
 
 function targetDescription(game: GameTarget): string {
-  return game.nonSteam ? "Non-Steam" : "Steam";
+  return game.source === "unknown"
+    ? "Unknown source · excluded from bulk actions"
+    : sourceLabel(game.source);
 }
 
 export function GameConfigurationSelector({
   targets,
   runningGame,
+  source,
+  bulkOperationBusy,
   onSelect,
   onEnableAll,
   onResetAll,
@@ -36,13 +43,19 @@ export function GameConfigurationSelector({
   });
   const enabledGames = sortGames(targets.filter((game) => game.configured));
   const availableGames = sortGames(targets.filter((game) => !game.configured));
+  const enableableGames = availableGames.filter((game) => game.source === source);
+  const removableGames = enabledGames.filter((game) => game.source === source);
+  const sourceName = source === "nonSteam" ? "non-Steam shortcuts" : "Steam games";
+  const emptyDescription = source === "nonSteam"
+    ? "Steam has not reported any eligible non-Steam shortcuts"
+    : "Steam has not reported any eligible installed games";
   const toItem = (game: GameTarget) => ({
     id: game.appid,
     label: game.name,
     description: targetDescription(game),
   });
-  const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed(ENABLED_COLLAPSED_KEY);
-  const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(AVAILABLE_COLLAPSED_KEY);
+  const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed(`${ENABLED_COLLAPSED_KEY}-${source}`);
+  const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(`${AVAILABLE_COLLAPSED_KEY}-${source}`);
   const enabledToggleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,10 +70,10 @@ export function GameConfigurationSelector({
   const confirmResetAll = () => {
     showModal(
       <ConfirmModal
-        strTitle="Remove all profiles?"
+        strTitle={`Remove all ${sourceName} profiles?`}
         strOKButtonText="Remove all"
         strCancelButtonText="Cancel"
-        onOK={() => void onResetAll()}
+        onOK={() => void onResetAll(source)}
         onCancel={() => {}}
       />,
     );
@@ -69,11 +82,11 @@ export function GameConfigurationSelector({
   const confirmEnableAll = () => {
     showModal(
       <ConfirmModal
-        strTitle="Enable all available games?"
-        strDescription="Create individual LSFG-VK profiles for every available Steam game and non-Steam shortcut. Flatpak profiles are managed separately in the Flatpak tab."
+        strTitle={`Enable all available ${sourceName}?`}
+        strDescription={`Create individual LSFG-VK profiles for every available ${sourceName}. Unknown-source profiles are excluded. Flatpak profiles are managed separately in the Flatpak tab.`}
         strOKButtonText="Enable all"
         strCancelButtonText="Cancel"
-        onOK={() => void onEnableAll()}
+        onOK={() => void onEnableAll(source)}
         onCancel={() => {}}
       />,
     );
@@ -86,7 +99,7 @@ export function GameConfigurationSelector({
       </style>
       {targets.length === 0 && (
         <PanelSectionRow>
-          <Field label="No installed games" description="Steam has not reported any eligible games" />
+          <Field label={`No ${sourceName} found`} description={emptyDescription} />
         </PanelSectionRow>
       )}
       <CollapsibleItemGroup
@@ -104,10 +117,10 @@ export function GameConfigurationSelector({
         onToggle={toggleAvailable}
         onSelect={onSelect}
       />
-      {availableGames.length > 0 && (
+      {enableableGames.length > 0 && (
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={confirmEnableAll}>
-            Enable all available games
+          <ButtonItem layout="below" onClick={confirmEnableAll} disabled={bulkOperationBusy}>
+            {`Enable all ${sourceName}`}
           </ButtonItem>
         </PanelSectionRow>
       )}
@@ -115,9 +128,9 @@ export function GameConfigurationSelector({
         <ButtonItem
           layout="below"
           onClick={confirmResetAll}
-          disabled={!targets.some((target) => target.configured)}
+          disabled={bulkOperationBusy || removableGames.length === 0}
         >
-          Remove all profiles
+          {`Remove all ${sourceLabel(source)} profiles`}
         </ButtonItem>
       </PanelSectionRow>
     </>

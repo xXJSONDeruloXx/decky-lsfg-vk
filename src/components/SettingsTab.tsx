@@ -2,7 +2,7 @@ import { ButtonItem, Field, PanelSection, PanelSectionRow, ToggleField } from "@
 import { type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 
-interface SetupTabProps {
+interface SettingsTabProps {
   isInstalled: boolean;
   installationStatus: string;
   losslessScalingInstalled: boolean;
@@ -18,7 +18,7 @@ interface SetupTabProps {
   onUninstall: () => void;
 }
 
-export function SetupTab(props: SetupTabProps) {
+export function SettingsTab(props: SettingsTabProps) {
   const {
     isInstalled,
     installationStatus,
@@ -45,7 +45,7 @@ export function SetupTab(props: SetupTabProps) {
 
   return (
     <>
-      <PanelSection title="Setup">
+      <PanelSection title="Settings">
         <PanelSectionRow>
           <Field
             label="Lossless Scaling"

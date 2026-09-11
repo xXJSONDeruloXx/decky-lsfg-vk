@@ -1,6 +1,7 @@
 import { Focusable } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
-import { GameTarget } from "../hooks/useGameConfiguration";
+import type { GameTarget } from "../utils/gameTargets";
+import { sourceLabel } from "../utils/gameTargets";
 import { GameConfigurationControls } from "./GameConfigurationControls";
 import { NowPlayingSummary } from "./NowPlayingSummary";
 
@@ -14,7 +15,7 @@ interface Props {
 }
 
 function targetDescription(game: GameTarget): string {
-  return game.nonSteam ? "Non-Steam" : "Steam";
+  return sourceLabel(game.source);
 }
 
 export function NowPlayingTab({

@@ -1,28 +1,37 @@
 import { Tabs } from "@decky/ui";
 import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
-import { FaCube, FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
+import { FaCube, FaExternalLinkAlt, FaFileAlt, FaGamepad, FaSteam, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { useFlatpakConfiguration } from "../hooks/useFlatpakConfiguration";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallation } from "../hooks/useLsfgHooks";
 import { tabStyles } from "../styles";
-import { resolveNowPlayingTarget } from "../utils/nowPlaying";
+import { targetsForSource } from "../utils/gameTargets";
+import { resolveNowPlayingTarget, type NowPlayingTarget } from "../utils/nowPlaying";
 import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpakNowPlayingTab } from "./FlatpakNowPlayingTab";
 import { FlatpakTab } from "./FlatpakTab";
 import { NowPlayingTab } from "./NowPlayingTab";
-import { SetupTab } from "./SetupTab";
+import { SettingsTab } from "./SettingsTab";
 
 const tabIcons = {
   nowPlaying: <FaGamepad size={18} />,
-  games: <FaList size={18} />,
+  steam: <FaSteam size={18} />,
+  nonSteam: <FaExternalLinkAlt size={18} />,
   flatpak: <FaCube size={18} />,
   configFile: <FaFileAlt size={18} />,
-  setup: <FaTools size={18} />,
+  settings: <FaTools size={18} />,
 };
 
 const DEBUG_TAB_VISIBILITY_KEY = "lsfg-debug-tab-visible-v1";
+type GameTabId = "Steam" | "NonSteam" | "Flatpak";
+
+function tabForNowPlaying(target: NowPlayingTarget | null): GameTabId {
+  if (!target) return "Steam";
+  if (target.kind === "flatpak") return target.launcher?.source === "nonSteam" ? "NonSteam" : "Flatpak";
+  return target.game.source === "nonSteam" ? "NonSteam" : "Steam";
+}
 
 function usePersistentBoolean(key: string, defaultValue: boolean) {
   const [value, setValue] = useState(() => {
@@ -56,6 +65,7 @@ export function Content() {
     updateGlobal,
     enable,
     enableAll,
+    bulkOperationBusy,
     repair,
     resetSelected,
     resetAll,
@@ -80,34 +90,40 @@ export function Content() {
     steamBranchStatus.installed &&
     !steamBranchStatus.needs_switch;
   const flatpak = useFlatpakConfiguration(setupComplete);
-  const [tab, setTab] = useState("Setup");
+  const [tab, setTab] = useState("Settings");
   const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, false);
   const [contentFocused, setContentFocused] = useState(false);
   const previousRunningWorkload = useRef<string | null>(null);
+  const previousNowPlayingTab = useRef<GameTabId>("Steam");
   const runningFlatpak = flatpak.runningApp;
   const nowPlayingTarget = resolveNowPlayingTarget(runningGame, runningFlatpak);
   const hasNowPlaying = Boolean(nowPlayingTarget);
   const runningWorkload = nowPlayingTarget
     ? nowPlayingTarget.kind === "flatpak"
       ? `flatpak:${nowPlayingTarget.app.app_id}:${nowPlayingTarget.launcher?.appid ?? ""}`
-      : `steam:${nowPlayingTarget.game.appid}`
+      : `${nowPlayingTarget.game.source}:${nowPlayingTarget.game.appid}`
     : null;
+  const steamTargets = targetsForSource(targets, "steam");
+  const nonSteamTargets = targetsForSource(targets, "nonSteam");
 
   useEffect(() => {
     if (!setupComplete) {
-      setTab("Setup");
+      setTab("Settings");
       return;
     }
-    setTab((current) => current === "Setup" ? (hasNowPlaying ? "NowPlaying" : "Games") : current);
+    setTab((current) => current === "Settings" ? (hasNowPlaying ? "NowPlaying" : "Steam") : current);
   }, [hasNowPlaying, setupComplete]);
 
   useEffect(() => {
     if (!setupComplete) return;
     const previous = previousRunningWorkload.current;
     previousRunningWorkload.current = runningWorkload;
-    if (runningWorkload && runningWorkload !== previous) setTab("NowPlaying");
+    if (runningWorkload && runningWorkload !== previous) {
+      previousNowPlayingTab.current = tabForNowPlaying(nowPlayingTarget);
+      setTab("NowPlaying");
+    }
     else if (!runningWorkload && previous) {
-      setTab((current) => current === "NowPlaying" ? "Games" : current);
+      setTab((current) => current === "NowPlaying" ? previousNowPlayingTab.current : current);
     }
   }, [runningWorkload, setupComplete]);
 
@@ -119,8 +135,8 @@ export function Content() {
   }, [isInstalled, reload, flatpak.reload]);
 
   useEffect(() => {
-    if (!showDebugTab && tab === "ConfigFile") setTab("Games");
-  }, [showDebugTab, tab]);
+    if (!showDebugTab && tab === "ConfigFile") setTab(setupComplete ? "Steam" : "Settings");
+  }, [setupComplete, showDebugTab, tab]);
 
   const handleConfigChange = async (
     fieldName: keyof ConfigurationData,
@@ -130,8 +146,8 @@ export function Content() {
     await save({ ...config, [fieldName]: value }, cleanupLaunchOptions);
   };
 
-  const setup = (
-    <SetupTab
+  const settings = (
+    <SettingsTab
       isInstalled={isInstalled}
       installationStatus={installationStatus}
       losslessScalingInstalled={losslessScalingInstalled}
@@ -152,7 +168,13 @@ export function Content() {
     <div className="lsfg-vk-tab-content">{content}</div>
   );
 
-  const nowPlaying = nowPlayingTarget?.kind === "steam" ? (
+  const nowPlaying = nowPlayingTarget?.kind === "flatpak" ? (
+    <FlatpakNowPlayingTab
+      app={nowPlayingTarget.app}
+      launcher={nowPlayingTarget.launcher}
+      onConfigChange={flatpak.updateConfig}
+    />
+  ) : nowPlayingTarget ? (
     <NowPlayingTab
       game={nowPlayingTarget.game}
       config={runningConfig}
@@ -160,33 +182,51 @@ export function Content() {
         await saveFor(nowPlayingTarget.game.appid, { ...runningConfig, [field]: value }, true);
       }}
     />
-  ) : nowPlayingTarget?.kind === "flatpak" ? (
-    <FlatpakNowPlayingTab
-      app={nowPlayingTarget.app}
-      launcher={nowPlayingTarget.launcher}
-      onConfigChange={flatpak.updateConfig}
-    />
   ) : null;
 
   const tabs = setupComplete
     ? [
         ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: tabContent(nowPlaying) }] : []),
         {
-          id: "Games",
-          title: tabIcons.games,
+          id: "Steam",
+          title: tabIcons.steam,
           content: tabContent(
             <ConfigurationTab
+              title="Steam games"
+              source="steam"
               config={config}
-              targets={targets}
+              targets={steamTargets}
               runningGame={runningGame}
               onSelect={setSelectedAppId}
-              onConfigChange={(field, value) => handleConfigChange(field, value, true)}
+              onConfigChange={handleConfigChange}
               onEnable={enable}
               onEnableAll={enableAll}
+              bulkOperationBusy={bulkOperationBusy}
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
             />,
+          ),
+        },
+        {
+          id: "NonSteam",
+          title: tabIcons.nonSteam,
+          content: tabContent(
+            <ConfigurationTab
+              title="Non-Steam games"
+              source="nonSteam"
+              config={config}
+              targets={nonSteamTargets}
+              runningGame={runningGame}
+              onSelect={setSelectedAppId}
+              onConfigChange={handleConfigChange}
+              onEnable={enable}
+              onEnableAll={enableAll}
+              bulkOperationBusy={bulkOperationBusy}
+              onRepair={repair}
+              onReset={resetSelected}
+              onResetAll={resetAll}
+            />
           ),
         },
         {
@@ -209,12 +249,12 @@ export function Content() {
           ),
         },
         ...(showDebugTab ? [{ id: "ConfigFile", title: tabIcons.configFile, content: tabContent(<ConfigFileTab />) }] : []),
-        { id: "Setup", title: tabIcons.setup, content: tabContent(setup) },
+        { id: "Settings", title: tabIcons.settings, content: tabContent(settings) },
       ]
-    : [{ id: "Setup", title: tabIcons.setup, content: tabContent(setup) }];
+    : [{ id: "Settings", title: tabIcons.settings, content: tabContent(settings) }];
 
   const availableTabIds = new Set(tabs.map(({ id }) => id));
-  const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Games" : "Setup";
+  const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Steam" : "Settings";
   const handleFocusCapture = (event: FocusEvent<HTMLDivElement>) => {
     const focusedElement = event.target as HTMLElement | null;
     setContentFocused(!focusedElement?.closest?.('[role="tab"]'));

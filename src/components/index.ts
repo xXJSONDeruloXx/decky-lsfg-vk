@@ -3,7 +3,7 @@ export { ConfigurationSection } from "./ConfigurationSection";
 export { FpsMultiplierControl } from "./FpsMultiplierControl";
 export { ConfigurationTab } from "./ConfigurationTab";
 export { ConfigFileTab } from "./ConfigFileTab";
-export { SetupTab } from "./SetupTab";
+export { SettingsTab } from "./SettingsTab";
 export { GameConfigurationSelector } from "./GameConfigurationSelector";
 export { GameConfigurationControls } from "./GameConfigurationControls";
 export { NowPlayingTab } from "./NowPlayingTab";

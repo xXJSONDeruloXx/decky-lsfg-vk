@@ -1,26 +1,36 @@
-import { ButtonItem, ConfirmModal, DialogButton, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses, showModal } from "@decky/ui";
+import { ButtonItem, ConfirmModal, DialogButton, Field, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses, showModal } from "@decky/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
-import { GameTarget } from "../hooks/useGameConfiguration";
+import type { GameTarget, KnownGameSource } from "../utils/gameTargets";
+import { sourceLabel } from "../utils/gameTargets";
 import { GameConfigurationControls } from "./GameConfigurationControls";
 import { GameConfigurationSelector } from "./GameConfigurationSelector";
 import { ProfileDetails } from "./ProfileDetails";
 
 interface ConfigurationTabProps {
+  title: string;
+  source: KnownGameSource;
   config: ConfigurationData;
   targets: GameTarget[];
   runningGame: GameTarget | null;
   onSelect: (appid: string) => void;
-  onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
+  onConfigChange: (
+    fieldName: keyof ConfigurationData,
+    value: boolean | number | string | string[],
+    cleanupLaunchOptions?: boolean,
+  ) => Promise<void>;
   onEnable: (appid: string) => Promise<boolean>;
-  onEnableAll: () => Promise<void>;
+  onEnableAll: (source: KnownGameSource) => Promise<void>;
+  bulkOperationBusy: boolean;
   onRepair: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
-  onResetAll: () => Promise<void>;
+  onResetAll: (source: KnownGameSource) => Promise<void>;
 }
 
 export function ConfigurationTab({
+  title,
+  source,
   config,
   targets,
   runningGame,
@@ -28,6 +38,7 @@ export function ConfigurationTab({
   onConfigChange,
   onEnable,
   onEnableAll,
+  bulkOperationBusy,
   onRepair,
   onReset,
   onResetAll,
@@ -64,10 +75,12 @@ export function ConfigurationTab({
   if (detailAppId === null) {
     return (
       <>
-        <PanelSection title="Games">
+        <PanelSection title={title}>
           <GameConfigurationSelector
             targets={targets}
             runningGame={runningGame}
+            source={source}
+            bulkOperationBusy={bulkOperationBusy}
             onSelect={(appid) => {
               setFocusConfiguredToggle(false);
               setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
@@ -85,9 +98,9 @@ export function ConfigurationTab({
   }
 
   const profileLabel = selectedTarget?.name || "Game profile";
-  const profileTransport = selectedTarget?.nonSteam ? "Non-Steam" : "Steam";
+  const profileTransport = selectedTarget ? sourceLabel(selectedTarget.source) : sourceLabel(source);
   const profileDescription = selectedTarget
-    ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}`
+    ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}${selectedTarget.source === "unknown" ? " · Bulk actions exclude this profile" : ""}`
     : "Game is no longer available";
   const enableProfile = async (appid: string, quitRunningGame = false) => {
     if (!(await onEnable(appid))) return;
@@ -101,8 +114,8 @@ export function ConfigurationTab({
       closeDetails();
     } else if (detailAppId) {
       const isRunningUnconfigured = runningGame?.appid === detailAppId
-        && runningGame.nonSteam === false
-        && selectedTarget?.nonSteam === false
+        && runningGame.source === "steam"
+        && selectedTarget?.source === "steam"
         && !runningGame.configured;
       if (isRunningUnconfigured) {
         showModal(
@@ -128,7 +141,7 @@ export function ConfigurationTab({
           <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             <Focusable noFocusRing style={{ flex: "none" }}>
               <DialogButton
-                aria-label="Back to games"
+                aria-label={`Back to ${title}`}
                 onClick={closeDetails}
                 style={{
                   width: "48px",
@@ -156,21 +169,28 @@ export function ConfigurationTab({
       <PanelSection>
         {!selectedTarget?.configured && selectedTarget && (
           <PanelSectionRow>
-            <Focusable ref={enableRef} noFocusRing>
-              <ButtonItem layout="below" onClick={handleProfileAction}>Enable for next launch</ButtonItem>
-            </Focusable>
+            {selectedTarget.source === "unknown" ? (
+              <Field
+                label="Target source unavailable"
+                description="Refresh Steam and try again before enabling this target."
+              />
+            ) : (
+              <Focusable ref={enableRef} noFocusRing>
+                <ButtonItem layout="below" onClick={handleProfileAction}>Enable for next launch</ButtonItem>
+              </Focusable>
+            )}
           </PanelSectionRow>
         )}
       </PanelSection>
       {selectedTarget?.configured && (
         <GameConfigurationControls
           config={config}
-          onConfigChange={onConfigChange}
+          onConfigChange={(field, value) => onConfigChange(field, value, selectedTarget?.source !== "unknown")}
           autoFocusFpsMultiplier={focusFpsMultiplier}
           onFpsMultiplierFocused={clearFpsFocusRequest}
-          showWorkarounds
-          workaroundTarget={selectedTarget || undefined}
-          onRepairWorkaround={selectedTarget ? () => onRepair(selectedTarget.appid) : undefined}
+          showWorkarounds={selectedTarget.source !== "unknown"}
+          workaroundTarget={selectedTarget.source !== "unknown" ? selectedTarget : undefined}
+          onRepairWorkaround={selectedTarget.source !== "unknown" ? () => onRepair(selectedTarget.appid) : undefined}
         />
       )}
       {selectedTarget?.configured && (

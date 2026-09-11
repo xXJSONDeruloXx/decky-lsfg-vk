@@ -169,6 +169,33 @@ class ConfigurationService(BaseService):
         except Exception as error:
             return self._error_response(dict, str(error), appid=str(appid), config=None)
 
+    def reset_game_configs(self, appids: list[str]) -> Dict[str, Any]:
+        try:
+            if not isinstance(appids, list):
+                raise ValueError("appids must be a list")
+            requested = set()
+            for appid in appids:
+                if isinstance(appid, bool) or not isinstance(appid, (str, int)):
+                    raise ValueError("appids must contain only strings or integers")
+                value = str(appid)
+                if not re.fullmatch(r"-?[0-9]+", value):
+                    raise ValueError("appids must contain only numeric App IDs")
+                requested.add(value)
+
+            data = self._get_profile_data()
+            data["profiles"] = {
+                name: profile
+                for name, profile in data["profiles"].items()
+                if not (
+                    len(profile.get("active_in", [])) == 1
+                    and str(profile["active_in"][0]) in requested
+                )
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]), games=[])
+        except Exception as error:
+            return self._error_response(dict, str(error), games=[])
+
     def reset_all_game_configs(self) -> Dict[str, Any]:
         try:
             data = self._get_profile_data()

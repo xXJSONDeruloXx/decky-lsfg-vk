@@ -24,6 +24,7 @@ const game = (nonSteam = true, configured = true) => ({
   appid: "123456",
   name: nonSteam ? "1080 Snowboarding" : "Native Game",
   nonSteam,
+  source: nonSteam ? "nonSteam" : "steam",
   configured,
 });
 
@@ -100,6 +101,12 @@ test("configured Steam target remains the fallback", () => {
   const target = resolveNowPlayingTarget(game(false), null);
 
   assert.equal(target?.kind, "steam");
+});
+
+test("configured non-Steam target remains the fallback", () => {
+  const target = resolveNowPlayingTarget(game(true), null);
+
+  assert.equal(target?.kind, "nonSteam");
 });
 
 test("unconfigured Steam target has no Now Playing controls", () => {
