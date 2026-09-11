@@ -14,6 +14,7 @@ sys.modules.setdefault(
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "py_modules"))
 
 from lsfg_vk.configuration import ConfigurationService
+from lsfg_vk.flatpak_service import FlatpakService
 from lsfg_vk.flatpak_profile_service import FlatpakProfileService
 
 
@@ -26,6 +27,7 @@ class FakeFlatpakService:
         self.state = {"version": 2, "plugin_owned_branches": [], "prepared_apps": {}}
         self.commands = []
         self.running = ""
+        self.start_times = {}
 
     def _read_state(self):
         return self.state
@@ -48,6 +50,9 @@ class FakeFlatpakService:
         if not path.exists():
             return False, b""
         return True, path.read_bytes()
+
+    def _process_start_time(self, pid):
+        return self.start_times.get(pid)
 
     @staticmethod
     def _write_file(path, content, mode=0o644):
@@ -175,6 +180,17 @@ class FlatpakProfileServiceTests(unittest.TestCase):
         self.assertNotIn("--env=DXVK_HDR=0", command)
         self.assertIn("--env=MESA_LOADER_DRIVER_OVERRIDE=zink", command)
 
+    def test_config_update_returns_without_relisting_flatpaks(self):
+        self.assertTrue(self.service.enable_app(self.app_id)["success"])
+        self.service.get_app = Mock(side_effect=AssertionError("config updates must not relist Flatpaks"))
+
+        result = self.service.update_config(self.app_id, {"multiplier": 4})
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["app_id"], self.app_id)
+        self.assertEqual(result["config"]["multiplier"], 4)
+        self.service.get_app.assert_not_called()
+
     def test_remove_restores_exact_original_override_and_profile(self):
         baseline = "[Environment]\nKEEP=yes\n"
         self.flatpak._write_file(self.flatpak._override_path(self.app_id), baseline)
@@ -199,11 +215,18 @@ class FlatpakProfileServiceTests(unittest.TestCase):
     def test_running_detection_uses_owned_selector_state(self):
         self.assertTrue(self.service.enable_app(self.app_id)["success"])
         self.flatpak.running = "org.example.Game\ttrue\t1234\norg.other.App\ttrue\t9999\n"
+        self.flatpak.start_times["1234"] = 200
 
         result = self.service.get_running_apps()
 
         self.assertTrue(result["success"])
-        self.assertEqual(result["apps"], [{"app_id": self.app_id, "active": True, "pid": "1234"}])
+        self.assertEqual(result["apps"], [{"app_id": self.app_id, "active": True, "pid": "1234", "start_time": 200}])
+
+    def test_process_start_time_parser_handles_parentheses_in_command_name(self):
+        fields = ["S"] + ["0"] * 18 + ["4242"]
+        stat = "1234 (retro)arch) " + " ".join(fields)
+
+        self.assertEqual(FlatpakService._parse_process_start_time(stat), 4242)
 
 
 if __name__ == "__main__":

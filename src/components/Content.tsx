@@ -1,4 +1,4 @@
-import { Tabs } from "@decky/ui";
+import { Field, PanelSection, PanelSectionRow, Tabs } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { FaCube, FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
@@ -6,6 +6,7 @@ import { useFlatpakConfiguration } from "../hooks/useFlatpakConfiguration";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallation } from "../hooks/useLsfgHooks";
 import { tabStyles } from "../styles";
+import { resolveNowPlayingTarget } from "../utils/nowPlaying";
 import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpakNowPlayingTab } from "./FlatpakNowPlayingTab";
@@ -80,10 +81,13 @@ export function Content() {
   const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
   const previousRunningWorkload = useRef<string | null>(null);
   const runningFlatpak = flatpak.runningApp;
-  const hasNowPlaying = Boolean(runningGame?.configured || runningFlatpak);
-  const runningWorkload = runningGame?.configured
-    ? `steam:${runningGame.appid}`
-    : runningFlatpak ? `flatpak:${runningFlatpak.app_id}` : null;
+  const nowPlayingTarget = resolveNowPlayingTarget(runningGame, runningFlatpak);
+  const hasNowPlaying = Boolean(nowPlayingTarget);
+  const runningWorkload = nowPlayingTarget
+    ? nowPlayingTarget.kind === "flatpak"
+      ? `flatpak:${nowPlayingTarget.app.app_id}`
+      : `steam:${nowPlayingTarget.game.appid}`
+    : null;
 
   useEffect(() => {
     if (!setupComplete) {
@@ -136,26 +140,27 @@ export function Content() {
     />
   );
 
-  const nowPlaying = runningGame?.configured ? (
+  const nowPlaying = nowPlayingTarget?.kind === "steam" ? (
     <NowPlayingTab
-      game={runningGame}
+      game={nowPlayingTarget.game}
       config={runningConfig}
       onConfigChange={async (field, value) => {
-        await saveFor(runningGame.appid, { ...runningConfig, [field]: value }, true);
+        await saveFor(nowPlayingTarget.game.appid, { ...runningConfig, [field]: value }, true);
       }}
     />
-  ) : runningFlatpak ? (
+  ) : nowPlayingTarget?.kind === "flatpak" ? (
     <FlatpakNowPlayingTab
-      app={runningFlatpak}
-      busy={flatpak.busyAppId === runningFlatpak.app_id}
+      app={nowPlayingTarget.app}
+      launcher={nowPlayingTarget.launcher}
       onConfigChange={flatpak.updateConfig}
-      onWorkaroundChange={flatpak.updateWorkarounds}
     />
-  ) : null;
+  ) : (
+    <NowPlayingTabPlaceholder />
+  );
 
   const tabs = setupComplete
     ? [
-        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying }] : []),
+        { id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying },
         {
           id: "Games",
           title: tabIcons.games,
@@ -198,13 +203,34 @@ export function Content() {
       ]
     : [{ id: "Setup", title: tabIcons.setup, content: setup }];
 
+  const availableTabIds = new Set(tabs.map(({ id }) => id));
+  const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Games" : "Setup";
+
   return (
     <div
       className="lsfg-vk-tabs"
       style={{ height: "95%", width: "300px", position: "fixed", marginTop: "-12px", overflow: "hidden" }}
     >
       <style>{tabStyles}</style>
-      <Tabs activeTab={!showDebugTab && tab === "ConfigFile" ? "Games" : tab} onShowTab={setTab} tabs={tabs} />
+      <Tabs
+        activeTab={activeTab}
+        onShowTab={(nextTab: string) => {
+          if (availableTabIds.has(nextTab)) setTab(nextTab);
+        }}
+        tabs={tabs}
+      />
+    </div>
+  );
+}
+
+function NowPlayingTabPlaceholder() {
+  return (
+    <div>
+      <PanelSection title="Now Playing">
+        <PanelSectionRow>
+          <Field label="Nothing running" description="Start an enabled Steam, non-Steam, or Flatpak target to configure it here." />
+        </PanelSectionRow>
+      </PanelSection>
     </div>
   );
 }

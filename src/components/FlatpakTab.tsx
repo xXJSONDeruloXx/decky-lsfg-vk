@@ -1,7 +1,8 @@
 import { ButtonItem, DialogButton, Field, Focusable, PanelSection, PanelSectionRow, gamepadDialogClasses } from "@decky/ui";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import type { FlatpakApp, LsfgConfig, WorkaroundState } from "../api/lsfgApi";
+import { CollapsibleItemGroup, collapsibleItemGroupStyles } from "./CollapsibleItemGroup";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FlatpakWorkaroundsSection } from "./FlatpakWorkaroundsSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
@@ -17,6 +18,24 @@ interface Props {
   onRemove: (appId: string) => Promise<boolean>;
   onConfigChange: (appId: string, config: LsfgConfig) => Promise<boolean>;
   onWorkaroundChange: (appId: string, state: WorkaroundState) => Promise<boolean>;
+}
+
+function usePersistentCollapsed(key: string) {
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(key) !== "false";
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, String(collapsed));
+    } catch {}
+  }, [collapsed, key]);
+
+  return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
 export function FlatpakTab({
@@ -36,31 +55,47 @@ export function FlatpakTab({
     [apps, selectedAppId],
   );
   const close = useCallback(() => setSelectedAppId(null), []);
+  const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed("lsfg-flatpak-enabled-collapsed-v1");
+  const [availableCollapsed, toggleAvailable] = usePersistentCollapsed("lsfg-flatpak-available-collapsed-v1");
+  const enabledToggleRef = useRef<HTMLDivElement>(null);
+
+  const enabledApps = useMemo(
+    () => apps.filter((app) => app.enabled).sort((a, b) => a.app_name.localeCompare(b.app_name)),
+    [apps],
+  );
+  const availableApps = useMemo(
+    () => apps.filter((app) => !app.enabled).sort((a, b) => a.app_name.localeCompare(b.app_name)),
+    [apps],
+  );
+  const itemFor = (app: FlatpakApp) => ({
+    id: app.app_id,
+    label: app.app_name,
+    description: `${app.app_id} · ${app.prepared && !app.owned ? "Prepared externally" : "Available"}`,
+  });
 
   if (!selectedAppId) {
     return (
       <PanelSection title="Flatpak">
-        {/* <PanelSectionRow>
-          <Field
-            label="Flatpak applications"
-            description="Enable LSFG-VK directly for a Flatpak. Steam shortcuts and launcher scripts are not modified."
-          />
-        </PanelSectionRow> */}
-        {apps.map((app) => {
-          const status = app.enabled
-            ? app.app_id === runningApp?.app_id ? "Enabled · Running" : "Enabled"
-            : app.prepared && !app.owned ? "Prepared externally" : "Available";
-          return (
-            <PanelSectionRow key={app.app_id}>
-              <Field
-                label={app.app_name}
-                description={`${app.app_id} · ${status}`}
-                onActivate={() => setSelectedAppId(app.app_id)}
-                highlightOnFocus
-              />
-            </PanelSectionRow>
-          );
-        })}
+        <style>{collapsibleItemGroupStyles}</style>
+        <CollapsibleItemGroup
+          title="Enabled"
+          items={enabledApps.map((app) => ({
+            id: app.app_id,
+            label: app.app_name,
+            description: `${app.app_id}${app.app_id === runningApp?.app_id ? " · Running" : ""}`,
+          }))}
+          collapsed={enabledCollapsed}
+          onToggle={toggleEnabled}
+          onSelect={setSelectedAppId}
+          toggleRef={enabledToggleRef}
+        />
+        <CollapsibleItemGroup
+          title="Available"
+          items={availableApps.map(itemFor)}
+          collapsed={availableCollapsed}
+          onToggle={toggleAvailable}
+          onSelect={setSelectedAppId}
+        />
         {apps.length === 0 && !loading && (
           <PanelSectionRow>
             <Field label="No Flatpak applications found" />

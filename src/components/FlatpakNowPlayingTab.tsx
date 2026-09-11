@@ -1,17 +1,16 @@
 import { Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
-import type { FlatpakApp, LsfgConfig, WorkaroundState } from "../api/lsfgApi";
+import type { FlatpakApp, LsfgConfig } from "../api/lsfgApi";
+import type { GameTarget } from "../hooks/useGameConfiguration";
 import { ConfigurationSection } from "./ConfigurationSection";
-import { FlatpakWorkaroundsSection } from "./FlatpakWorkaroundsSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 
 interface Props {
   app: FlatpakApp;
-  busy: boolean;
+  launcher: GameTarget | null;
   onConfigChange: (appId: string, config: LsfgConfig) => Promise<boolean>;
-  onWorkaroundChange: (appId: string, state: WorkaroundState) => Promise<boolean>;
 }
 
-export function FlatpakNowPlayingTab({ app, busy, onConfigChange, onWorkaroundChange }: Props) {
+export function FlatpakNowPlayingTab({ app, launcher, onConfigChange }: Props) {
   if (!app.config) return null;
   const changeConfig = async (
     field: keyof LsfgConfig,
@@ -24,16 +23,21 @@ export function FlatpakNowPlayingTab({ app, busy, onConfigChange, onWorkaroundCh
     <Focusable>
       <PanelSection title="Now Playing">
         <PanelSectionRow>
-          <Field label={app.app_name} description={`Flatpak · ${app.app_id}`} />
+          <Field
+            label={launcher?.name || app.app_name}
+            description={launcher
+              ? `${launcher.nonSteam ? "Steam shortcut" : "Steam"} · Running in ${app.app_name} · Flatpak`
+              : `Flatpak · ${app.app_id}`}
+          />
         </PanelSectionRow>
+        {launcher && (
+          <PanelSectionRow>
+            <Field label="Controls" description={`${app.app_name} profile · ${app.app_id}`} />
+          </PanelSectionRow>
+        )}
       </PanelSection>
       <FpsMultiplierControl config={app.config} onConfigChange={changeConfig} />
       <ConfigurationSection config={app.config} onConfigChange={changeConfig} />
-      <FlatpakWorkaroundsSection
-        state={app.workarounds}
-        disabled={busy}
-        onChange={(state) => onWorkaroundChange(app.app_id, state)}
-      />
     </Focusable>
   );
 }

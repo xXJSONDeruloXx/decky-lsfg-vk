@@ -44,6 +44,13 @@ class FlatpakService(BaseService):
         env = os.environ.copy()
         env.pop("LD_LIBRARY_PATH", None)
         env["HOME"] = str(self.user_home)
+        try:
+            user_id = self.user_home.stat().st_uid
+        except OSError:
+            user_id = None
+        if user_id is not None:
+            env["XDG_RUNTIME_DIR"] = f"/run/user/{user_id}"
+            env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path=/run/user/{user_id}/bus"
         path = [entry for entry in env.get("PATH", "").split(":") if entry]
         for entry in ("/usr/bin", "/usr/local/bin", "/bin"):
             if entry not in path:
@@ -195,6 +202,29 @@ class FlatpakService(BaseService):
     @staticmethod
     def _sha256(content: bytes) -> str:
         return hashlib.sha256(content).hexdigest()
+
+    @staticmethod
+    def _parse_process_start_time(stat_content: str) -> Optional[int]:
+        closing_command = stat_content.rfind(")")
+        if closing_command < 0:
+            return None
+        fields = stat_content[closing_command + 2:].split()
+        if len(fields) <= 19:
+            return None
+        try:
+            return int(fields[19])
+        except (TypeError, ValueError):
+            return None
+
+    @classmethod
+    def _process_start_time(cls, pid: str) -> Optional[int]:
+        if not isinstance(pid, str) or re.fullmatch(r"[0-9]+", pid) is None:
+            return None
+        try:
+            stat_content = (Path("/proc") / pid / "stat").read_text(encoding="utf-8")
+        except OSError:
+            return None
+        return cls._parse_process_start_time(stat_content)
 
     def _snapshot_override(self, app_id: str) -> tuple[bool, bytes]:
         path = self._override_path(app_id)

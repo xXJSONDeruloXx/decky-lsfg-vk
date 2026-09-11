@@ -8,7 +8,7 @@ deploy:
     ./scripts/deploy-to-deck.sh
 
 test:
-    node --experimental-strip-types --test tests/steamLaunchOptions.test.ts
+    node --experimental-strip-types --test tests/steamLaunchOptions.test.ts tests/nowPlaying.test.ts
     python3.12 -m unittest discover -s tests -p 'test_*.py'
 
 watch:

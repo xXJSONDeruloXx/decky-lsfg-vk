@@ -149,6 +149,12 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertEqual(runtime, self.runtime_ref)
         self.assertEqual(branch, "25.08")
 
+    def test_clean_env_targets_deck_user_session_bus(self):
+        env = self.service._clean_env()
+        user_id = self.home.stat().st_uid
+        self.assertEqual(env["XDG_RUNTIME_DIR"], f"/run/user/{user_id}")
+        self.assertEqual(env["DBUS_SESSION_BUS_ADDRESS"], f"unix:path=/run/user/{user_id}/bus")
+
     def test_prepare_app_installs_runtime_and_persists_narrow_override(self):
         response = self.service.prepare_app("com.example.Game")
 
