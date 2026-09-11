@@ -20,11 +20,26 @@ function numericPid(value: string | undefined): number {
   return value && /^\d+$/.test(value) ? Number(value) : -1;
 }
 
+function compareRunningProcesses(a: RunningFlatpakApp, b: RunningFlatpakApp): number {
+  if (a.active !== b.active) return a.active ? -1 : 1;
+  const startDifference = numericValue(b.start_time) - numericValue(a.start_time);
+  if (startDifference !== 0) return startDifference;
+  return numericPid(b.pid) - numericPid(a.pid);
+}
+
 export function selectMostRecentRunningFlatpak(
   apps: FlatpakApp[],
   runningApps: RunningFlatpakApp[],
 ): FlatpakApp | null {
-  const candidates = runningApps
+  const newestProcessByApp = new Map<string, RunningFlatpakApp>();
+  for (const running of runningApps) {
+    const current = newestProcessByApp.get(running.app_id);
+    if (!current || compareRunningProcesses(running, current) < 0) {
+      newestProcessByApp.set(running.app_id, running);
+    }
+  }
+
+  const candidates = Array.from(newestProcessByApp.values())
     .map((running) => ({
       running,
       app: apps.find((app) => app.app_id === running.app_id) || null,
@@ -38,10 +53,8 @@ export function selectMostRecentRunningFlatpak(
       : [];
 
   eligibleCandidates.sort((a, b) => {
-    const startDifference = numericValue(b.running.start_time) - numericValue(a.running.start_time);
-    if (startDifference !== 0) return startDifference;
-    const pidDifference = numericPid(b.running.pid) - numericPid(a.running.pid);
-    if (pidDifference !== 0) return pidDifference;
+    const processDifference = compareRunningProcesses(a.running, b.running);
+    if (processDifference !== 0) return processDifference;
     return a.running.app_id.localeCompare(b.running.app_id);
   });
 

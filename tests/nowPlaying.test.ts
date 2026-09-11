@@ -47,6 +47,16 @@ test("prefers active Flatpak status before process age", () => {
   assert.equal(selectMostRecentRunningFlatpak(apps, running)?.app_id, "org.example.active");
 });
 
+test("deduplicates multiple process rows for one managed Flatpak", () => {
+  const apps = [flatpak("com.heroicgameslauncher.hgl")];
+  const running = [
+    { app_id: "com.heroicgameslauncher.hgl", active: false, pid: "228081", start_time: null },
+    { app_id: "com.heroicgameslauncher.hgl", active: false, pid: "228116", start_time: null },
+  ];
+
+  assert.equal(selectMostRecentRunningFlatpak(apps, running)?.app_id, "com.heroicgameslauncher.hgl");
+});
+
 test("Flatpak runtime wins while a Steam shortcut is running", () => {
   const target = resolveNowPlayingTarget(game(true), flatpak("org.libretro.RetroArch", "RetroArch"));
 
