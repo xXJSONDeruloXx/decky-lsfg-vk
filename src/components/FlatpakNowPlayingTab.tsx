@@ -1,17 +1,17 @@
-import { Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
-import type { FlatpakApp, LsfgConfig, WorkaroundState } from "../api/lsfgApi";
+import { Focusable } from "@decky/ui";
+import type { FlatpakApp, LsfgConfig } from "../api/lsfgApi";
+import type { GameTarget } from "../hooks/useGameConfiguration";
 import { ConfigurationSection } from "./ConfigurationSection";
-import { FlatpakWorkaroundsSection } from "./FlatpakWorkaroundsSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
+import { NowPlayingSummary } from "./NowPlayingSummary";
 
 interface Props {
   app: FlatpakApp;
-  busy: boolean;
+  launcher: GameTarget | null;
   onConfigChange: (appId: string, config: LsfgConfig) => Promise<boolean>;
-  onWorkaroundChange: (appId: string, state: WorkaroundState) => Promise<boolean>;
 }
 
-export function FlatpakNowPlayingTab({ app, busy, onConfigChange, onWorkaroundChange }: Props) {
+export function FlatpakNowPlayingTab({ app, launcher, onConfigChange }: Props) {
   if (!app.config) return null;
   const changeConfig = async (
     field: keyof LsfgConfig,
@@ -22,18 +22,17 @@ export function FlatpakNowPlayingTab({ app, busy, onConfigChange, onWorkaroundCh
 
   return (
     <Focusable>
-      <PanelSection title="Now Playing">
-        <PanelSectionRow>
-          <Field label={app.app_name} description={`Flatpak · ${app.app_id}`} />
-        </PanelSectionRow>
-      </PanelSection>
+      <NowPlayingSummary
+        title={launcher?.name || app.app_name}
+        details={[
+          launcher ? (launcher.nonSteam ? "Steam shortcut" : "Steam") : "Flatpak",
+          launcher && launcher.name !== app.app_name ? `Running in ${app.app_name}` : null,
+          launcher ? "Flatpak" : null,
+          `Controls: ${app.app_name} profile`,
+        ].filter((detail): detail is string => detail !== null)}
+      />
       <FpsMultiplierControl config={app.config} onConfigChange={changeConfig} />
       <ConfigurationSection config={app.config} onConfigChange={changeConfig} />
-      <FlatpakWorkaroundsSection
-        state={app.workarounds}
-        disabled={busy}
-        onChange={(state) => onWorkaroundChange(app.app_id, state)}
-      />
     </Focusable>
   );
 }

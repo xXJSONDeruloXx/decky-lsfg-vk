@@ -1,7 +1,8 @@
-import { Field, Focusable, PanelSection, PanelSectionRow } from "@decky/ui";
+import { Focusable } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import { GameTarget } from "../hooks/useGameConfiguration";
 import { GameConfigurationControls } from "./GameConfigurationControls";
+import { NowPlayingSummary } from "./NowPlayingSummary";
 
 interface Props {
   game: GameTarget;
@@ -23,11 +24,10 @@ export function NowPlayingTab({
 }: Props) {
   return (
     <Focusable>
-      <PanelSection title="Now Playing">
-        <PanelSectionRow>
-          <Field label={game.name} description={targetDescription(game)} />
-        </PanelSectionRow>
-      </PanelSection>
+      <NowPlayingSummary
+        title={game.name}
+        details={[targetDescription(game), `Controls: ${game.name} profile`]}
+      />
       <GameConfigurationControls
         config={config}
         onConfigChange={onConfigChange}

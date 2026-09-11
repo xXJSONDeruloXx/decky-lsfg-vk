@@ -1,11 +1,12 @@
 import { Tabs } from "@decky/ui";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type ReactNode } from "react";
 import { FaCube, FaFileAlt, FaGamepad, FaList, FaTools } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import { useFlatpakConfiguration } from "../hooks/useFlatpakConfiguration";
 import { useGameConfiguration } from "../hooks/useGameConfiguration";
 import { useInstallation } from "../hooks/useLsfgHooks";
 import { tabStyles } from "../styles";
+import { resolveNowPlayingTarget } from "../utils/nowPlaying";
 import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpakNowPlayingTab } from "./FlatpakNowPlayingTab";
@@ -78,12 +79,16 @@ export function Content() {
   const flatpak = useFlatpakConfiguration(setupComplete);
   const [tab, setTab] = useState("Setup");
   const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, true);
+  const [contentFocused, setContentFocused] = useState(false);
   const previousRunningWorkload = useRef<string | null>(null);
   const runningFlatpak = flatpak.runningApp;
-  const hasNowPlaying = Boolean(runningGame?.configured || runningFlatpak);
-  const runningWorkload = runningGame?.configured
-    ? `steam:${runningGame.appid}`
-    : runningFlatpak ? `flatpak:${runningFlatpak.app_id}` : null;
+  const nowPlayingTarget = resolveNowPlayingTarget(runningGame, runningFlatpak);
+  const hasNowPlaying = Boolean(nowPlayingTarget);
+  const runningWorkload = nowPlayingTarget
+    ? nowPlayingTarget.kind === "flatpak"
+      ? `flatpak:${nowPlayingTarget.app.app_id}:${nowPlayingTarget.launcher?.appid ?? ""}`
+      : `steam:${nowPlayingTarget.game.appid}`
+    : null;
 
   useEffect(() => {
     if (!setupComplete) {
@@ -136,30 +141,33 @@ export function Content() {
     />
   );
 
-  const nowPlaying = runningGame?.configured ? (
+  const tabContent = (content: ReactNode) => (
+    <div className="lsfg-vk-tab-content">{content}</div>
+  );
+
+  const nowPlaying = nowPlayingTarget?.kind === "steam" ? (
     <NowPlayingTab
-      game={runningGame}
+      game={nowPlayingTarget.game}
       config={runningConfig}
       onConfigChange={async (field, value) => {
-        await saveFor(runningGame.appid, { ...runningConfig, [field]: value }, true);
+        await saveFor(nowPlayingTarget.game.appid, { ...runningConfig, [field]: value }, true);
       }}
     />
-  ) : runningFlatpak ? (
+  ) : nowPlayingTarget?.kind === "flatpak" ? (
     <FlatpakNowPlayingTab
-      app={runningFlatpak}
-      busy={flatpak.busyAppId === runningFlatpak.app_id}
+      app={nowPlayingTarget.app}
+      launcher={nowPlayingTarget.launcher}
       onConfigChange={flatpak.updateConfig}
-      onWorkaroundChange={flatpak.updateWorkarounds}
     />
   ) : null;
 
   const tabs = setupComplete
     ? [
-        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: nowPlaying }] : []),
+        ...(nowPlaying ? [{ id: "NowPlaying", title: tabIcons.nowPlaying, content: tabContent(nowPlaying) }] : []),
         {
           id: "Games",
           title: tabIcons.games,
-          content: (
+          content: tabContent(
             <ConfigurationTab
               config={config}
               targets={targets}
@@ -173,13 +181,13 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
-            />
+            />,
           ),
         },
         {
           id: "Flatpak",
           title: tabIcons.flatpak,
-          content: (
+          content: tabContent(
             <FlatpakTab
               apps={flatpak.apps}
               runningApp={runningFlatpak}
@@ -190,21 +198,35 @@ export function Content() {
               onRemove={flatpak.removeApp}
               onConfigChange={flatpak.updateConfig}
               onWorkaroundChange={flatpak.updateWorkarounds}
-            />
+            />,
           ),
         },
-        ...(showDebugTab ? [{ id: "ConfigFile", title: tabIcons.configFile, content: <ConfigFileTab /> }] : []),
-        { id: "Setup", title: tabIcons.setup, content: setup },
+        ...(showDebugTab ? [{ id: "ConfigFile", title: tabIcons.configFile, content: tabContent(<ConfigFileTab />) }] : []),
+        { id: "Setup", title: tabIcons.setup, content: tabContent(setup) },
       ]
-    : [{ id: "Setup", title: tabIcons.setup, content: setup }];
+    : [{ id: "Setup", title: tabIcons.setup, content: tabContent(setup) }];
+
+  const availableTabIds = new Set(tabs.map(({ id }) => id));
+  const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Games" : "Setup";
+  const handleFocusCapture = (event: FocusEvent<HTMLDivElement>) => {
+    const focusedElement = event.target as HTMLElement | null;
+    setContentFocused(!focusedElement?.closest?.('[role="tab"]'));
+  };
 
   return (
     <div
-      className="lsfg-vk-tabs"
+      className={`lsfg-vk-tabs${contentFocused ? " lsfg-vk-tabs--content-focused" : ""}`}
       style={{ height: "95%", width: "300px", position: "fixed", marginTop: "-12px", overflow: "hidden" }}
+      onFocusCapture={handleFocusCapture}
     >
       <style>{tabStyles}</style>
-      <Tabs activeTab={!showDebugTab && tab === "ConfigFile" ? "Games" : tab} onShowTab={setTab} tabs={tabs} />
+      <Tabs
+        activeTab={activeTab}
+        onShowTab={(nextTab: string) => {
+          if (availableTabIds.has(nextTab)) setTab(nextTab);
+        }}
+        tabs={tabs}
+      />
     </div>
   );
 }

@@ -5,6 +5,36 @@ deck_host="deck@192.168.0.241"
 plugin_root="Decky LSFG-VK"
 install_path="/home/deck/homebrew/plugins/Decky LSFG-VK"
 
+if [[ -z ${DEPLOY_EXPECT:-} && -f .env ]]; then
+    set -a
+    source .env
+    set +a
+fi
+
+if [[ -n ${DECK_PASSWORD:-} && -z ${DEPLOY_EXPECT:-} ]]; then
+    export DEPLOY_EXPECT=1
+    export DEPLOY_SCRIPT="$0"
+    exec expect <<'EXPECT'
+set timeout -1
+spawn bash $env(DEPLOY_SCRIPT)
+
+expect {
+    -re {(?i)yes/no} {
+        send -- "yes\r"
+        exp_continue
+    }
+    -re {(?i)(password|passphrase).*:} {
+        send -- "$env(DECK_PASSWORD)\r"
+        exp_continue
+    }
+    eof
+}
+
+catch wait result
+exit [lindex $result 3]
+EXPECT
+fi
+
 package_dir="$(mktemp -d "${TMPDIR:-/tmp}/decky-plugin-package.XXXXXX")"
 run_id="$(basename "$package_dir")"
 remote_archive="/tmp/decky-lsfg-vk-${run_id}.zip"

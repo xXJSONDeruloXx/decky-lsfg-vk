@@ -11,7 +11,15 @@ import {
   type RunningFlatpakApp,
   type WorkaroundState,
 } from "../api/lsfgApi";
+import { selectMostRecentRunningFlatpak } from "../utils/nowPlaying";
 import { showErrorToast } from "../utils/toastUtils";
+
+type FlatpakOperationResult = {
+  success: boolean;
+  error?: string | null;
+  config?: LsfgConfig | null;
+  state?: WorkaroundState | null;
+};
 
 export function useFlatpakConfiguration(enabled: boolean) {
   const [apps, setApps] = useState<FlatpakApp[]>([]);
@@ -58,40 +66,61 @@ export function useFlatpakConfiguration(enabled: boolean) {
     return () => window.clearInterval(interval);
   }, [enabled, pollRunning]);
 
-  const operate = useCallback(async (appId: string, operation: () => Promise<{ success: boolean; error?: string | null }>) => {
-    if (busyAppId) return false;
+  const operate = useCallback(async (
+    appId: string,
+    operation: () => Promise<FlatpakOperationResult>,
+    refresh = true,
+  ): Promise<FlatpakOperationResult> => {
+    if (busyAppId) return { success: false };
     setBusyAppId(appId);
     try {
       const result = await operation();
       if (!result.success) throw new Error(result.error || "Flatpak operation failed");
-      await reload();
-      await pollRunning();
-      return true;
+      if (refresh) {
+        await reload();
+        await pollRunning();
+      }
+      return result;
     } catch (error) {
       showErrorToast("Flatpak operation failed", error instanceof Error ? error.message : String(error));
-      return false;
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     } finally {
       setBusyAppId("");
     }
   }, [busyAppId, pollRunning, reload]);
 
-  const enableApp = useCallback((appId: string) => operate(appId, () => enableFlatpakApp(appId)), [operate]);
-  const removeApp = useCallback((appId: string) => operate(appId, () => removeFlatpakApp(appId)), [operate]);
+  const enableApp = useCallback(async (appId: string) => (
+    await operate(appId, () => enableFlatpakApp(appId))
+  ).success, [operate]);
+  const removeApp = useCallback(async (appId: string) => (
+    await operate(appId, () => removeFlatpakApp(appId))
+  ).success, [operate]);
   const updateConfig = useCallback(
-    (appId: string, config: LsfgConfig) => operate(appId, () => updateFlatpakConfig(appId, config)),
+    async (appId: string, config: LsfgConfig) => {
+      const result = await operate(appId, () => updateFlatpakConfig(appId, config), false);
+      if (result.success) {
+        setApps((current) => current.map((app) => (
+          app.app_id === appId ? { ...app, config: result.config || config } : app
+        )));
+      }
+      return result.success;
+    },
     [operate],
   );
   const updateWorkarounds = useCallback(
-    (appId: string, state: WorkaroundState) => operate(appId, () => setFlatpakWorkaroundState(appId, state)),
+    async (appId: string, state: WorkaroundState) => {
+      const result = await operate(appId, () => setFlatpakWorkaroundState(appId, state), false);
+      if (result.success) {
+        setApps((current) => current.map((app) => (
+          app.app_id === appId ? { ...app, workarounds: result.state || state } : app
+        )));
+      }
+      return result.success;
+    },
     [operate],
   );
 
-  const runningApp = useMemo(() => {
-    if (runningApps.length === 0) return null;
-    const running = runningApps.find((app) => app.active) || (runningApps.length === 1 ? runningApps[0] : null);
-    if (!running) return null;
-    return apps.find((app) => app.app_id === running.app_id) || null;
-  }, [apps, runningApps]);
+  const runningApp = useMemo(() => selectMostRecentRunningFlatpak(apps, runningApps), [apps, runningApps]);
 
   return {
     apps,

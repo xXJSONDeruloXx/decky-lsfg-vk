@@ -88,7 +88,6 @@ export function ConfigurationTab({
           <PanelSectionRow>
             <ToggleField
               label="Show debug tab"
-              description="Show the raw configuration and generated files tab for troubleshooting."
               checked={showDebugTab}
               onChange={onShowDebugTabChange}
             />

@@ -202,7 +202,7 @@ class FlatpakProfileService:
             result = self.configuration_service.update_flatpak_config(app_id, config)
             if not result.get("success"):
                 raise RuntimeError(result.get("error") or "Could not update Flatpak profile")
-            return self.get_app(app_id)
+            return result
         except Exception as error:
             return {
                 "success": False,
@@ -374,8 +374,10 @@ class FlatpakProfileService:
                     "app_id": fields[0],
                     "active": active,
                     "pid": fields[2].strip() if len(fields) > 2 else "",
+                    "start_time": self.flatpak_service._process_start_time(
+                        fields[2].strip() if len(fields) > 2 else ""
+                    ),
                 })
-            running.sort(key=lambda item: (not item["active"], item["app_id"]))
             return {"success": True, "message": "", "error": None, "apps": running}
         except Exception as error:
             return {"success": False, "message": "", "error": str(error), "apps": []}

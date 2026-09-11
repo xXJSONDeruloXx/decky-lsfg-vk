@@ -118,6 +118,7 @@ export interface RunningFlatpakApp {
   app_id: string;
   active: boolean;
   pid?: string;
+  start_time?: number | null;
 }
 
 export interface FlatpakAppsResult extends ApiResult {
