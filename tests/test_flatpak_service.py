@@ -32,10 +32,8 @@ class FlatpakServiceTests(unittest.TestCase):
         self.runtime_metadata = ""
         self.user_branches = set()
         self.system_branches = set()
+        self.user_extension_origin = "flathub"
         self.apps = {"com.example.Game": "Example Game"}
-        self.bundle = self.home / "lsfg-vk.flatpak"
-        self.bundle.write_bytes(b"bundle")
-        self.service._bundled_extension_path = Mock(return_value=self.bundle)
         self.dll_dir = self.home / ".local/share/Steam/steamapps/common/Lossless Scaling"
         self.service._dll_directory = Mock(return_value=self.dll_dir)
 
@@ -120,6 +118,8 @@ class FlatpakServiceTests(unittest.TestCase):
             return self._result(self.runtime_ref + "\n")
         if args[:2] == ["info", "--show-metadata"]:
             return self._result(self.runtime_metadata)
+        if args[:3] == ["info", "--user", "--show-origin"]:
+            return self._result(self.user_extension_origin)
         if args[:2] == ["list", "--app"]:
             return self._result("".join(f"{name}\t{app_id}\n" for app_id, name in self.apps.items()))
         if args[0] == "list":
@@ -157,6 +157,22 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertTrue(response["owned"])
         self.assertEqual(response["runtime_branch"], "24.08")
         self.assertEqual(self.user_branches, {"24.08"})
+        install_calls = [
+            call.args[0]
+            for call in self.service._run_flatpak_command.call_args_list
+            if call.args[0][0] == "install"
+        ]
+        self.assertEqual(
+            install_calls,
+            [[
+                "install",
+                "--user",
+                "--noninteractive",
+                "--or-update",
+                "flathub",
+                "org.freedesktop.Platform.VulkanLayer.lsfgvk//24.08",
+            ]],
+        )
         status = self.service._app_override_status("com.example.Game")
         self.assertTrue(status["prepared"])
         content = self.service._override_path("com.example.Game").read_text(encoding="utf-8")
@@ -179,6 +195,25 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertEqual(first_content, self.service._override_path("com.example.Game").read_bytes())
         install_calls = [call for call in self.service._run_flatpak_command.call_args_list if call.args[0][0] == "install"]
         self.assertEqual(len(install_calls), 1)
+
+    def test_replaces_extension_from_another_remote(self):
+        self.user_branches = {"24.08"}
+        self.user_extension_origin = "lsfgvk-origin"
+
+        response = self.service.install_extension("24.08")
+
+        self.assertTrue(response["success"])
+        commands = [call.args[0] for call in self.service._run_flatpak_command.call_args_list]
+        self.assertIn(
+            [
+                "uninstall",
+                "--user",
+                "--noninteractive",
+                "org.freedesktop.Platform.VulkanLayer.lsfgvk/x86_64/24.08",
+            ],
+            commands,
+        )
+        self.assertEqual(self.user_branches, {"24.08"})
 
     def test_preinstalled_runtime_is_not_owned(self):
         self.system_branches = {"24.08"}

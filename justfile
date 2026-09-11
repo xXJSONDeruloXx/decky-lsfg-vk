@@ -8,7 +8,8 @@ deploy:
     ./scripts/deploy-to-deck.sh
 
 test:
-    scp "out/Decky LSFG-VK.zip" deck@192.168.0.6:~/Desktop
+    node --experimental-strip-types --test tests/steamLaunchOptions.test.ts
+    python3.12 -m unittest discover -s tests -p 'test_*.py'
 
 watch:
     ssh deck@192.168.0.6 "journalctl -f"

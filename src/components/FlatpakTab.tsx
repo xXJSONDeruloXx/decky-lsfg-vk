@@ -40,12 +40,12 @@ export function FlatpakTab({
   if (!selectedAppId) {
     return (
       <PanelSection title="Flatpak">
-        <PanelSectionRow>
+        {/* <PanelSectionRow>
           <Field
             label="Flatpak applications"
             description="Enable LSFG-VK directly for a Flatpak. Steam shortcuts and launcher scripts are not modified."
           />
-        </PanelSectionRow>
+        </PanelSectionRow> */}
         {apps.map((app) => {
           const status = app.enabled
             ? app.app_id === runningApp?.app_id ? "Enabled · Running" : "Enabled"

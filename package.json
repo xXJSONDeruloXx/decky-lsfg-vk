@@ -52,21 +52,6 @@
       "name": "lsfg-vk-2.0.0.tar.xz",
       "url": "https://builds.lsfg-vk.dev/lsfg-vk-2.0.0.tar.xz",
       "sha256hash": "08bdbdf373a111022df87dac7aa87e3b564bb841f961552e3ca85fea12b5aa74"
-    },
-    {
-      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_23.08.flatpak",
-      "sha256hash": "7eff81f96b278fde6fe395c88461c55e611547bf5991d179b9145ec6f5a778b1"
-    },
-    {
-      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_24.08.flatpak",
-      "sha256hash": "cbd663b9021c355dddec61ec51fd4388c12705f16637cadd4b45aead0e5dc427"
-    },
-    {
-      "name": "org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
-      "url": "https://github.com/xXJSONDeruloXx/lsfg-vk/releases/download/v2.0.0-decky.2/org.freedesktop.Platform.VulkanLayer.lsfg_vk_25.08.flatpak",
-      "sha256hash": "615e87c03b18368ed1cca97e036f1bf54fff95fc6126aac697bb368f33281cbf"
     }
   ],
   "pnpm": {

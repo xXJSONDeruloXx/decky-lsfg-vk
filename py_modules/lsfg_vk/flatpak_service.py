@@ -12,17 +12,12 @@ from pathlib import Path
 from typing import Dict, Optional, Set
 
 from .base_service import BaseService
-from .constants import (
-    BIN_DIR,
-    FLATPAK_23_08_FILENAME,
-    FLATPAK_24_08_FILENAME,
-    FLATPAK_25_08_FILENAME,
-)
 
 
 class FlatpakService(BaseService):
     EXTENSION_ID = "org.freedesktop.Platform.VulkanLayer.lsfgvk"
-    SUPPORTED_RUNTIMES = ("23.08", "24.08", "25.08")
+    FLATHUB_REMOTE = "flathub"
+    SUPPORTED_RUNTIMES = ("24.08", "25.08")
     DERIVED_RUNTIME_IDS = {"org.gnome.Platform", "org.kde.Platform"}
     RUNTIME_METADATA_SECTION = "Extension org.freedesktop.Platform.GL"
     OWNERSHIP_FILENAME = "flatpak_state.json"
@@ -34,6 +29,7 @@ class FlatpakService(BaseService):
     def __init__(self, logger=None):
         super().__init__(logger)
         self.flatpak_command: Optional[str] = None
+        self._verified_branches: Set[str] = set()
         self._lock = threading.RLock()
 
     @property
@@ -115,14 +111,6 @@ class FlatpakService(BaseService):
     def _extension_ref(cls, branch: str) -> str:
         return f"{cls.EXTENSION_ID}/x86_64/{cls._validate_runtime(branch)}"
 
-    def _bundled_extension_path(self, branch: str) -> Path:
-        filename = {
-            "23.08": FLATPAK_23_08_FILENAME,
-            "24.08": FLATPAK_24_08_FILENAME,
-            "25.08": FLATPAK_25_08_FILENAME,
-        }[self._validate_runtime(branch)]
-        return Path(__file__).resolve().parent.parent.parent / BIN_DIR / filename
-
     def _installed_extension_branches(self, scope: Optional[str] = None) -> Set[str]:
         scopes = ("user", "system") if scope is None else (scope,)
         installed = set()
@@ -138,6 +126,14 @@ class FlatpakService(BaseService):
                 if len(fields) >= 3 and fields[0] == self.EXTENSION_ID and fields[1] == "x86_64":
                     installed.add(fields[2])
         return installed
+
+    def _user_extension_origin(self, branch: str) -> str:
+        result = self._run_flatpak_command(
+            ["info", "--user", "--show-origin", self._extension_ref(branch)],
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout.strip() if result.returncode == 0 else ""
 
     def _empty_state(self) -> Dict[str, object]:
         return {
@@ -343,14 +339,29 @@ class FlatpakService(BaseService):
             if not self.check_flatpak_available():
                 raise FileNotFoundError("Flatpak is not available on this system")
             with self._lock:
-                installed = self._installed_extension_branches()
-                if branch in installed:
+                if branch in self._verified_branches:
                     return self._extension_result(branch, True, False, "is ready")
-                bundle = self._bundled_extension_path(branch)
-                if not bundle.is_file():
-                    raise FileNotFoundError(f"Bundled Flatpak extension not found at {bundle}; reinstall the plugin")
+                user_installed = self._installed_extension_branches("user")
+                system_installed = self._installed_extension_branches("system")
+                if branch in system_installed and branch not in user_installed:
+                    return self._extension_result(branch, True, False, "is ready")
+                if branch in user_installed and self._user_extension_origin(branch) != self.FLATHUB_REMOTE:
+                    result = self._run_flatpak_command(
+                        ["uninstall", "--user", "--noninteractive", self._extension_ref(branch)],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.returncode != 0:
+                        raise OSError(result.stderr.strip() or "Could not replace the existing Flatpak extension")
                 result = self._run_flatpak_command(
-                    ["install", "--user", "--noninteractive", "--or-update", str(bundle)],
+                    [
+                        "install",
+                        "--user",
+                        "--noninteractive",
+                        "--or-update",
+                        self.FLATHUB_REMOTE,
+                        f"{self.EXTENSION_ID}//{branch}",
+                    ],
                     capture_output=True,
                     text=True,
                 )
@@ -363,6 +374,7 @@ class FlatpakService(BaseService):
                 owned.add(branch)
                 state["plugin_owned_branches"] = sorted(owned)
                 self._write_state(state)
+                self._verified_branches.add(branch)
                 return self._extension_result(branch, True, False, "installed")
         except Exception as error:
             return self._error_response(dict, str(error), runtime_branch=branch, installed=False, enabled=False)
@@ -410,12 +422,6 @@ class FlatpakService(BaseService):
             return self._error_response(dict, str(error), runtime_branch=branch, removed=False, installed=False, enabled=False)
 
     def ensure_extension(self, branch: str):
-        try:
-            branch = self._validate_runtime(branch)
-            if branch in self._installed_extension_branches():
-                return self._extension_result(branch, True, False, "is ready")
-        except Exception as error:
-            return self._error_response(dict, str(error), runtime_branch=branch, installed=False, enabled=False)
         return self.install_extension(branch)
 
     def set_extension_enabled(self, branch: str, enabled: bool):
