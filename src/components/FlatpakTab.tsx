@@ -20,6 +20,9 @@ interface Props {
   onWorkaroundChange: (appId: string, state: WorkaroundState) => Promise<boolean>;
 }
 
+const ENABLED_COLLAPSED_KEY = "lsfg-flatpak-enabled-collapsed-v2";
+const AVAILABLE_COLLAPSED_KEY = "lsfg-flatpak-available-collapsed-v2";
+
 function usePersistentCollapsed(key: string) {
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -55,8 +58,8 @@ export function FlatpakTab({
     [apps, selectedAppId],
   );
   const close = useCallback(() => setSelectedAppId(null), []);
-  const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed("lsfg-flatpak-enabled-collapsed-v1");
-  const [availableCollapsed, toggleAvailable] = usePersistentCollapsed("lsfg-flatpak-available-collapsed-v1");
+  const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed(ENABLED_COLLAPSED_KEY);
+  const [availableCollapsed, toggleAvailable] = usePersistentCollapsed(AVAILABLE_COLLAPSED_KEY);
   const enabledToggleRef = useRef<HTMLDivElement>(null);
 
   const enabledApps = useMemo(
