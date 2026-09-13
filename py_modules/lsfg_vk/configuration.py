@@ -1,446 +1,213 @@
-"""
-Configuration service for TOML-based lsfg configuration management.
-"""
-
-from pathlib import Path
-from typing import Dict, Any
+import re
+from typing import Any, Dict
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, CONFIG_SCHEMA, ProfileData, DEFAULT_PROFILE_NAME
-from .config_schema_generated import ConfigurationData, get_script_generation_logic
-from .constants import ARMADA_DEVICE_ENV, ARMADA_GAME_LAUNCH
-from .types import ConfigurationResponse, ProfilesResponse, ProfileResponse
+from .config_schema import ConfigurationManager, ProfileData
+from .runtime_service import RuntimeService
 
 
 class ConfigurationService(BaseService):
-    """Service for managing TOML-based lsfg configuration"""
-    
-    def get_config(self) -> ConfigurationResponse:
-        """Read current TOML configuration merged with launch script environment variables
-        
-        Returns:
-            ConfigurationResponse with current configuration or error
-        """
-        try:
-            if not self.config_file_path.exists():
-                from .dll_detection import DllDetectionService
-                dll_service = DllDetectionService(self.log)
-                toml_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
-            else:
-                content = self.config_file_path.read_text(encoding='utf-8')
-                toml_config = ConfigurationManager.parse_toml_content(content)
-            
-            script_values = {}
-            if self.lsfg_script_path.exists():
-                try:
-                    script_content = self.lsfg_script_path.read_text(encoding='utf-8')
-                    script_values = ConfigurationManager.parse_script_content(script_content)
-                    self.log.info(f"Parsed script values: {script_values}")
-                except Exception as e:
-                    self.log.warning(f"Failed to parse launch script: {str(e)}")
-            
-            config = ConfigurationManager.merge_config_with_script(toml_config, script_values)
-            
-            return self._success_response(ConfigurationResponse, config=config)
-            
-        except (OSError, IOError) as e:
-            error_msg = f"Error reading lsfg config: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
-        except Exception as e:
-            error_msg = f"Error parsing config file: {str(e)}"
-            self.log.error(error_msg)
-            from .dll_detection import DllDetectionService
-            dll_service = DllDetectionService(self.log)
-            config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
-            return self._success_response(ConfigurationResponse, 
-                                        f"Using default configuration due to parse error: {str(e)}", 
-                                        config=config)
-    
-    def update_config_from_dict(self, config: ConfigurationData) -> ConfigurationResponse:
-        """Update TOML configuration from configuration dictionary (eliminates parameter duplication)
-        
-        Args:
-            config: Complete configuration data dictionary
-            
-        Returns:
-            ConfigurationResponse with success status
-        """
-        try:
-            profile_data = self._get_profile_data()
-            current_profile = profile_data["current_profile"]
-            
-            return self.update_profile_config(current_profile, config)
-            
-        except (OSError, IOError) as e:
-            error_msg = f"Error updating lsfg config: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
-        except ValueError as e:
-            error_msg = f"Invalid configuration arguments: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
-    
-    def update_lsfg_script(self, config: ConfigurationData) -> ConfigurationResponse:
-        """Update the ~/lsfg launch script with current configuration
-        
-        Args:
-            config: Configuration data to apply to the script
-            
-        Returns:
-            ConfigurationResponse indicating success or failure
-        """
-        try:
-            script_content = self._generate_script_content(config)
-            
-            self._write_file(self.lsfg_script_path, script_content, 0o755)
-            
-            self.log.info(f"Updated lsfg launch script at {self.lsfg_script_path}")
-            
-            return self._success_response(ConfigurationResponse,
-                                        "Launch script updated successfully",
-                                        config=config)
-            
-        except Exception as e:
-            error_msg = f"Error updating launch script: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
-    
-    def _generate_script_content(self, config: ConfigurationData) -> str:
-        """Generate the content for the ~/lsfg launch script
-        
-        Args:
-            config: Configuration data to apply to the script
-            
-        Returns:
-            The complete script content as a string
-        """
-        lines = [
-            "#!/bin/bash",
-            "# lsfg-vk launch script generated by decky-lossless-scaling-vk plugin",
-            "# This script sets up the environment for lsfg-vk to work with the plugin configuration",
-        ]
-        
-        generate_script_lines = get_script_generation_logic()
-        lines.extend(generate_script_lines(config))
-        
-        lines.append("export LSFG_PROCESS=decky-lsfg-vk")
-        lines.extend(self._generate_game_launch_lines())
-        
-        return "\n".join(lines) + "\n"
-    
-    def _generate_script_content_for_profile(self, profile_data: ProfileData) -> str:
-        """Generate the content for the ~/lsfg launch script with profile support
-        
-        Args:
-            profile_data: Profile data containing current profile and configurations
-            
-        Returns:
-            The complete script content as a string
-        """
-        current_profile = profile_data["current_profile"]
-        config = profile_data["profiles"].get(current_profile, ConfigurationManager.get_defaults())
-        
-        merged_config = dict(config)
-        for field_name, value in profile_data["global_config"].items():
-            merged_config[field_name] = value
-        
-        lines = [
-            "#!/bin/bash",
-            f"# Current profile: {current_profile}",
-        ]
-        
-        generate_script_lines = get_script_generation_logic()
-        lines.extend(generate_script_lines(merged_config))
-        
-        lines.append(f"export LSFG_PROCESS={current_profile}")
-        lines.extend(self._generate_game_launch_lines())
-        
-        return "\n".join(lines) + "\n"
+    FLATPAK_PROFILE_PREFIX = "flatpak:"
+
+    def __init__(self, logger=None, runtime_service: RuntimeService = None):
+        super().__init__(logger)
+        self.runtime_service = runtime_service or RuntimeService(logger=self.log)
+
+    def _default_data(self) -> ProfileData:
+        return {"profiles": {}, "global_config": {"dll": "", "no_fp16": False}}
+
+    def _get_profile_data(self) -> ProfileData:
+        if not self.config_file_path.exists():
+            return self._default_data()
+        return ConfigurationManager.parse_toml_content_multi_profile(self.config_file_path.read_text(encoding="utf-8"))
+
+    def _save_profile_data(self, data: ProfileData) -> None:
+        content = ConfigurationManager.generate_toml_content_multi_profile(data)
+        self.runtime_service.validate_config_content(content)
+        self._write_file(self.config_file_path, content, 0o644)
 
     @staticmethod
-    def _generate_game_launch_lines() -> list[str]:
-        """Generate a portable exec block with Armada's host wrapper."""
-        device_env = ARMADA_DEVICE_ENV.as_posix()
-        game_launch = ARMADA_GAME_LAUNCH.as_posix()
-        return [
-            f'armada_game_launch="{game_launch}"',
-            'for argument in "$@"; do',
-            '    if [ "$argument" = "$armada_game_launch" ]; then',
-            '        exec "$@"',
-            "    fi",
-            "done",
-            f'if [ -f "{device_env}" ] && [ -x "$armada_game_launch" ]; then',
-            '    exec "$armada_game_launch" "$@"',
-            "fi",
-            'exec "$@"',
-        ]
-    
-    def _get_profile_data(self) -> ProfileData:
-        """Get current profile data from config file"""
-        if not self.config_file_path.exists():
-            from .dll_detection import DllDetectionService
-            dll_service = DllDetectionService(self.log)
-            default_config = ConfigurationManager.get_defaults_with_dll_detection(dll_service)
-            return ProfileData(
-                current_profile=DEFAULT_PROFILE_NAME,
-                profiles={DEFAULT_PROFILE_NAME: default_config},
-                global_config={
-                    "dll": default_config.get("dll", ""),
-                    "no_fp16": False
-                }
+    def _profile_name(data: ProfileData, appid: str, game_name: str) -> str:
+        name = str(game_name).strip()
+        if not name:
+            raise ValueError("game name is required")
+        existing = data["profiles"].get(name)
+        if existing is not None and str(appid) not in existing.get("active_in", []):
+            name = f"{name} ({appid})"
+        return name
+
+    @staticmethod
+    def _profile_for_appid(data: ProfileData, appid: str):
+        return next(
+            (
+                (name, profile)
+                for name, profile in data["profiles"].items()
+                if str(appid) in profile.get("active_in", [])
+            ),
+            (None, None),
+        )
+
+    @classmethod
+    def flatpak_profile_name(cls, app_id: str) -> str:
+        value = str(app_id).strip()
+        if not value:
+            raise ValueError("Flatpak application ID is required")
+        return f"{cls.FLATPAK_PROFILE_PREFIX}{value}"
+
+    @staticmethod
+    def _public_config(config: Dict[str, Any]) -> Dict[str, Any]:
+        return ConfigurationManager.validate_config(config)
+
+    def get_game_configs(self) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            games = []
+            for name, raw in data["profiles"].items():
+                active_in = raw.get("active_in", [])
+                if len(active_in) != 1 or not re.fullmatch(r"-?[0-9]+", str(active_in[0])):
+                    continue
+                games.append({"appid": str(active_in[0]), "profile": name, "config": self._public_config(raw)})
+            return self._success_response(dict, global_config=dict(data["global_config"]), games=games)
+        except Exception as error:
+            self.log.error(f"Error reading game configs: {error}")
+            return self._error_response(dict, str(error), games=[])
+
+    def update_global_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            merged_config = {**data["global_config"], **config}
+            validated = self._public_config(merged_config)
+            data["global_config"] = {
+                "dll": validated["dll"],
+                "no_fp16": validated["no_fp16"],
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]))
+        except Exception as error:
+            return self._error_response(dict, str(error), global_config=None)
+
+    def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            old_name, _ = self._profile_for_appid(data, appid)
+            name = self._profile_name(data, appid, game_name)
+            merged_config = {**data["global_config"], **{key: value for key, value in config.items() if key != "no_fp16"}}
+            if not config.get("dll"):
+                merged_config["dll"] = data["global_config"].get("dll", "")
+            validated = self._public_config(merged_config)
+            validated["active_in"] = [str(appid)]
+            if old_name and old_name != name:
+                data["profiles"].pop(old_name, None)
+            data["profiles"][name] = validated
+            self._save_profile_data(data)
+            return self._success_response(dict, appid=str(appid), config=validated)
+        except Exception as error:
+            return self._error_response(dict, str(error), appid=str(appid), config=None)
+
+    def get_flatpak_config(self, app_id: str) -> Dict[str, Any]:
+        try:
+            data = self._get_profile_data()
+            name = self.flatpak_profile_name(app_id)
+            raw = data["profiles"].get(name)
+            return self._success_response(
+                dict,
+                app_id=str(app_id),
+                profile=name,
+                exists=raw is not None,
+                config=self._public_config(raw) if raw is not None else None,
+                global_config=dict(data["global_config"]),
             )
-        
-        content = self.config_file_path.read_text(encoding='utf-8')
-        return ConfigurationManager.parse_toml_content_multi_profile(content)
-    
-    def _save_profile_data(self, profile_data: ProfileData) -> None:
-        """Save profile data to config file"""
-        toml_content = ConfigurationManager.generate_toml_content_multi_profile(profile_data)
-        
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        
-        self._write_file(self.config_file_path, toml_content, 0o644)
-    
-    def get_profiles(self) -> ProfilesResponse:
-        """Get list of all profiles and current profile
-        
-        Returns:
-            ProfilesResponse with profile list and current profile
-        """
+        except Exception as error:
+            return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
+
+    def update_flatpak_config(self, app_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            profile_data = self._get_profile_data()
-            
-            return self._success_response(ProfilesResponse,
-                                        "Profiles retrieved successfully",
-                                        profiles=list(profile_data["profiles"].keys()),
-                                        current_profile=profile_data["current_profile"])
-            
-        except Exception as e:
-            error_msg = f"Error getting profiles: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfilesResponse, str(e), 
-                                       profiles=None, current_profile=None)
-    
-    def create_profile(self, profile_name: str, source_profile: str = None) -> ProfileResponse:
-        """Create a new profile
-        
-        Args:
-            profile_name: Name for the new profile (spaces will be converted to dashes)
-            source_profile: Optional source profile to copy from (default: current profile)
-            
-        Returns:
-            ProfileResponse with success status and the normalized profile name
-        """
+            data = self._get_profile_data()
+            name = self.flatpak_profile_name(app_id)
+            merged_config = {**data["global_config"], **{key: value for key, value in config.items() if key != "no_fp16"}}
+            if not config.get("dll"):
+                merged_config["dll"] = data["global_config"].get("dll", "")
+            validated = self._public_config(merged_config)
+            validated["active_in"] = []
+            data["profiles"][name] = validated
+            self._save_profile_data(data)
+            return self._success_response(dict, app_id=str(app_id), profile=name, exists=True, config=validated)
+        except Exception as error:
+            return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
+
+    def reset_flatpak_config(self, app_id: str) -> Dict[str, Any]:
         try:
-            profile_data = self._get_profile_data()
-            
-            if not source_profile:
-                source_profile = profile_data["current_profile"]
-            
-            # Get the normalized name that will be used for storage
-            normalized_name = ConfigurationManager.normalize_profile_name(profile_name)
-            
-            new_profile_data = ConfigurationManager.create_profile(profile_data, profile_name, source_profile)
-            
-            self._save_profile_data(new_profile_data)
-            
-            self.log.info(f"Created profile '{normalized_name}' from '{source_profile}'")
-            
-            # Return the normalized name so frontend can use the actual stored name
-            return self._success_response(ProfileResponse,
-                                        f"Profile '{normalized_name}' created successfully",
-                                        profile_name=normalized_name)
-            
-        except ValueError as e:
-            error_msg = f"Invalid profile operation: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-        except Exception as e:
-            error_msg = f"Error creating profile: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-    
-    def delete_profile(self, profile_name: str) -> ProfileResponse:
-        """Delete a profile
-        
-        Args:
-            profile_name: Name of the profile to delete
-            
-        Returns:
-            ProfileResponse with success status
-        """
+            data = self._get_profile_data()
+            name = self.flatpak_profile_name(app_id)
+            data["profiles"].pop(name, None)
+            self._save_profile_data(data)
+            return self._success_response(dict, app_id=str(app_id), profile=name, exists=False)
+        except Exception as error:
+            return self._error_response(dict, str(error), app_id=str(app_id), config=None, exists=False)
+
+    def reset_all_flatpak_configs(self) -> Dict[str, Any]:
         try:
-            profile_data = self._get_profile_data()
-            
-            new_profile_data = ConfigurationManager.delete_profile(profile_data, profile_name)
-            
-            self._save_profile_data(new_profile_data)
-            
-            script_result = self.update_lsfg_script_from_profile_data(new_profile_data)
-            if not script_result["success"]:
-                self.log.warning(f"Failed to update launch script: {script_result['error']}")
-            
-            self.log.info(f"Deleted profile '{profile_name}'")
-            
-            return self._success_response(ProfileResponse,
-                                        f"Profile '{profile_name}' deleted successfully",
-                                        profile_name=profile_name)
-            
-        except ValueError as e:
-            error_msg = f"Invalid profile operation: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-        except Exception as e:
-            error_msg = f"Error deleting profile: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-    
-    def rename_profile(self, old_name: str, new_name: str) -> ProfileResponse:
-        """Rename a profile
-        
-        Args:
-            old_name: Current profile name
-            new_name: New profile name (spaces will be converted to dashes)
-            
-        Returns:
-            ProfileResponse with success status and the normalized profile name
-        """
+            data = self._get_profile_data()
+            data["profiles"] = {
+                name: profile
+                for name, profile in data["profiles"].items()
+                if not name.startswith(self.FLATPAK_PROFILE_PREFIX)
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]))
+        except Exception as error:
+            return self._error_response(dict, str(error))
+
+    def reset_game_config(self, appid: str) -> Dict[str, Any]:
         try:
-            profile_data = self._get_profile_data()
-            
-            # Get the normalized name that will be used for storage
-            normalized_name = ConfigurationManager.normalize_profile_name(new_name)
-            
-            new_profile_data = ConfigurationManager.rename_profile(profile_data, old_name, new_name)
-            
-            self._save_profile_data(new_profile_data)
-            
-            script_result = self.update_lsfg_script_from_profile_data(new_profile_data)
-            if not script_result["success"]:
-                self.log.warning(f"Failed to update launch script: {script_result['error']}")
-            
-            self.log.info(f"Renamed profile '{old_name}' to '{normalized_name}'")
-            
-            # Return the normalized name so frontend can use the actual stored name
-            return self._success_response(ProfileResponse,
-                                        f"Profile renamed from '{old_name}' to '{normalized_name}' successfully",
-                                        profile_name=normalized_name)
-            
-        except ValueError as e:
-            error_msg = f"Invalid profile operation: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-        except Exception as e:
-            error_msg = f"Error renaming profile: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-    
-    def set_current_profile(self, profile_name: str) -> ProfileResponse:
-        """Set the current active profile
-        
-        Args:
-            profile_name: Name of the profile to set as current
-            
-        Returns:
-            ProfileResponse with success status
-        """
+            data = self._get_profile_data()
+            name, _ = self._profile_for_appid(data, appid)
+            if name:
+                data["profiles"].pop(name, None)
+            self._save_profile_data(data)
+            return self._success_response(dict, appid=str(appid), exists=False)
+        except Exception as error:
+            return self._error_response(dict, str(error), appid=str(appid), config=None)
+
+    def reset_game_configs(self, appids: list[str]) -> Dict[str, Any]:
         try:
-            profile_data = self._get_profile_data()
-            
-            new_profile_data = ConfigurationManager.set_current_profile(profile_data, profile_name)
-            
-            self._save_profile_data(new_profile_data)
-            
-            script_result = self.update_lsfg_script_from_profile_data(new_profile_data)
-            if not script_result["success"]:
-                self.log.warning(f"Failed to update launch script: {script_result['error']}")
-            
-            self.log.info(f"Set current profile to '{profile_name}'")
-            
-            return self._success_response(ProfileResponse,
-                                        f"Current profile set to '{profile_name}' successfully",
-                                        profile_name=profile_name)
-            
-        except ValueError as e:
-            error_msg = f"Invalid profile operation: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-        except Exception as e:
-            error_msg = f"Error setting current profile: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ProfileResponse, str(e), profile_name=None)
-    
-    def update_profile_config(self, profile_name: str, config: ConfigurationData) -> ConfigurationResponse:
-        """Update configuration for a specific profile
-        
-        Args:
-            profile_name: Name of the profile to update
-            config: Configuration data to apply
-            
-        Returns:
-            ConfigurationResponse with success status
-        """
+            if not isinstance(appids, list):
+                raise ValueError("appids must be a list")
+            requested = set()
+            for appid in appids:
+                if isinstance(appid, bool) or not isinstance(appid, (str, int)):
+                    raise ValueError("appids must contain only strings or integers")
+                value = str(appid)
+                if not re.fullmatch(r"-?[0-9]+", value):
+                    raise ValueError("appids must contain only numeric App IDs")
+                requested.add(value)
+
+            data = self._get_profile_data()
+            data["profiles"] = {
+                name: profile
+                for name, profile in data["profiles"].items()
+                if not (
+                    len(profile.get("active_in", [])) == 1
+                    and str(profile["active_in"][0]) in requested
+                )
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]), games=[])
+        except Exception as error:
+            return self._error_response(dict, str(error), games=[])
+
+    def reset_all_game_configs(self) -> Dict[str, Any]:
         try:
-            profile_data = self._get_profile_data()
-            
-            if profile_name not in profile_data["profiles"]:
-                return self._error_response(ConfigurationResponse, 
-                                          f"Profile '{profile_name}' does not exist", 
-                                          config=None)
-            
-            # Update the profile's config
-            profile_data["profiles"][profile_name] = config
-            
-            # Update global config fields if they're in the config
-            for field_name in ["dll", "no_fp16"]:
-                if field_name in config:
-                    profile_data["global_config"][field_name] = config[field_name]
-            
-            self._save_profile_data(profile_data)
-            
-            if profile_name == profile_data["current_profile"]:
-                script_result = self.update_lsfg_script_from_profile_data(profile_data)
-                if not script_result["success"]:
-                    self.log.warning(f"Failed to update launch script: {script_result['error']}")
-            
-            field_values = ", ".join(f"{k}={repr(v)}" for k, v in config.items())
-            self.log.info(f"Updated profile '{profile_name}' configuration: {field_values}")
-            
-            return self._success_response(ConfigurationResponse,
-                                        f"Profile '{profile_name}' configuration updated successfully",
-                                        config=config)
-            
-        except Exception as e:
-            error_msg = f"Error updating profile configuration: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
-    
-    def update_lsfg_script_from_profile_data(self, profile_data: ProfileData) -> ConfigurationResponse:
-        """Update the ~/lsfg launch script from profile data
-        
-        Args:
-            profile_data: Profile data to apply to the script
-            
-        Returns:
-            ConfigurationResponse indicating success or failure
-        """
-        try:
-            script_content = self._generate_script_content_for_profile(profile_data)
-            
-            # Write the script file
-            self._write_file(self.lsfg_script_path, script_content, 0o755)
-            
-            self.log.info(f"Updated lsfg launch script at {self.lsfg_script_path} for profile '{profile_data['current_profile']}'")
-            
-            # Get current profile config for response
-            current_config = profile_data["profiles"].get(profile_data["current_profile"], ConfigurationManager.get_defaults())
-            
-            return self._success_response(ConfigurationResponse,
-                                        "Launch script updated successfully",
-                                        config=current_config)
-            
-        except Exception as e:
-            error_msg = f"Error updating launch script: {str(e)}"
-            self.log.error(error_msg)
-            return self._error_response(ConfigurationResponse, str(e), config=None)
+            data = self._get_profile_data()
+            data["profiles"] = {
+                name: profile
+                for name, profile in data["profiles"].items()
+                if not (
+                    len(profile.get("active_in", [])) == 1
+                    and re.fullmatch(r"-?[0-9]+", str(profile.get("active_in", [""])[0]))
+                )
+            }
+            self._save_profile_data(data)
+            return self._success_response(dict, global_config=dict(data["global_config"]), games=[])
+        except Exception as error:
+            return self._error_response(dict, str(error), games=[])

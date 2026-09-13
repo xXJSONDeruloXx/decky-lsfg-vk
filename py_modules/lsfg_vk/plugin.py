@@ -1,495 +1,222 @@
-"""
-Main plugin class for the lsfg-vk Decky Loader plugin.
-
-This plugin provides services for installing and managing the lsfg-vk 
-Vulkan layer for frame generation on Steam Deck.
-"""
-
 import os
-import subprocess
-import hashlib
-from typing import Dict, Any
-from pathlib import Path
+from typing import Any, Dict
 
 import decky
 
-from .installation import InstallationService
-from .dll_detection import DllDetectionService
 from .configuration import ConfigurationService
-from .config_schema import ConfigurationManager
+from .flatpak_profile_service import FlatpakProfileService
 from .flatpak_service import FlatpakService
+from .installation import InstallationService
+from .runtime_service import RuntimeService
+from .steam_service import SteamService
+from .wrapper_service import WrapperService
 
 
 class Plugin:
-    """
-    Main plugin class for lsfg-vk management.
-    
-    This class provides a unified interface for installation, configuration,
-    and DLL detection services. It implements the Decky Loader plugin lifecycle
-    methods (_main, _unload, _uninstall, _migration).
-    """
-    
     def __init__(self):
-        """Initialize the plugin with all necessary services"""
-        self.installation_service = InstallationService()
-        self.dll_detection_service = DllDetectionService()
-        self.configuration_service = ConfigurationService()
+        self.runtime_service = RuntimeService()
+        self.steam_service = SteamService()
+        self.installation_service = InstallationService(
+            runtime_service=self.runtime_service,
+            steam_service=self.steam_service,
+        )
+        self.configuration_service = ConfigurationService(runtime_service=self.runtime_service)
         self.flatpak_service = FlatpakService()
+        self.flatpak_profile_service = FlatpakProfileService(
+            self.flatpak_service,
+            self.configuration_service,
+        )
+        self.wrapper_service = WrapperService()
 
-    async def install_lsfg_vk(self) -> Dict[str, Any]:
-        """Install lsfg-vk by extracting the zip file to ~/.local
-        
-        Returns:
-            InstallationResponse dict with success status and message/error
-        """
+    async def install_lsfg_vk(self):
         return self.installation_service.install()
 
-    async def check_lsfg_vk_installed(self) -> Dict[str, Any]:
-        """Check if lsfg-vk is already installed
-        
-        Returns:
-            InstallationCheckResponse dict with installation status and paths
-        """
+    async def check_lsfg_vk_installed(self):
         return self.installation_service.check_installation()
 
-    async def uninstall_lsfg_vk(self) -> Dict[str, Any]:
-        """Uninstall lsfg-vk by removing the installed files
-        
-        Returns:
-            UninstallationResponse dict with success status and removed files
-        """
-        return self.installation_service.uninstall()
+    def _cleanup_runtime_state(self, preserve_wrapper: bool = False):
+        flatpak = self.flatpak_service.remove_plugin_owned_environment()
+        if not flatpak.get("success"):
+            return flatpak.get("error") or "Could not clean up Flatpak support"
+        profiles = self.configuration_service.reset_all_flatpak_configs()
+        if not profiles.get("success"):
+            return profiles.get("error") or "Could not remove Flatpak profiles"
+        wrapper = self.wrapper_service.neutralize() if preserve_wrapper else self.wrapper_service.purge()
+        if not wrapper.get("success"):
+            return wrapper.get("error") or "Could not remove workaround state"
+        return None
 
-    async def check_lossless_scaling_dll(self) -> Dict[str, Any]:
-        """Check if Lossless Scaling DLL is available at the expected paths
-        
-        Returns:
-            DllDetectionResponse dict with detection status and path info
-        """
-        return self.dll_detection_service.check_lossless_scaling_dll()
-
-    async def get_dll_stats(self) -> Dict[str, Any]:
-        """Get detailed statistics about the detected DLL
-        
-        Returns:
-            Dict containing DLL path, SHA256 hash, and other stats
-        """
-        try:
-            dll_result = self.dll_detection_service.check_lossless_scaling_dll()
-            
-            if not dll_result.get("detected") or not dll_result.get("path"):
-                return {
-                    "success": False,
-                    "error": "DLL not detected",
-                    "dll_path": None,
-                    "dll_sha256": None
-                }
-            
-            dll_path = dll_result["path"]
-            if dll_path is None:
-                return {
-                    "success": False,
-                    "error": "DLL path is None",
-                    "dll_path": None,
-                    "dll_sha256": None
-                }
-            
-            dll_path_obj = Path(dll_path)
-            
-            sha256_hash = hashlib.sha256()
-            try:
-                with open(dll_path_obj, "rb") as f:
-                    for chunk in iter(lambda: f.read(4096), b""):
-                        sha256_hash.update(chunk)
-                dll_sha256 = sha256_hash.hexdigest()
-            except Exception as e:
-                return {
-                    "success": False,
-                    "error": f"Failed to calculate SHA256: {str(e)}",
-                    "dll_path": dll_path,
-                    "dll_sha256": None
-                }
-            
-            return {
-                "success": True,
-                "dll_path": dll_path,
-                "dll_sha256": dll_sha256,
-                "dll_source": dll_result.get("source"),
-                "error": None
-            }
-            
-        except Exception as e:
+    async def uninstall_lsfg_vk(self):
+        error = self._cleanup_runtime_state()
+        if error:
             return {
                 "success": False,
-                "error": f"Failed to get DLL stats: {str(e)}",
-                "dll_path": None,
-                "dll_sha256": None
+                "message": "",
+                "error": error,
+                "removed_files": None,
             }
+        return self.installation_service.uninstall()
 
-    async def get_lsfg_config(self) -> Dict[str, Any]:
-        """Read current lsfg script configuration
-        
-        Returns:
-            ConfigurationResponse dict with current configuration or error
-        """
-        return self.configuration_service.get_config()
+    async def get_game_configs(self):
+        return self.configuration_service.get_game_configs()
 
-    async def get_config_schema(self) -> Dict[str, Any]:
-        """Get configuration schema information for frontend
-        
-        Returns:
-            Dict with field names, types, defaults, and profile information
-        """
+    async def update_global_config(self, config: Dict[str, Any]):
+        return self.configuration_service.update_global_config(config)
+
+    async def get_installed_games(self):
+        return self.steam_service.get_installed_games()
+
+    async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]):
+        return self.configuration_service.update_game_config(appid, game_name, config)
+
+    async def reset_game_config(self, appid: str):
+        return self.configuration_service.reset_game_config(appid)
+
+    async def reset_game_configs(self, appids):
+        return self.configuration_service.reset_game_configs(appids)
+
+    async def reset_all_game_configs(self):
+        return self.configuration_service.reset_all_game_configs()
+
+    async def get_workaround_state(self, appid: str):
+        return self.wrapper_service.get(appid)
+
+    async def get_workaround_apps(self):
+        return self.wrapper_service.list_apps()
+
+    async def set_workaround_state(
+        self,
+        appid: str,
+        state: Dict[str, Any],
+        command_token_added: bool = False,
+        non_steam: bool = False,
+    ):
+        return self.wrapper_service.set(appid, state, command_token_added, non_steam)
+
+    async def remove_workaround_state(self, appid: str):
+        return self.wrapper_service.remove(appid)
+
+    async def get_config_file_content(self):
+        path = self.configuration_service.config_file_path
         try:
-            profiles_response = self.configuration_service.get_profiles()
-            
-            schema_data = {
-                "field_names": ConfigurationManager.get_field_names(),
-                "field_types": {name: field_type.value for name, field_type in ConfigurationManager.get_field_types().items()},
-                "defaults": ConfigurationManager.get_defaults()
-            }
-            
-            if profiles_response.get("success"):
-                schema_data["profiles"] = profiles_response.get("profiles", [])
-                schema_data["current_profile"] = profiles_response.get("current_profile")
-            else:
-                schema_data["profiles"] = ["decky-lsfg-vk"]
-                schema_data["current_profile"] = "decky-lsfg-vk"
-            
-            return schema_data
-            
-        except (ValueError, KeyError, AttributeError) as e:
-            self.configuration_service.log.warning(f"Failed to get full schema, using fallback: {e}")
-            return {
-                "field_names": ConfigurationManager.get_field_names(),
-                "field_types": {name: field_type.value for name, field_type in ConfigurationManager.get_field_types().items()},
-                "defaults": ConfigurationManager.get_defaults(),
-                "profiles": ["decky-lsfg-vk"],
-                "current_profile": "decky-lsfg-vk"
-            }
-
-    async def update_lsfg_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Update lsfg TOML configuration using object-based API (single source of truth)
-        
-        Args:
-            config: Configuration data dictionary containing all settings
-            
-        Returns:
-            ConfigurationResponse dict with success status
-        """
-        validated_config = ConfigurationManager.validate_config(config)
-        
-        return self.configuration_service.update_config_from_dict(validated_config)
-
-    async def get_profiles(self) -> Dict[str, Any]:
-        """Get list of all profiles and current profile
-        
-        Returns:
-            ProfilesResponse dict with profile list and current profile
-        """
-        return self.configuration_service.get_profiles()
-
-    async def create_profile(self, profile_name: str, source_profile: str = None) -> Dict[str, Any]:
-        """Create a new profile
-        
-        Args:
-            profile_name: Name for the new profile
-            source_profile: Optional source profile to copy from (default: current profile)
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return self.configuration_service.create_profile(profile_name, source_profile)
-
-    async def delete_profile(self, profile_name: str) -> Dict[str, Any]:
-        """Delete a profile
-        
-        Args:
-            profile_name: Name of the profile to delete
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return self.configuration_service.delete_profile(profile_name)
-
-    async def rename_profile(self, old_name: str, new_name: str) -> Dict[str, Any]:
-        """Rename a profile
-        
-        Args:
-            old_name: Current profile name
-            new_name: New profile name
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return self.configuration_service.rename_profile(old_name, new_name)
-
-    async def set_current_profile(self, profile_name: str) -> Dict[str, Any]:
-        """Set the current active profile
-        
-        Args:
-            profile_name: Name of the profile to set as current
-            
-        Returns:
-            ProfileResponse dict with success status
-        """
-        return self.configuration_service.set_current_profile(profile_name)
-
-    async def update_profile_config(self, profile_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Update configuration for a specific profile
-        
-        Args:
-            profile_name: Name of the profile to update
-            config: Configuration data dictionary containing settings
-            
-        Returns:
-            ConfigurationResponse dict with success status
-        """
-        validated_config = ConfigurationManager.validate_config(config)
-        
-        return self.configuration_service.update_profile_config(profile_name, validated_config)
-
-    async def get_launch_option(self) -> Dict[str, Any]:
-        """Get the launch option that users need to set for their games
-        
-        Returns:
-            Dict containing the launch option string and instructions
-        """
-        return {
-            "launch_option": "~/lsfg %command%",
-            "instructions": "Add this to your game's launch options in Steam Properties",
-            "explanation": "The lsfg script is created during installation and sets up the environment for the plugin"
-        }
-
-    async def get_config_file_content(self) -> Dict[str, Any]:
-        """Get the current config file content
-        
-        Returns:
-            Dict containing the config file content or error message
-        """
-        try:
-            config_path = self.configuration_service.config_file_path
-            if not config_path.exists():
+            if not path.exists():
                 return {
                     "success": False,
                     "content": None,
-                    "path": str(config_path),
-                    "error": "Config file does not exist"
+                    "path": str(path),
+                    "error": "Config file does not exist",
                 }
-            
-            content = config_path.read_text(encoding='utf-8')
             return {
                 "success": True,
-                "content": content,
-                "path": str(config_path),
-                "error": None
+                "content": path.read_text(encoding="utf-8"),
+                "path": str(path),
+                "error": None,
             }
-        except Exception as e:
+        except Exception as error:
             return {
                 "success": False,
                 "content": None,
-                "path": str(config_path) if 'config_path' in locals() else "unknown",
-                "error": f"Error reading config file: {str(e)}"
+                "path": str(path),
+                "error": f"Error reading config file: {error}",
             }
 
-    async def get_launch_script_content(self) -> Dict[str, Any]:
-        """Get the content of the launch script file
-        
-        Returns:
-            FileContentResponse dict with file content or error information
-        """
-        try:
-            script_path = self.installation_service.get_launch_script_path()
-            
-            if not os.path.exists(script_path):
-                return {
-                    "success": False,
-                    "error": f"Launch script not found at {script_path}",
-                    "path": str(script_path)
-                }
-            
-            with open(script_path, 'r') as file:
-                content = file.read()
-                
-            return {
-                "success": True,
-                "content": content,
-                "path": str(script_path)
-            }
-            
-        except Exception as e:
-            decky.logger.error(f"Error reading launch script: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
-
-    async def check_fgmod_directory(self) -> Dict[str, Any]:
-        """Check if the fgmod directory exists in the home directory
-        
-        Returns:
-            Dict with exists status and directory path
-        """
-        try:
-            home_path = Path(decky.DECKY_USER_HOME)
-            fgmod_path = home_path / "fgmod"
-            
-            exists = fgmod_path.exists() and fgmod_path.is_dir()
-            
-            return {
-                "success": True,
-                "exists": exists,
-                "path": str(fgmod_path)
-            }
-            
-        except Exception as e:
-            decky.logger.error(f"Error checking fgmod directory: {e}")
-            return {
-                "success": False,
+    async def get_debug_file_contents(self):
+        files = (
+            ("config", "LSFG-VK configuration", self.configuration_service.config_file_path),
+            ("workarounds", "Per-app workarounds", self.wrapper_service.sidecar_path),
+            ("wrapper", "Generated launch wrapper", self.wrapper_service.wrapper_path),
+            ("flatpak", "Flatpak ownership state", self.flatpak_service.ownership_path),
+        )
+        contents = []
+        for file_id, label, path in files:
+            item = {
+                "id": file_id,
+                "label": label,
+                "path": str(path),
                 "exists": False,
-                "error": str(e)
+                "content": None,
+                "error": None,
             }
+            try:
+                if path.is_symlink():
+                    item["error"] = "Path is a symlink; refusing to read it"
+                elif not path.exists():
+                    item["error"] = "File does not exist"
+                elif not path.is_file():
+                    item["error"] = "Path is not a regular file"
+                else:
+                    item["exists"] = True
+                    item["content"] = path.read_text(encoding="utf-8")
+            except Exception as error:
+                item["error"] = f"Error reading file: {error}"
+            contents.append(item)
+        return {
+            "success": True,
+            "message": "Debug file contents retrieved",
+            "error": None,
+            "files": contents,
+        }
 
-    async def check_flatpak_extension_status(self) -> Dict[str, Any]:
-        """Check status of lsfg-vk Flatpak runtime extensions
-        
-        Returns:
-            FlatpakExtensionStatus dict with installation status for both runtime versions
-        """
-        return self.flatpak_service.get_extension_status()
+    async def get_lossless_scaling_branch_status(self):
+        return self.steam_service.get_branch_status()
 
-    async def install_flatpak_extension(self, version: str) -> Dict[str, Any]:
-        """Install lsfg-vk Flatpak runtime extension
-        
-        Args:
-            version: Runtime version to install ("23.08" or "24.08")
-            
-        Returns:
-            BaseResponse dict with success status and message/error
-        """
-        return self.flatpak_service.install_extension(version)
+    async def get_flatpak_apps(self):
+        return self.flatpak_profile_service.get_apps()
 
-    async def uninstall_flatpak_extension(self, version: str) -> Dict[str, Any]:
-        """Uninstall lsfg-vk Flatpak runtime extension
-        
-        Args:
-            version: Runtime version to uninstall ("23.08" or "24.08")
-            
-        Returns:
-            BaseResponse dict with success status and message/error
-        """
-        return self.flatpak_service.uninstall_extension(version)
+    async def enable_flatpak_app(self, flatpak_app_id: str):
+        return self.flatpak_profile_service.enable_app(flatpak_app_id)
 
-    async def get_flatpak_apps(self) -> Dict[str, Any]:
-        """Get list of installed Flatpak apps and their lsfg-vk override status
-        
-        Returns:
-            FlatpakAppInfo dict with apps list and override status
-        """
-        return self.flatpak_service.get_flatpak_apps()
+    async def update_flatpak_config(self, flatpak_app_id: str, config: Dict[str, Any]):
+        return self.flatpak_profile_service.update_config(flatpak_app_id, config)
 
-    async def set_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
-        """Set lsfg-vk overrides for a Flatpak app
-        
-        Args:
-            app_id: Flatpak application ID
-            
-        Returns:
-            FlatpakOverrideResponse dict with operation result
-        """
-        return self.flatpak_service.set_app_override(app_id)
+    async def get_flatpak_workaround_state(self, flatpak_app_id: str):
+        return self.flatpak_profile_service.get_workaround_state(flatpak_app_id)
 
-    async def remove_flatpak_app_override(self, app_id: str) -> Dict[str, Any]:
-        """Remove lsfg-vk overrides for a Flatpak app
-        
-        Args:
-            app_id: Flatpak application ID
-            
-        Returns:
-            FlatpakOverrideResponse dict with operation result
-        """
-        return self.flatpak_service.remove_app_override(app_id)
-    
+    async def set_flatpak_workaround_state(self, flatpak_app_id: str, state: Dict[str, Any]):
+        return self.flatpak_profile_service.set_workaround_state(flatpak_app_id, state)
+
+    async def remove_flatpak_app(self, flatpak_app_id: str):
+        return self.flatpak_profile_service.remove_app(flatpak_app_id)
+
+    async def get_running_flatpak_apps(self):
+        return self.flatpak_profile_service.get_running_apps()
+
     async def _main(self):
-        """
-        Main entry point for the plugin.
-        
-        This method is called by Decky Loader when the plugin is loaded.
-        Any initialization code should go here.
-        """
+        repair = self.wrapper_service.repair()
+        if not repair.get("success"):
+            decky.logger.error(f"Could not repair lsfg workaround wrapper: {repair.get('error')}")
         decky.logger.info("decky-lsfg-vk plugin loaded")
 
     async def _unload(self):
-        """
-        Cleanup tasks when the plugin is unloaded.
-        
-        This method is called by Decky Loader when the plugin is being unloaded.
-        Any cleanup code should go here.
-        """
         decky.logger.info("decky-lsfg-vk plugin unloaded")
 
     async def _uninstall(self):
-        """
-        Called when the plugin is uninstalled.
-        
-        This method is called by Decky Loader when the plugin is being uninstalled.
-        Performs cleanup of plugin files and flatpak extensions.
-        """
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
-        
-        # Clean up lsfg-vk files when the plugin is uninstalled
-        self.installation_service.cleanup_on_uninstall()
-        
-        # Also clean up flatpak extensions if they are installed
         try:
-            decky.logger.info("Checking for flatpak extensions to uninstall")
-            
-            extension_status = self.flatpak_service.get_extension_status()
-            
-            if extension_status.get("success"):
-                if extension_status.get("installed_23_08"):
-                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 23.08")
-                    result = self.flatpak_service.uninstall_extension("23.08")
-                    if result.get("success"):
-                        decky.logger.info("Successfully uninstalled flatpak runtime 23.08")
-                    else:
-                        decky.logger.warning(f"Failed to uninstall flatpak runtime 23.08: {result.get('error')}")
-                
-                if extension_status.get("installed_24_08"):
-                    decky.logger.info("Uninstalling lsfg-vk flatpak runtime 24.08")
-                    result = self.flatpak_service.uninstall_extension("24.08")
-                    if result.get("success"):
-                        decky.logger.info("Successfully uninstalled flatpak runtime 24.08")
-                    else:
-                        decky.logger.warning(f"Failed to uninstall flatpak runtime 24.08: {result.get('error')}")
-                        
-                decky.logger.info("Flatpak extension cleanup completed")
-            else:
-                decky.logger.info(f"Could not check flatpak status for cleanup: {extension_status.get('error')}")
-                
-        except Exception as e:
-            decky.logger.error(f"Error during flatpak cleanup: {e}")
-        
+            error = self._cleanup_runtime_state(preserve_wrapper=True)
+            if error:
+                decky.logger.warning(f"Preserving lsfg-vk files because uninstall cleanup failed: {error}")
+                return
+        except Exception as error:
+            decky.logger.error(f"Error during lsfg-vk cleanup: {error}")
+            return
+        self.installation_service.cleanup_on_uninstall()
         decky.logger.info("decky-lsfg-vk plugin uninstall cleanup completed")
 
     async def _migration(self):
-        """
-        Migrations that should be performed before entering `_main()`.
-        
-        This method is called by Decky Loader for plugin migrations.
-        Currently migrates logs, settings, and runtime data from old locations.
-        """
         decky.logger.info("Running decky-lsfg-vk plugin migrations")
-        
-        decky.migrate_logs(os.path.join(decky.DECKY_USER_HOME,
-                                       ".config", "decky-lossless-scaling-vk", "lossless-scaling-vk.log"))
-        
+        decky.migrate_logs(os.path.join(
+            decky.DECKY_USER_HOME,
+            ".config",
+            "decky-lossless-scaling-vk",
+            "lossless-scaling-vk.log",
+        ))
         decky.migrate_settings(
             os.path.join(decky.DECKY_HOME, "settings", "lossless-scaling-vk.json"),
-            os.path.join(decky.DECKY_USER_HOME, ".config", "decky-lossless-scaling-vk"))
-        
+            os.path.join(decky.DECKY_USER_HOME, ".config", "decky-lossless-scaling-vk"),
+        )
         decky.migrate_runtime(
             os.path.join(decky.DECKY_HOME, "lossless-scaling-vk"),
-            os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-lossless-scaling-vk"))
-        
+            os.path.join(decky.DECKY_USER_HOME, ".local", "share", "decky-lossless-scaling-vk"),
+        )
         decky.logger.info("decky-lsfg-vk plugin migrations completed")

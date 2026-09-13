@@ -1,170 +1,180 @@
 import { callable } from "@decky/api";
 import { ConfigurationData } from "../config/configSchema";
 
-// Type definitions for API responses
-export interface InstallationResult {
+interface ApiResult {
   success: boolean;
-  error?: string;
   message?: string;
+  error?: string | null;
+}
+
+export interface InstallationResult extends ApiResult {
   removed_files?: string[];
 }
 
 export interface InstallationStatus {
   installed: boolean;
-  lib_exists: boolean;
-  json_exists: boolean;
-  script_exists: boolean;
-  lib_path: string;
-  json_path: string;
-  script_path: string;
+  lossless_scaling_installed: boolean;
+  lossless_scaling_status: string;
   error?: string;
 }
 
-export interface DllDetectionResult {
-  detected: boolean;
-  path?: string;
-  source?: string;
-  message?: string;
-  error?: string;
+export interface SteamBranchStatus extends ApiResult {
+  message: string;
+  installed: boolean;
+  manifest_path?: string;
+  selected_branch?: string;
+  current_branch?: string;
+  target_branch: string;
+  needs_switch: boolean;
+  restart_required: boolean;
 }
 
-export interface DllStatsResult {
-  success: boolean;
-  dll_path?: string;
-  dll_sha256?: string;
-  dll_source?: string;
-  error?: string;
-}
-
-// Use centralized configuration data type
 export type LsfgConfig = ConfigurationData;
 
-export interface ConfigResult {
-  success: boolean;
+export interface GameConfigEntry {
+  appid: string;
+  profile: string;
+  config: LsfgConfig;
+}
+
+export interface InstalledGame {
+  appid: string;
+  name: string;
+  nonSteam: boolean;
+  isFlatpakShortcut?: boolean;
+}
+
+export interface GlobalConfig {
+  dll: string;
+  no_fp16: boolean;
+}
+
+export interface WorkaroundState {
+  dxvkFrameRate: number;
+  disableGamescopeWsi: boolean;
+  disableHdr: boolean;
+  disableSteamdeckMode: boolean;
+  disableVkbasalt: boolean;
+  enableZink: boolean;
+}
+
+export interface WorkaroundStateResult extends ApiResult {
+  appid?: string;
+  app_id?: string;
+  state?: WorkaroundState | null;
+  wrapper_path?: string;
+  wrapper_owned?: boolean;
+  command_token_added?: boolean;
+  non_steam?: boolean;
+}
+
+export interface WorkaroundApp {
+  appid: string;
+  non_steam: boolean;
+  command_token_added: boolean;
+}
+
+export interface WorkaroundAppsResult extends ApiResult {
+  apps?: WorkaroundApp[];
+  wrapper_path?: string;
+}
+
+export interface GameConfigsResult extends ApiResult {
+  global_config?: GlobalConfig;
+  games?: GameConfigEntry[];
+}
+
+export interface GlobalConfigResult extends ApiResult {
+  global_config?: GlobalConfig;
+}
+
+export interface GameConfigResult extends ApiResult {
+  appid?: string;
+  exists?: boolean;
   config?: LsfgConfig;
-  error?: string;
 }
 
-export interface ConfigUpdateResult {
-  success: boolean;
-  message?: string;
-  error?: string;
+export interface InstalledGamesResult extends ApiResult {
+  games?: InstalledGame[];
 }
 
-export interface ConfigSchemaResult {
-  field_names: string[];
-  field_types: Record<string, string>;
-  defaults: ConfigurationData;
-  profiles?: string[];
-  current_profile?: string;
-}
-
-export interface LaunchOptionResult {
-  launch_option: string;
-  instructions: string;
-  explanation: string;
-}
-
-export interface FileContentResult {
-  success: boolean;
+export interface FileContentResult extends ApiResult {
   content?: string;
   path?: string;
-  error?: string;
 }
 
-export interface FgmodCheckResult {
-  success: boolean;
+export interface DebugFileContent {
+  id: string;
+  label: string;
+  path: string;
   exists: boolean;
-  path?: string;
-  error?: string;
+  content?: string | null;
+  error?: string | null;
 }
 
-// Flatpak management interfaces
-export interface FlatpakExtensionStatus {
-  success: boolean;
-  message: string;
-  error?: string;
-  installed_23_08: boolean;
-  installed_24_08: boolean;
-  installed_25_08: boolean;
+export interface DebugFileContentsResult extends ApiResult {
+  files?: DebugFileContent[];
 }
 
 export interface FlatpakApp {
   app_id: string;
   app_name: string;
-  has_filesystem_override: boolean;
-  has_env_override: boolean;
+  runtime?: string | null;
+  runtime_branch?: string | null;
+  runtime_ready: boolean;
+  prepared: boolean;
+  owned: boolean;
+  enabled: boolean;
+  profile: string;
+  config?: LsfgConfig | null;
+  workarounds: WorkaroundState;
+  error?: string | null;
 }
 
-export interface FlatpakAppInfo {
-  success: boolean;
-  message: string;
-  error?: string;
-  apps: FlatpakApp[];
-  total_apps: number;
+export interface RunningFlatpakApp {
+  app_id: string;
+  active: boolean;
+  pid?: string;
+  start_time?: number | null;
 }
 
-export interface FlatpakOperationResult {
-  success: boolean;
-  message: string;
-  error?: string;
-  app_id?: string;
-  operation?: string;
+export interface FlatpakAppsResult extends ApiResult {
+  apps?: FlatpakApp[];
 }
 
-// Profile management interfaces
-export interface ProfilesResult {
-  success: boolean;
-  profiles?: string[];
-  current_profile?: string;
-  message?: string;
-  error?: string;
+export interface RunningFlatpakAppsResult extends ApiResult {
+  apps?: RunningFlatpakApp[];
 }
 
-export interface ProfileResult {
-  success: boolean;
-  profile_name?: string;
-  message?: string;
-  error?: string;
+export interface FlatpakAppResult extends ApiResult, Partial<FlatpakApp> {
+  app_id: string;
 }
 
-// API functions
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
-export const checkLosslessScalingDll = callable<[], DllDetectionResult>("check_lossless_scaling_dll");
-export const getDllStats = callable<[], DllStatsResult>("get_dll_stats");
-export const getLsfgConfig = callable<[], ConfigResult>("get_lsfg_config");
-export const getConfigSchema = callable<[], ConfigSchemaResult>("get_config_schema");
-export const getLaunchOption = callable<[], LaunchOptionResult>("get_launch_option");
+export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
-export const getLaunchScriptContent = callable<[], FileContentResult>("get_launch_script_content");
-export const checkFgmodDirectory = callable<[], FgmodCheckResult>("check_fgmod_directory");
-
-// Flatpak management API functions
-export const checkFlatpakExtensionStatus = callable<[], FlatpakExtensionStatus>("check_flatpak_extension_status");
-export const installFlatpakExtension = callable<[string], FlatpakOperationResult>("install_flatpak_extension");
-export const uninstallFlatpakExtension = callable<[string], FlatpakOperationResult>("uninstall_flatpak_extension");
-export const getFlatpakApps = callable<[], FlatpakAppInfo>("get_flatpak_apps");
-export const setFlatpakAppOverride = callable<[string], FlatpakOperationResult>("set_flatpak_app_override");
-export const removeFlatpakAppOverride = callable<[string], FlatpakOperationResult>("remove_flatpak_app_override");
-
-// Updated config function using object-based configuration (single source of truth)
-export const updateLsfgConfig = callable<
-  [ConfigurationData],
-  ConfigUpdateResult
->("update_lsfg_config");
-
-// Legacy helper function for backward compatibility
-export const updateLsfgConfigFromObject = async (config: ConfigurationData): Promise<ConfigUpdateResult> => {
-  return updateLsfgConfig(config);
-};
-
-// Self-updater API functions
-// Profile management API functions
-export const getProfiles = callable<[], ProfilesResult>("get_profiles");
-export const createProfile = callable<[string, string?], ProfileResult>("create_profile");
-export const deleteProfile = callable<[string], ProfileResult>("delete_profile");
-export const renameProfile = callable<[string, string], ProfileResult>("rename_profile");
-export const setCurrentProfile = callable<[string], ProfileResult>("set_current_profile");
-export const updateProfileConfig = callable<[string, ConfigurationData], ConfigUpdateResult>("update_profile_config");
+export const getFlatpakApps = callable<[], FlatpakAppsResult>("get_flatpak_apps");
+export const enableFlatpakApp = callable<[string], FlatpakAppResult>("enable_flatpak_app");
+export const updateFlatpakConfig = callable<[string, LsfgConfig], FlatpakAppResult>("update_flatpak_config");
+export const setFlatpakWorkaroundState = callable<[string, WorkaroundState], WorkaroundStateResult>("set_flatpak_workaround_state");
+export const removeFlatpakApp = callable<[string], FlatpakAppResult>("remove_flatpak_app");
+export const getRunningFlatpakApps = callable<[], RunningFlatpakAppsResult>("get_running_flatpak_apps");
+export const getGameConfigs = callable<[], GameConfigsResult>("get_game_configs");
+export const getInstalledGames = callable<[], InstalledGamesResult>("get_installed_games");
+export const updateGameConfig = callable<[string, string, LsfgConfig], GameConfigResult>("update_game_config");
+export const resetGameConfig = callable<[string], GameConfigResult>("reset_game_config");
+export const resetGameConfigs = callable<[string[]], GameConfigsResult>("reset_game_configs");
+export const resetAllGameConfigs = callable<[], GameConfigsResult>("reset_all_game_configs");
+export const updateGlobalConfig = callable<[GlobalConfig], GlobalConfigResult>("update_global_config");
+export const getWorkaroundState = callable<[string], WorkaroundStateResult>("get_workaround_state");
+export const setWorkaroundState = callable<[
+  string,
+  WorkaroundState,
+  boolean,
+  boolean,
+], WorkaroundStateResult>("set_workaround_state");
+export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
+export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
+export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

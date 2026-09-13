@@ -1,125 +1,117 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   checkLsfgVkInstalled,
-  checkLosslessScalingDll,
-  getLsfgConfig,
-  updateLsfgConfigFromObject,
-  type ConfigUpdateResult
+  getLosslessScalingBranchStatus,
+  installLsfgVk,
+  uninstallLsfgVk,
+  type SteamBranchStatus,
 } from "../api/lsfgApi";
-import { ConfigurationData, getDefaults } from "../config/configSchema";
-import { showErrorToast, ToastMessages } from "../utils/toastUtils";
+import {
+  showInstallErrorToast,
+  showInstallSuccessToast,
+  showUninstallErrorToast,
+  showUninstallSuccessToast,
+} from "../utils/toastUtils";
 
-export function useInstallationStatus() {
-  const [isInstalled, setIsInstalled] = useState<boolean>(false);
-  const [installationStatus, setInstallationStatus] = useState<string>("");
+export function useInstallation(
+  reloadConfig?: () => Promise<void>,
+  beforeUninstall?: () => Promise<boolean>,
+) {
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [installationStatus, setInstallationStatus] = useState("");
+  const [losslessScalingInstalled, setLosslessScalingInstalled] = useState(false);
+  const [losslessScalingStatus, setLosslessScalingStatus] = useState("");
+  const [steamBranchStatus, setSteamBranchStatus] = useState<SteamBranchStatus | null>(null);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [isUninstalling, setIsUninstalling] = useState(false);
 
   const checkInstallation = async () => {
     try {
+      setSteamBranchStatus(await getLosslessScalingBranchStatus());
+    } catch (error) {
+      console.error("Error checking Lossless Scaling Steam branch:", error);
+      setSteamBranchStatus(null);
+    }
+
+    try {
       const status = await checkLsfgVkInstalled();
       setIsInstalled(status.installed);
-      if (status.installed) {
-        setInstallationStatus("lsfg-vk Installed");
-      } else {
-        setInstallationStatus("lsfg-vk Not Installed");
-      }
+      setLosslessScalingInstalled(status.lossless_scaling_installed);
+      setLosslessScalingStatus(status.lossless_scaling_status || "Lossless Scaling Not Installed");
+      setInstallationStatus(status.installed ? "lsfg-vk Installed" : "lsfg-vk Not Installed");
       return status.installed;
-    } catch (error) {
+    } catch {
+      setSteamBranchStatus(null);
+      setLosslessScalingInstalled(false);
+      setLosslessScalingStatus("Lossless Scaling Not Installed");
       setInstallationStatus("lsfg-vk Not Installed");
       return false;
     }
   };
 
   useEffect(() => {
-    checkInstallation();
+    void checkInstallation();
   }, []);
+
+  const install = async () => {
+    setIsInstalling(true);
+    setInstallationStatus("Installing lsfg-vk...");
+    try {
+      const result = await installLsfgVk();
+      if (!result.success) {
+        setInstallationStatus(`Installation failed: ${result.error}`);
+        showInstallErrorToast(result.error ?? undefined);
+        return;
+      }
+      setIsInstalled(true);
+      setInstallationStatus("lsfg-vk installed");
+      showInstallSuccessToast();
+      await reloadConfig?.();
+      await checkInstallation();
+    } catch (error) {
+      setInstallationStatus(`Installation failed: ${error}`);
+      showInstallErrorToast(String(error));
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  const uninstall = async () => {
+    setIsUninstalling(true);
+    setInstallationStatus("Uninstalling lsfg-vk...");
+    try {
+      if (beforeUninstall && !(await beforeUninstall())) {
+        setInstallationStatus("Uninstallation cancelled: could not clean up launch options");
+        return;
+      }
+      const result = await uninstallLsfgVk();
+      if (!result.success) {
+        setInstallationStatus(`Uninstallation failed: ${result.error}`);
+        showUninstallErrorToast(result.error ?? undefined);
+        return;
+      }
+      setIsInstalled(false);
+      setInstallationStatus("lsfg-vk uninstalled successfully!");
+      await checkInstallation();
+      showUninstallSuccessToast();
+    } catch (error) {
+      setInstallationStatus(`Uninstallation failed: ${error}`);
+      showUninstallErrorToast(String(error));
+    } finally {
+      setIsUninstalling(false);
+    }
+  };
 
   return {
     isInstalled,
     installationStatus,
-    setIsInstalled,
-    setInstallationStatus,
-    checkInstallation
-  };
-}
-
-export function useDllDetection() {
-  const [dllDetected, setDllDetected] = useState<boolean>(false);
-  const [dllDetectionStatus, setDllDetectionStatus] = useState<string>("");
-
-  const checkDllDetection = async () => {
-    try {
-      const result = await checkLosslessScalingDll();
-      setDllDetected(result.detected);
-      if (result.detected) {
-        setDllDetectionStatus("Lossless Scaling Installed");
-      } else {
-        setDllDetectionStatus("Lossless Scaling Not Installed");
-      }
-    } catch (error) {
-      setDllDetectionStatus("Lossless Scaling Not Installed");
-    }
-  };
-
-  useEffect(() => {
-    checkDllDetection();
-  }, []);
-
-  return {
-    dllDetected,
-    dllDetectionStatus
-  };
-}
-
-export function useLsfgConfig() {
-  const [config, setConfig] = useState<ConfigurationData>(() => getDefaults());
-
-  const loadLsfgConfig = useCallback(async () => {
-    try {
-      const result = await getLsfgConfig();
-      if (result.success && result.config) {
-        setConfig(result.config);
-      } else {
-        console.log("lsfg config not available, using defaults:", result.error);
-        setConfig(getDefaults());
-      }
-    } catch (error) {
-      console.error("Error loading lsfg config:", error);
-      setConfig(getDefaults());
-    }
-  }, []);
-
-  const updateConfig = useCallback(async (newConfig: ConfigurationData): Promise<ConfigUpdateResult> => {
-    try {
-      const result = await updateLsfgConfigFromObject(newConfig);
-      if (result.success) {
-        setConfig(newConfig);
-      } else {
-        showErrorToast(
-          ToastMessages.CONFIG_UPDATE_ERROR.title, 
-          result.error || ToastMessages.CONFIG_UPDATE_ERROR.body
-        );
-      }
-      return result;
-    } catch (error) {
-      showErrorToast(ToastMessages.CONFIG_UPDATE_ERROR.title, String(error));
-      return { success: false, error: String(error) };
-    }
-  }, []);
-
-  const updateField = useCallback(async (fieldName: keyof ConfigurationData, value: boolean | number | string): Promise<ConfigUpdateResult> => {
-    const newConfig = { ...config, [fieldName]: value };
-    return updateConfig(newConfig);
-  }, [config, updateConfig]);
-
-  useEffect(() => {
-    loadLsfgConfig();
-  }, []);
-
-  return {
-    config,
-    setConfig,
-    loadLsfgConfig,
-    updateConfig,
-    updateField
+    losslessScalingInstalled,
+    losslessScalingStatus,
+    steamBranchStatus,
+    isInstalling,
+    isUninstalling,
+    install,
+    uninstall,
+    checkInstallation,
   };
 }
