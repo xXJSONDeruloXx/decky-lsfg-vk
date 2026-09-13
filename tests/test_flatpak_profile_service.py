@@ -1,4 +1,3 @@
-import hashlib
 import sys
 import tempfile
 import types
@@ -23,7 +22,6 @@ class FakeFlatpakService:
         self.user_home = home
         self.config_dir = home / ".config/lsfg-vk"
         self.config_file_path = self.config_dir / "conf.toml"
-        self.backup_dir = self.config_dir / "flatpak-overrides"
         self.state = {"version": 2, "plugin_owned_branches": [], "prepared_apps": {}}
         self.commands = []
         self.running = ""
@@ -38,18 +36,8 @@ class FakeFlatpakService:
     def _override_path(self, app_id):
         return self.user_home / ".local/share/flatpak/overrides" / app_id
 
-    def _backup_path(self, app_id):
-        return self.backup_dir / f"{app_id}.ini"
-
-    @staticmethod
-    def _sha256(content):
-        return hashlib.sha256(content).hexdigest()
-
-    def _snapshot_override(self, app_id):
-        path = self._override_path(app_id)
-        if not path.exists():
-            return False, b""
-        return True, path.read_bytes()
+    def _reset_app_override(self, app_id):
+        self._override_path(app_id).unlink(missing_ok=True)
 
     def _process_start_time(self, pid):
         return self.start_times.get(pid)
@@ -63,34 +51,26 @@ class FakeFlatpakService:
     def prepare_app(self, app_id):
         apps = self.state["prepared_apps"]
         if app_id not in apps:
-            existed, original = self._snapshot_override(app_id)
-            if existed:
-                self._write_file(self._backup_path(app_id), original.decode("utf-8"))
-            apps[app_id] = {"override_existed": existed, "managed_sha256": ""}
-        entry = apps[app_id]
-        baseline = ""
-        if entry["override_existed"]:
-            baseline = self._backup_path(app_id).read_text(encoding="utf-8")
-        managed = baseline + "\n[Context]\nfilesystems=/config:ro;/dll:ro;\n[Environment]\nLSFGVK_CONFIG=/config/conf.toml\nLSFGVK_FLATPAK=1\n"
-        self._write_file(self._override_path(app_id), managed)
-        entry["managed_sha256"] = self._sha256(managed.encode())
-        return {"success": True, "owned": True, "prepared": True, "runtime": "org.freedesktop.Platform/x86_64/24.08", "runtime_branch": "24.08"}
+            self._reset_app_override(app_id)
+            apps[app_id] = {}
+        self._write_file(
+            self._override_path(app_id),
+            "[Context]\nfilesystems=/config:ro;/dll:ro;\n"
+            "unset-environment=DISABLE_LSFGVK;DISABLE_LSFG;\n"
+            "[Environment]\nLSFGVK_CONFIG=/config/conf.toml\nLSFGVK_FLATPAK=1\n",
+        )
+        return {
+            "success": True,
+            "owned": True,
+            "prepared": True,
+            "runtime": "org.freedesktop.Platform/x86_64/24.08",
+            "runtime_branch": "24.08",
+        }
 
     def remove_app_override(self, app_id):
-        entry = self.state["prepared_apps"].get(app_id)
-        if entry is None:
+        if app_id not in self.state["prepared_apps"]:
             return {"success": True, "prepared": False, "owned": False}
-        existed, current = self._snapshot_override(app_id)
-        current_hash = self._sha256(current) if existed else self._sha256(b"")
-        if current_hash != entry["managed_sha256"]:
-            return {"success": False, "error": "Flatpak override changed after preparation"}
-        path = self._override_path(app_id)
-        backup = self._backup_path(app_id)
-        if entry["override_existed"]:
-            self._write_file(path, backup.read_text(encoding="utf-8"))
-        else:
-            path.unlink(missing_ok=True)
-        backup.unlink(missing_ok=True)
+        self._reset_app_override(app_id)
         self.state["prepared_apps"].pop(app_id)
         return {"success": True, "prepared": False, "owned": False}
 
@@ -114,7 +94,14 @@ class FakeFlatpakService:
         self.commands.append(args)
         if args[:3] == ["override", "--user", "--show"]:
             path = self._override_path(args[3])
-            return types.SimpleNamespace(returncode=0, stdout=path.read_text(encoding="utf-8") if path.exists() else "", stderr="")
+            return types.SimpleNamespace(
+                returncode=0,
+                stdout=path.read_text(encoding="utf-8") if path.exists() else "",
+                stderr="",
+            )
+        if args[:3] == ["override", "--user", "--reset"]:
+            self._reset_app_override(args[3])
+            return types.SimpleNamespace(returncode=0, stdout="", stderr="")
         if args[0] == "override":
             app_id = args[-1]
             path = self._override_path(app_id)
@@ -162,9 +149,11 @@ class FlatpakProfileServiceTests(unittest.TestCase):
         self.assertIn("ENABLE_GAMESCOPE_WSI=0", content)
         self.assertIn("DXVK_HDR=0", content)
 
-    def test_workaround_update_rebuilds_from_original_override(self):
-        baseline = "[Environment]\nDXVK_CONFIG=dxgi.syncInterval = 0\nKEEP=yes\n"
-        self.flatpak._write_file(self.flatpak._override_path(self.app_id), baseline)
+    def test_workaround_update_rebuilds_from_clean_override(self):
+        self.flatpak._write_file(
+            self.flatpak._override_path(self.app_id),
+            "[Environment]\nDXVK_CONFIG=dxgi.syncInterval = 0\nKEEP=yes\n",
+        )
         self.assertTrue(self.service.enable_app(self.app_id)["success"])
 
         state = self.service.default_state()
@@ -176,7 +165,8 @@ class FlatpakProfileServiceTests(unittest.TestCase):
         )
 
         self.assertTrue(result["success"])
-        self.assertIn("--env=DXVK_CONFIG=dxgi.syncInterval = 0; dxvk.maxFrameRate = 30", command)
+        self.assertIn("--env=DXVK_CONFIG=dxvk.maxFrameRate = 30", command)
+        self.assertNotIn("dxgi.syncInterval", " ".join(command))
         self.assertNotIn("--env=DXVK_HDR=0", command)
         self.assertIn("--env=MESA_LOADER_DRIVER_OVERRIDE=zink", command)
 
@@ -191,26 +181,25 @@ class FlatpakProfileServiceTests(unittest.TestCase):
         self.assertEqual(result["config"]["multiplier"], 4)
         self.service.get_app.assert_not_called()
 
-    def test_remove_restores_exact_original_override_and_profile(self):
-        baseline = "[Environment]\nKEEP=yes\n"
-        self.flatpak._write_file(self.flatpak._override_path(self.app_id), baseline)
+    def test_remove_resets_override_and_profile(self):
+        self.flatpak._write_file(self.flatpak._override_path(self.app_id), "[Environment]\nKEEP=yes\n")
         self.assertTrue(self.service.enable_app(self.app_id)["success"])
 
         removed = self.service.remove_app(self.app_id)
 
         self.assertTrue(removed["success"])
-        self.assertEqual(self.flatpak._override_path(self.app_id).read_text(encoding="utf-8"), baseline)
+        self.assertFalse(self.flatpak._override_path(self.app_id).exists())
         self.assertFalse(self.configuration.get_flatpak_config(self.app_id)["exists"])
 
-    def test_external_override_change_fails_closed(self):
+    def test_external_override_change_is_replaced_on_update(self):
         self.assertTrue(self.service.enable_app(self.app_id)["success"])
         path = self.flatpak._override_path(self.app_id)
         path.write_text(path.read_text(encoding="utf-8") + "EXTERNAL=yes\n", encoding="utf-8")
 
         result = self.service.set_workaround_state(self.app_id, self.service.default_state())
 
-        self.assertFalse(result["success"])
-        self.assertIn("changed after preparation", result["error"])
+        self.assertTrue(result["success"])
+        self.assertNotIn("EXTERNAL=yes", path.read_text(encoding="utf-8"))
 
     def test_running_detection_uses_owned_selector_state(self):
         self.assertTrue(self.service.enable_app(self.app_id)["success"])

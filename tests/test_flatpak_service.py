@@ -134,6 +134,9 @@ class FlatpakServiceTests(unittest.TestCase):
         if args[:3] == ["override", "--user", "--show"]:
             path = self.service._override_path(args[-1])
             return self._result(path.read_text(encoding="utf-8") if path.exists() else "")
+        if args[:3] == ["override", "--user", "--reset"]:
+            self.service._override_path(args[-1]).unlink(missing_ok=True)
+            return self._result()
         if args[:2] == ["override", "--user"]:
             return self._apply_override(args)
         raise AssertionError(f"Unexpected Flatpak command: {args}")
@@ -189,7 +192,7 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertNotIn("ENABLE_GAMESCOPE_WSI", content)
         state = json.loads(self.service.ownership_path.read_text(encoding="utf-8"))
         self.assertEqual(state["plugin_owned_branches"], ["24.08"])
-        self.assertIn("com.example.Game", state["prepared_apps"])
+        self.assertEqual(state["prepared_apps"]["com.example.Game"], {})
 
     def test_prepare_is_idempotent(self):
         first = self.service.prepare_app("com.example.Game")
@@ -230,42 +233,20 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertEqual(state["plugin_owned_branches"], [])
         self.assertIn("com.example.Game", state["prepared_apps"])
 
-    def test_external_preparation_is_preserved(self):
+    def test_prepare_resets_existing_override(self):
+        self.system_branches = {"24.08"}
         path = self.service._override_path("com.example.Game")
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            self._serialize_override(
-                [str(self.service.config_dir) + ":ro", str(self.dll_dir) + ":ro"],
-                ["DISABLE_LSFGVK", "DISABLE_LSFG"],
-                {
-                    "LSFGVK_CONFIG": str(self.service.config_file_path),
-                    "LSFGVK_FLATPAK": "1",
-                },
-            ),
-            encoding="utf-8",
-        )
-        self.system_branches = {"24.08"}
+        path.write_text("[Context]\nfilesystems=~/Documents;\n\n[Environment]\nFOO=bar\n", encoding="utf-8")
 
         response = self.service.prepare_app("com.example.Game")
+        content = path.read_text(encoding="utf-8")
 
         self.assertTrue(response["success"])
-        self.assertTrue(response["prepared"])
-        self.assertFalse(response["owned"])
-        self.assertFalse(self.service.ownership_path.exists())
-
-    def test_remove_restores_exact_previous_override(self):
-        self.system_branches = {"24.08"}
-        original = "[Context]\nfilesystems=~/Documents;\n\n[Environment]\nFOO=bar\n"
-        path = self.service._override_path("com.example.Game")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(original, encoding="utf-8")
-        self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
-
-        response = self.service.remove_app_override("com.example.Game")
-
-        self.assertTrue(response["success"])
-        self.assertEqual(path.read_text(encoding="utf-8"), original)
-        self.assertFalse(self.service.ownership_path.exists())
+        self.assertTrue(response["owned"])
+        self.assertNotIn("~/Documents", content)
+        self.assertNotIn("FOO=bar", content)
+        self.assertIn("LSFGVK_CONFIG=", content)
 
     def test_remove_deletes_override_created_by_plugin(self):
         self.system_branches = {"24.08"}
@@ -279,7 +260,7 @@ class FlatpakServiceTests(unittest.TestCase):
         self.assertFalse(path.exists())
         self.assertFalse(self.service.ownership_path.exists())
 
-    def test_remove_fails_closed_after_external_change(self):
+    def test_remove_resets_external_changes(self):
         self.system_branches = {"24.08"}
         self.assertTrue(self.service.prepare_app("com.example.Game")["success"])
         path = self.service._override_path("com.example.Game")
@@ -288,10 +269,21 @@ class FlatpakServiceTests(unittest.TestCase):
 
         response = self.service.remove_app_override("com.example.Game")
 
-        self.assertFalse(response["success"])
-        self.assertIn("changed after preparation", response["error"])
-        self.assertTrue(path.exists())
-        self.assertTrue(self.service.ownership_path.exists())
+        self.assertTrue(response["success"])
+        self.assertFalse(path.exists())
+        self.assertFalse(self.service.ownership_path.exists())
+
+    def test_legacy_ownership_fields_are_accepted(self):
+        self.service.ownership_path.write_text(
+            json.dumps({
+                "version": 2,
+                "plugin_owned_branches": [],
+                "prepared_apps": {"com.example.Game": {"override_existed": True, "managed_sha256": "old"}},
+            }),
+            encoding="utf-8",
+        )
+
+        self.assertIn("com.example.Game", self.service._read_state()["prepared_apps"])
 
     def test_full_cleanup_removes_only_owned_state(self):
         self.system_branches = {"23.08"}

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import pwd
@@ -35,10 +34,6 @@ class FlatpakService(BaseService):
     @property
     def ownership_path(self) -> Path:
         return self.config_dir / self.OWNERSHIP_FILENAME
-
-    @property
-    def backup_dir(self) -> Path:
-        return self.config_dir / "flatpak-overrides"
 
     def _clean_env(self) -> Dict[str, str]:
         env = os.environ.copy()
@@ -77,6 +72,7 @@ class FlatpakService(BaseService):
             if runuser is None:
                 raise FileNotFoundError("runuser command not available")
             command = [runuser, "--user", user.pw_name, "--", *command]
+        kwargs.setdefault("timeout", 300 if args and args[0] in ("install", "uninstall") else 30)
         return subprocess.run(command, env=env, **kwargs)
 
     @classmethod
@@ -170,10 +166,6 @@ class FlatpakService(BaseService):
             self._validate_app_id(app_id)
             if not isinstance(entry, dict):
                 raise RuntimeError("Invalid Flatpak app ownership metadata")
-            if type(entry.get("override_existed")) is not bool:
-                raise RuntimeError("Invalid Flatpak app ownership metadata")
-            if not isinstance(entry.get("managed_sha256"), str):
-                raise RuntimeError("Invalid Flatpak app ownership metadata")
         return data
 
     def _write_state(self, state: Dict[str, object]) -> None:
@@ -181,8 +173,6 @@ class FlatpakService(BaseService):
         apps = state.get("prepared_apps", {})
         if not branches and not apps:
             self.ownership_path.unlink(missing_ok=True)
-            if self.backup_dir.exists() and not any(self.backup_dir.iterdir()):
-                self.backup_dir.rmdir()
             return
         self._write_file(
             self.ownership_path,
@@ -196,12 +186,14 @@ class FlatpakService(BaseService):
     def _override_path(self, app_id: str) -> Path:
         return self.user_home / ".local/share/flatpak/overrides" / self._validate_app_id(app_id)
 
-    def _backup_path(self, app_id: str) -> Path:
-        return self.backup_dir / f"{self._validate_app_id(app_id)}.ini"
-
-    @staticmethod
-    def _sha256(content: bytes) -> str:
-        return hashlib.sha256(content).hexdigest()
+    def _reset_app_override(self, app_id: str) -> None:
+        result = self._run_flatpak_command(
+            ["override", "--user", "--reset", self._validate_app_id(app_id)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise OSError(result.stderr.strip() or f"Could not reset Flatpak override for {app_id}")
 
     @staticmethod
     def _parse_process_start_time(stat_content: str) -> Optional[int]:
@@ -225,16 +217,6 @@ class FlatpakService(BaseService):
         except OSError:
             return None
         return cls._parse_process_start_time(stat_content)
-
-    def _snapshot_override(self, app_id: str) -> tuple[bool, bytes]:
-        path = self._override_path(app_id)
-        if path.is_symlink():
-            raise RuntimeError("Flatpak override path is a symlink")
-        if not path.exists():
-            return False, b""
-        if not path.is_file():
-            raise RuntimeError("Flatpak override path is not a regular file")
-        return True, path.read_bytes()
 
     def _resolve_runtime(self, app_id: str) -> tuple[str, str]:
         self._validate_app_id(app_id)
@@ -517,28 +499,9 @@ class FlatpakService(BaseService):
                     raise RuntimeError(extension.get("error") or f"Could not install Flatpak runtime {branch}")
                 state = self._read_state()
                 apps = state["prepared_apps"]
-                status = self._app_override_status(app_id)
-                if status["prepared"] and app_id not in apps:
-                    return self._success_response(
-                        dict,
-                        "Flatpak application is already prepared outside this plugin",
-                        app_id=app_id,
-                        runtime=runtime,
-                        runtime_branch=branch,
-                        prepared=True,
-                        owned=False,
-                    )
                 if app_id not in apps:
-                    existed, original = self._snapshot_override(app_id)
-                    backup = self._backup_path(app_id)
-                    if existed:
-                        self._write_file(backup, original.decode("utf-8"))
-                    else:
-                        backup.unlink(missing_ok=True)
-                    apps[app_id] = {
-                        "override_existed": existed,
-                        "managed_sha256": "",
-                    }
+                    self._reset_app_override(app_id)
+                    apps[app_id] = {}
                 result = self._run_flatpak_command(
                     [
                         "override",
@@ -556,13 +519,8 @@ class FlatpakService(BaseService):
                 )
                 if result.returncode != 0:
                     raise OSError(result.stderr.strip() or f"Could not prepare Flatpak app {app_id}")
-                status = self._app_override_status(app_id)
-                if not status["prepared"]:
+                if not self._app_override_status(app_id)["prepared"]:
                     raise RuntimeError(f"Flatpak preparation did not become visible for {app_id}")
-                existed, managed = self._snapshot_override(app_id)
-                if not existed:
-                    raise RuntimeError(f"Flatpak override for {app_id} was not created")
-                apps[app_id]["managed_sha256"] = self._sha256(managed)
                 self._write_state(state)
                 return self._success_response(
                     dict,
@@ -582,8 +540,7 @@ class FlatpakService(BaseService):
             with self._lock:
                 state = self._read_state()
                 apps = state["prepared_apps"]
-                entry = apps.get(app_id)
-                if entry is None:
+                if app_id not in apps:
                     return self._success_response(
                         dict,
                         "Flatpak application is not plugin-owned; existing overrides were preserved",
@@ -591,26 +548,12 @@ class FlatpakService(BaseService):
                         prepared=self._app_override_status(app_id)["prepared"],
                         owned=False,
                     )
-                existed, current = self._snapshot_override(app_id)
-                current_hash = self._sha256(current) if existed else self._sha256(b"")
-                if current_hash != entry["managed_sha256"]:
-                    raise RuntimeError(
-                        "Flatpak override changed after preparation; refusing to overwrite unrelated settings"
-                    )
-                override_path = self._override_path(app_id)
-                backup_path = self._backup_path(app_id)
-                if entry["override_existed"]:
-                    if not backup_path.is_file() or backup_path.is_symlink():
-                        raise RuntimeError("Flatpak override backup is unavailable")
-                    self._write_file(override_path, backup_path.read_text(encoding="utf-8"))
-                else:
-                    override_path.unlink(missing_ok=True)
-                backup_path.unlink(missing_ok=True)
+                self._reset_app_override(app_id)
                 apps.pop(app_id, None)
                 self._write_state(state)
                 return self._success_response(
                     dict,
-                    "Plugin-owned Flatpak preparation removed",
+                    "Plugin-owned Flatpak override reset",
                     app_id=app_id,
                     prepared=False,
                     owned=False,

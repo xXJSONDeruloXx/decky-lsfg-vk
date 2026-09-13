@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import Any, Dict
 
 from .configuration import ConfigurationService
@@ -17,10 +16,6 @@ class FlatpakProfileService:
         "enableZink",
     )
     BOOLEAN_FIELDS = STATE_FIELDS[1:]
-    DXVK_FRAME_RATE_SEGMENT = re.compile(
-        r"^(?:dxvk\.maxFrameRate|dxgi\.maxFrameRate|d3d9\.maxFrameRate)\s*=",
-        re.IGNORECASE,
-    )
 
     def __init__(
         self,
@@ -64,14 +59,6 @@ class FlatpakProfileService:
             raise RuntimeError("Flatpak application is not owned by this plugin")
         return state, entry
 
-    def _baseline_content(self, app_id: str, entry: Dict[str, Any]) -> str:
-        if not entry.get("override_existed"):
-            return ""
-        path = self.flatpak_service._backup_path(app_id)
-        if path.is_symlink() or not path.is_file():
-            raise RuntimeError("Flatpak override backup is unavailable")
-        return path.read_text(encoding="utf-8")
-
     @staticmethod
     def _environment_value(content: str, key: str) -> str:
         section = None
@@ -87,31 +74,14 @@ class FlatpakProfileService:
                 return value
         return ""
 
-    @classmethod
-    def _dxvk_config(cls, baseline: str, frame_rate: int) -> str:
-        existing = cls._environment_value(baseline, "DXVK_CONFIG")
-        parts = [part.strip() for part in existing.split(";") if part.strip()]
-        parts = [part for part in parts if not cls.DXVK_FRAME_RATE_SEGMENT.match(part)]
-        if frame_rate > 0:
-            parts.append(f"dxvk.maxFrameRate = {frame_rate}")
-        return "; ".join(parts)
-
-    def _restore_baseline(self, app_id: str, entry: Dict[str, Any]) -> None:
-        existed, current = self.flatpak_service._snapshot_override(app_id)
-        current_hash = self.flatpak_service._sha256(current) if existed else self.flatpak_service._sha256(b"")
-        if current_hash != entry.get("managed_sha256"):
-            raise RuntimeError("Flatpak override changed after preparation; refusing to overwrite unrelated settings")
-        path = self.flatpak_service._override_path(app_id)
-        if entry.get("override_existed"):
-            self.flatpak_service._write_file(path, self._baseline_content(app_id, entry))
-        else:
-            path.unlink(missing_ok=True)
+    @staticmethod
+    def _dxvk_config(frame_rate: int) -> str:
+        return f"dxvk.maxFrameRate = {frame_rate}" if frame_rate > 0 else ""
 
     def _apply_state(self, app_id: str, workaround_state: Dict[str, Any]) -> Dict[str, Any]:
         workaround_state = self._validate_state(workaround_state)
-        _, entry = self._state_entry(app_id)
-        baseline = self._baseline_content(app_id, entry)
-        self._restore_baseline(app_id, entry)
+        self._state_entry(app_id)
+        self.flatpak_service._reset_app_override(app_id)
         prepared = self.flatpak_service.prepare_app(app_id)
         if not prepared.get("success") or not prepared.get("owned"):
             raise RuntimeError(prepared.get("error") or "Could not restore plugin-owned Flatpak preparation")
@@ -137,21 +107,17 @@ class FlatpakProfileService:
                 "--env=MESA_LOADER_DRIVER_OVERRIDE=zink",
                 "--env=GALLIUM_DRIVER=zink",
             ])
-        dxvk_config = self._dxvk_config(baseline, workaround_state["dxvkFrameRate"])
+        dxvk_config = self._dxvk_config(workaround_state["dxvkFrameRate"])
         if dxvk_config:
             args.append(f"--env=DXVK_CONFIG={dxvk_config}")
         args.append(app_id)
         result = self.flatpak_service._run_flatpak_command(args, capture_output=True, text=True)
         if result.returncode != 0:
             raise OSError(result.stderr.strip() or f"Could not apply Flatpak workarounds for {app_id}")
-        existed, managed = self.flatpak_service._snapshot_override(app_id)
-        if not existed:
-            raise RuntimeError(f"Flatpak override for {app_id} was not created")
         state = self.flatpak_service._read_state()
         entry = state["prepared_apps"].get(app_id)
         if not isinstance(entry, dict):
             raise RuntimeError("Flatpak application ownership state disappeared")
-        entry["managed_sha256"] = self.flatpak_service._sha256(managed)
         entry["workaround_state"] = workaround_state
         self.flatpak_service._write_state(state)
         return workaround_state
@@ -345,15 +311,13 @@ class FlatpakProfileService:
                 config = self.configuration_service.get_flatpak_config(app_id)
                 if not config.get("exists"):
                     continue
-                existed, content = self.flatpak_service._snapshot_override(app_id)
-                if not existed or self.flatpak_service._sha256(content) != entry.get("managed_sha256"):
-                    continue
+                shown = self.flatpak_service._run_flatpak_command(
+                    ["override", "--user", "--show", app_id],
+                    capture_output=True,
+                    text=True,
+                )
                 profile = self.configuration_service.flatpak_profile_name(app_id)
-                try:
-                    text = content.decode("utf-8")
-                except UnicodeDecodeError:
-                    continue
-                if self._environment_value(text, "LSFGVK_PROFILE") == profile:
+                if shown.returncode == 0 and self._environment_value(shown.stdout, "LSFGVK_PROFILE") == profile:
                     enabled.add(app_id)
             if not enabled:
                 return {"success": True, "message": "", "error": None, "apps": []}
