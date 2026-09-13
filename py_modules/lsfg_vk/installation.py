@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, ProfileData
+from .config_schema import ConfigurationManager, ProfileData, UnsupportedConfigurationVersion
 from .constants import (
     ARCHIVE_FILENAME,
     BIN_DIR,
@@ -138,6 +138,13 @@ class InstallationService(BaseService):
                 if self.config_file_path.exists()
                 else self._default_config()
             )
+        except UnsupportedConfigurationVersion as error:
+            if not ConfigurationManager.is_discardable_legacy_version(error.version):
+                raise
+            self.log.warning(
+                f"Discarding legacy lsfg-vk configuration version {error.version!r} during installation"
+            )
+            profile_data = self._default_config()
         except ValueError:
             profile_data = self._default_config()
         self._resolve_dll_path(profile_data)
