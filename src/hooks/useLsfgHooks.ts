@@ -63,7 +63,6 @@ export function useInstallation(
         showInstallErrorToast(result.error ?? undefined);
         return;
       }
-      setIsInstalled(true);
       setInstallationStatus("lsfg-vk installed");
       showInstallSuccessToast();
       await reloadConfig?.();

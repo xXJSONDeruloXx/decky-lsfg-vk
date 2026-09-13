@@ -59,7 +59,7 @@ export function SettingsTab(props: SettingsTabProps) {
           <PanelSectionRow>
             <Field
               label="Steam branch"
-              description={`${steamBranchStatus.current_branch || "public"}${steamBranchStatus.needs_switch ? ` - ${steamBranchStatus.message}` : ""}`}
+              description={`${steamBranchStatus.selected_branch || "public"}${steamBranchStatus.needs_switch ? ` - ${steamBranchStatus.message}` : ""}`}
             />
           </PanelSectionRow>
         )}
