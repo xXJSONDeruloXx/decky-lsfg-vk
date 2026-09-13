@@ -251,7 +251,12 @@ export function Content() {
         ...(showDebugTab ? [{ id: "ConfigFile", title: tabIcons.configFile, content: tabContent(<ConfigFileTab />) }] : []),
         { id: "Settings", title: tabIcons.settings, content: tabContent(settings) },
       ]
-    : [{ id: "Settings", title: tabIcons.settings, content: tabContent(settings) }];
+    : [
+        ...(isInstalled && showDebugTab
+          ? [{ id: "ConfigFile", title: tabIcons.configFile, content: tabContent(<ConfigFileTab />) }]
+          : []),
+        { id: "Settings", title: tabIcons.settings, content: tabContent(settings) },
+      ];
 
   const availableTabIds = new Set(tabs.map(({ id }) => id));
   const activeTab = availableTabIds.has(tab) ? tab : setupComplete ? "Steam" : "Settings";

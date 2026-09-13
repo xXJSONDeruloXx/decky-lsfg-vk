@@ -147,6 +147,13 @@ class SteamService(BaseService):
                         games.setdefault(game["appid"], game)
         return list(games.values())
 
+    def _lossless_scaling_path(self) -> Optional[Path]:
+        return next((
+            path
+            for root in self._steam_library_roots()
+            if (path := root / "steamapps/common/Lossless Scaling").is_dir()
+        ), None)
+
     def _manifest_path(self) -> Optional[Path]:
         return next((
             path
@@ -207,7 +214,7 @@ class SteamService(BaseService):
             self._section_value(content, "MountedConfig", "BetaKey")
             or self._section_value(content, "UserConfig", "BetaKey")
         )
-        needs_switch = selected != STEAM_LOSSLESS_SCALING_BRANCH or current != STEAM_LOSSLESS_SCALING_BRANCH
+        needs_switch = selected != STEAM_LOSSLESS_SCALING_BRANCH
         return {
             "installed": True,
             "manifest_path": str(manifest_path),
@@ -215,7 +222,7 @@ class SteamService(BaseService):
             "current_branch": current,
             "target_branch": STEAM_LOSSLESS_SCALING_BRANCH,
             "needs_switch": needs_switch,
-            "restart_required": selected == STEAM_LOSSLESS_SCALING_BRANCH and current != STEAM_LOSSLESS_SCALING_BRANCH,
+            "restart_required": False,
         }
 
     @staticmethod
@@ -233,27 +240,31 @@ class SteamService(BaseService):
     def find_lsfg_vk_dll(self) -> Optional[str]:
         if self.get_branch_status().get("needs_switch"):
             return None
-        return next((
-            str(path)
-            for root in self._steam_library_roots()
-            if (path := root / "steamapps/common/Lossless Scaling/lsfg-vk.dll").is_file()
-        ), None)
+        directory = self._lossless_scaling_path()
+        path = directory / "lsfg-vk.dll" if directory else None
+        return str(path) if path and path.is_file() else None
 
     def get_branch_status(self) -> Dict[str, object]:
         try:
-            manifest = self._manifest_path()
-            if manifest is None:
+            if self._lossless_scaling_path() is None:
                 return self._success_response(
                     dict,
                     "Lossless Scaling is not installed through Steam",
                     **self._missing_branch_fields(),
                 )
+            manifest = self._manifest_path()
+            if manifest is None:
+                fields = self._missing_branch_fields()
+                fields.update(installed=True, needs_switch=True)
+                return self._success_response(
+                    dict,
+                    "Lossless Scaling is installed but its Steam branch could not be determined",
+                    **fields,
+                )
             fields = self._status_fields(manifest, manifest.read_text(encoding="utf-8"))
             message = (
-                "Lossless Scaling is using the lsfg-vk Steam branch"
+                "Lossless Scaling has the lsfg-vk Steam branch selected"
                 if not fields["needs_switch"]
-                else "lsfg-vk is selected; restart Steam to finish the branch switch"
-                if fields["restart_required"]
                 else "Select lsfg-vk in Lossless Scaling's Steam Properties > Betas"
             )
             return self._success_response(dict, message, **fields)

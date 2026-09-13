@@ -183,18 +183,23 @@ class InstallationService(BaseService):
 
     def check_installation(self) -> InstallationCheckResponse:
         try:
-            installation_error = None
-            try:
-                installed = self.runtime_service.is_healthy()
-            except Exception as error:
-                installed = False
-                installation_error = str(error)
+            installed = all(
+                path.is_file()
+                for path in (
+                    self.cli_file,
+                    self.lib_file,
+                    self.lib_x86_file,
+                    self.json_file,
+                    self.json_x86_file,
+                    self.config_file_path,
+                )
+            )
             lossless_scaling = self.runtime_service.check_lossless_scaling()
             return {
                 "installed": installed,
                 "lossless_scaling_installed": bool(lossless_scaling["installed"]),
                 "lossless_scaling_status": str(lossless_scaling["status"]),
-                "error": installation_error,
+                "error": None,
             }
         except Exception as error:
             return {
