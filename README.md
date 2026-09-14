@@ -46,6 +46,10 @@ Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk**
 
 For per-game feedback and community support, please join the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3)
 
+### AYN Odin 2 / Armada
+
+The Odin 2 Armada port has a documented, reproducible generated-frame presentation issue. See the [Armada/Odin 2 investigation report](docs/ARMADA_ODIN2_INVESTIGATION.md) for the tested environment, results, and remaining hypotheses.
+
 ## Credits
 
 - **[PancakeTAS](https://lsfg-vk.dev/)** for creating the lsfg-vk Vulkan compatibility layer
