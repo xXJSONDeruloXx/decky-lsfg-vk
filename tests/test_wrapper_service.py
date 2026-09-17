@@ -94,6 +94,17 @@ class WrapperServiceTests(unittest.TestCase):
         self.assertNotIn("DISABLE_LSFGVK", values)
         self.assertNotIn("DISABLE_LSFG", values)
 
+    def test_preserves_steamdeck_by_default_and_disables_when_requested(self):
+        self.service.set("123", self._state())
+        inherited = self._run(123, "/usr/bin/env", env={"SteamDeck": "1"})
+        inherited_values = dict(line.split("=", 1) for line in inherited.stdout.splitlines() if "=" in line)
+        self.assertEqual(inherited_values["SteamDeck"], "1")
+
+        self.service.set("123", self._state(disableSteamdeckMode=True))
+        disabled = self._run(123, "/usr/bin/env", env={"SteamDeck": "1"})
+        disabled_values = dict(line.split("=", 1) for line in disabled.stdout.splitlines() if "=" in line)
+        self.assertEqual(disabled_values["SteamDeck"], "0")
+
     def test_wrapper_is_transport_agnostic(self):
         self.service.set("123", self._state())
         fake = self.home / "target"

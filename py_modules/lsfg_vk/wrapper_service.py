@@ -29,7 +29,6 @@ class WrapperService(BaseService):
         "ENABLE_GAMESCOPE_WSI",
         "DISABLE_GAMESCOPE_WSI",
         "DXVK_HDR",
-        "SteamDeck",
         "DISABLE_LSFGVK",
         "DISABLE_LSFG",
         "DISABLE_VKBASALT",
