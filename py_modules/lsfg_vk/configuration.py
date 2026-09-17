@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, ProfileData
+from .config_schema import ConfigurationManager, ProfileData, UnsupportedConfigurationVersion
 from .runtime_service import RuntimeService
 
 
@@ -16,10 +16,25 @@ class ConfigurationService(BaseService):
     def _default_data(self) -> ProfileData:
         return {"profiles": {}, "global_config": {"dll": "", "no_fp16": False}}
 
+    def _reset_legacy_config(self, version: Any) -> ProfileData:
+        data = self._default_data()
+        content = ConfigurationManager.generate_toml_content_multi_profile(data)
+        self._write_file(self.config_file_path, content)
+        self.log.warning(
+            f"Discarded legacy lsfg-vk configuration version {version!r}; reset conf.toml to v2 defaults"
+        )
+        return data
+
     def _get_profile_data(self) -> ProfileData:
         if not self.config_file_path.exists():
             return self._default_data()
-        return ConfigurationManager.parse_toml_content_multi_profile(self.config_file_path.read_text(encoding="utf-8"))
+        content = self.config_file_path.read_text(encoding="utf-8")
+        try:
+            return ConfigurationManager.parse_toml_content_multi_profile(content)
+        except UnsupportedConfigurationVersion as error:
+            if not ConfigurationManager.is_discardable_legacy_version(error.version):
+                raise
+            return self._reset_legacy_config(error.version)
 
     def _save_profile_data(self, data: ProfileData) -> None:
         content = ConfigurationManager.generate_toml_content_multi_profile(data)

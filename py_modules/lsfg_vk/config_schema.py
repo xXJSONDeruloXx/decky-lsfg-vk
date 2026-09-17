@@ -12,6 +12,12 @@ class ProfileData(TypedDict):
     global_config: Dict[str, Any]
 
 
+class UnsupportedConfigurationVersion(ValueError):
+    def __init__(self, version: Any):
+        self.version = version
+        super().__init__("unsupported lsfg-vk configuration version")
+
+
 PROFILE_DEFAULTS: Dict[str, Any] = {
     "active_in": [],
     "pacing_mode": "vsync",
@@ -45,6 +51,14 @@ def _normalize_active_in(value: Any) -> list[str]:
 
 
 class ConfigurationManager:
+    @staticmethod
+    def is_discardable_legacy_version(version: Any) -> bool:
+        return version is None or version == "1" or (
+            isinstance(version, (int, float))
+            and not isinstance(version, bool)
+            and version < 2
+        )
+
     @staticmethod
     def get_defaults() -> Dict[str, Any]:
         return {**GLOBAL_DEFAULTS, **PROFILE_DEFAULTS}
@@ -99,8 +113,9 @@ class ConfigurationManager:
     @staticmethod
     def parse_toml_content_multi_profile(content: str) -> ProfileData:
         data = tomllib.loads(content)
-        if data.get("version") != 2:
-            raise ValueError("unsupported lsfg-vk configuration version")
+        version = data.get("version")
+        if version != 2:
+            raise UnsupportedConfigurationVersion(version)
         raw_global = data.get("global", {})
         global_config = {
             "dll": str(raw_global.get("dll", "") or ""),
