@@ -166,6 +166,26 @@ class InstallationService(BaseService):
             return True
         return False
 
+    def _repair_dll_path(self) -> None:
+        if not self.config_file_path.is_file():
+            return
+        try:
+            dll_path = self.steam_service.find_lsfg_vk_dll()
+            if not dll_path:
+                return
+            profile_data = ConfigurationManager.parse_toml_content_multi_profile(
+                self.config_file_path.read_text(encoding="utf-8")
+            )
+            if profile_data["global_config"].get("dll") == dll_path:
+                return
+            profile_data["global_config"]["dll"] = dll_path
+            content = ConfigurationManager.generate_toml_content_multi_profile(profile_data)
+            self.runtime_service.validate_config_content(content)
+            self._write_file(self.config_file_path, content, 0o644)
+            self.log.info(f"Repaired lsfg-vk DLL path: {dll_path}")
+        except Exception as error:
+            self.log.warning(f"Could not repair lsfg-vk DLL path: {error}")
+
     def _remove_legacy_layer_files(self) -> None:
         for path in (self.legacy_lib_file, self.legacy_json_file):
             self._remove_if_exists(path)
@@ -202,6 +222,8 @@ class InstallationService(BaseService):
                     self.config_file_path,
                 )
             )
+            if installed:
+                self._repair_dll_path()
             lossless_scaling = self.runtime_service.check_lossless_scaling()
             return {
                 "installed": installed,

@@ -74,6 +74,7 @@ export function Content() {
   } = useGameConfiguration();
   const {
     isInstalled,
+    setupComplete,
     installationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
@@ -83,12 +84,6 @@ export function Content() {
     install,
     uninstall,
   } = useInstallation(reload, cleanupAllWorkarounds);
-  const setupComplete =
-    isInstalled &&
-    losslessScalingInstalled &&
-    steamBranchStatus?.success === true &&
-    steamBranchStatus.installed &&
-    !steamBranchStatus.needs_switch;
   const flatpak = useFlatpakConfiguration(setupComplete);
   const [tab, setTab] = useState("Settings");
   const [showDebugTab, setShowDebugTab] = usePersistentBoolean(DEBUG_TAB_VISIBILITY_KEY, false);
@@ -149,6 +144,7 @@ export function Content() {
   const settings = (
     <SettingsTab
       isInstalled={isInstalled}
+      setupComplete={setupComplete}
       installationStatus={installationStatus}
       losslessScalingInstalled={losslessScalingInstalled}
       losslessScalingStatus={losslessScalingStatus}

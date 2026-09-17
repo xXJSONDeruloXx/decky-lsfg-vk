@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   checkLsfgVkInstalled,
   getLosslessScalingBranchStatus,
@@ -25,7 +25,7 @@ export function useInstallation(
   const [isInstalling, setIsInstalling] = useState(false);
   const [isUninstalling, setIsUninstalling] = useState(false);
 
-  const checkInstallation = async () => {
+  const checkInstallation = useCallback(async () => {
     try {
       setSteamBranchStatus(await getLosslessScalingBranchStatus());
     } catch (error) {
@@ -47,11 +47,28 @@ export function useInstallation(
       setInstallationStatus("lsfg-vk Not Installed");
       return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     void checkInstallation();
-  }, []);
+  }, [checkInstallation]);
+
+  const setupComplete =
+    isInstalled &&
+    losslessScalingInstalled &&
+    steamBranchStatus?.success === true &&
+    steamBranchStatus.installed &&
+    !steamBranchStatus.needs_switch;
+
+  useEffect(() => {
+    if (setupComplete || isInstalling || isUninstalling) return;
+
+    const interval = window.setInterval(() => {
+      void checkInstallation();
+    }, 2000);
+
+    return () => window.clearInterval(interval);
+  }, [checkInstallation, isInstalling, isUninstalling, setupComplete]);
 
   const install = async () => {
     setIsInstalling(true);
@@ -103,6 +120,7 @@ export function useInstallation(
 
   return {
     isInstalled,
+    setupComplete,
     installationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,

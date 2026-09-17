@@ -1,9 +1,11 @@
-import { ButtonItem, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
+import { ButtonItem, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
 import { type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
+import { showBranchSetupModal } from "./BranchSetupModal";
 
 interface SettingsTabProps {
   isInstalled: boolean;
+  setupComplete: boolean;
   installationStatus: string;
   losslessScalingInstalled: boolean;
   losslessScalingStatus: string;
@@ -21,6 +23,7 @@ interface SettingsTabProps {
 export function SettingsTab(props: SettingsTabProps) {
   const {
     isInstalled,
+    setupComplete,
     installationStatus,
     losslessScalingInstalled,
     losslessScalingStatus,
@@ -34,7 +37,12 @@ export function SettingsTab(props: SettingsTabProps) {
     onInstall,
     onUninstall,
   } = props;
-  const losslessScalingAppInstalled = losslessScalingInstalled || steamBranchStatus?.installed === true;
+  const setupIncomplete = isInstalled && !setupComplete;
+  const branchSetupIncomplete = Boolean(
+    setupIncomplete && steamBranchStatus?.installed && steamBranchStatus.needs_switch,
+  );
+  const selectedBranch = steamBranchStatus?.selected_branch || "the current";
+  const targetBranch = steamBranchStatus?.target_branch || "lsfg-vk";
   const buttonLabel = isInstalling
     ? t("INSTALL_INSTALLING", "Installing...")
     : isUninstalling
@@ -46,16 +54,49 @@ export function SettingsTab(props: SettingsTabProps) {
   return (
     <>
       <PanelSection title="Settings">
+        {setupIncomplete && (
+          <PanelSectionRow>
+            <div
+              role="alert"
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "12px",
+                border: "1px solid #e55353",
+                borderRadius: "4px",
+                background: "rgba(128, 24, 24, 0.32)",
+                color: "#ffd7d7",
+              }}
+            >
+              <div style={{ fontWeight: 600 }}>Setup incomplete</div>
+              <div style={{ marginTop: "6px", lineHeight: 1.35 }}>
+                {branchSetupIncomplete ? (
+                  <>Lossless Scaling is on <strong>{selectedBranch}</strong>. Select the <strong>{targetBranch}</strong> branch before launching games.</>
+                ) : (
+                  <>Lossless Scaling is installed, but its LSFG-VK runtime is not ready yet.</>
+                )}
+              </div>
+              {branchSetupIncomplete && (
+                <DialogButton
+                  onClick={showBranchSetupModal}
+                  style={{ width: "100%", marginTop: "10px" }}
+                >
+                  Learn more
+                </DialogButton>
+              )}
+            </div>
+          </PanelSectionRow>
+        )}
         <PanelSectionRow>
           <Field
             label="Lossless Scaling"
-            description={losslessScalingAppInstalled ? "Installed" : losslessScalingStatus || "Not installed"}
+            description={losslessScalingInstalled ? "Installed" : losslessScalingStatus || "Not installed"}
           />
         </PanelSectionRow>
         <PanelSectionRow>
           <Field label="LSFG-VK" description={installationStatus} />
         </PanelSectionRow>
-        {steamBranchStatus?.installed && (
+        {steamBranchStatus?.installed && !setupIncomplete && (
           <PanelSectionRow>
             <Field
               label="Steam branch"
