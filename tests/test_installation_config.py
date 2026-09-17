@@ -35,7 +35,7 @@ class InstallationConfigTests(unittest.TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def test_installation_discards_v1_profiles_instead_of_migrating_them(self):
+    def test_installation_removes_v1_profiles_instead_of_migrating_them(self):
         self.service.config_dir.mkdir(parents=True)
         self.service.config_file_path.write_text(
             'version = 1\n\n[[profile]]\nname = "Old Game"\n',
@@ -46,6 +46,7 @@ class InstallationConfigTests(unittest.TestCase):
 
         self.assertEqual(data["profiles"], {})
         self.assertEqual(data["global_config"], {"dll": "", "no_fp16": False})
+        self.assertFalse(self.service.config_file_path.exists())
         self.service.log.warning.assert_called_once()
 
     def test_installation_does_not_overwrite_a_future_config_version(self):

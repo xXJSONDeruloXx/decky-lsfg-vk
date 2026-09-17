@@ -18,10 +18,11 @@ class ConfigurationService(BaseService):
 
     def _reset_legacy_config(self, version: Any) -> ProfileData:
         data = self._default_data()
+        self._remove_if_exists(self.config_file_path)
         content = ConfigurationManager.generate_toml_content_multi_profile(data)
         self._write_file(self.config_file_path, content)
         self.log.warning(
-            f"Discarded legacy lsfg-vk configuration version {version!r}; reset conf.toml to v2 defaults"
+            f"Removed legacy lsfg-vk configuration version {version!r}; reset conf.toml to v2 defaults"
         )
         return data
 

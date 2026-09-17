@@ -53,11 +53,11 @@ class InstallationService(BaseService):
                 raise FileNotFoundError(f"{ARCHIVE_FILENAME} not found at {archive_path}")
             self._ensure_directories()
             profile_data = self._prepare_config()
+            self._remove_legacy_layer_files()
             self._install_archive(archive_path)
             content = ConfigurationManager.generate_toml_content_multi_profile(profile_data)
             self.runtime_service.validate_config_content(content)
             self._write_file(self.config_file_path, content, 0o644)
-            self._remove_legacy_layer_files()
             return self._success_response(InstallationResponse, "lsfg-vk 2.0.0 installed successfully")
         except Exception as error:
             self.log.error(f"Error installing lsfg-vk: {error}")
@@ -141,8 +141,9 @@ class InstallationService(BaseService):
         except UnsupportedConfigurationVersion as error:
             if not ConfigurationManager.is_discardable_legacy_version(error.version):
                 raise
+            self._remove_if_exists(self.config_file_path)
             self.log.warning(
-                f"Discarding legacy lsfg-vk configuration version {error.version!r} during installation"
+                f"Removed legacy lsfg-vk configuration version {error.version!r} during installation"
             )
             profile_data = self._default_config()
         except ValueError:
