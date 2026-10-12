@@ -148,31 +148,33 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
         <>
           {status === "loading" && (
             <PanelSectionRow>
-              <Field label="Reading launch options..." />
+              <Field label={t("WORKAROUND_READING_LAUNCH", "Reading launch options...")} />
             </PanelSectionRow>
           )}
           {status === "error" && (
             <>
               <PanelSectionRow>
                 <Field
-                  label="Launch options unavailable"
-                  description={error || "Steam did not provide readable launch options."}
+                  label={t("WORKAROUND_LAUNCH_UNAVAILABLE", "Launch options unavailable")}
+                  description={error || t("WORKAROUND_LAUNCH_UNAVAILABLE_DESC", "Steam did not provide readable launch options.")}
                 />
               </PanelSectionRow>
               <PanelSectionRow>
-                <ButtonItem layout="below" onClick={() => void refresh()}>Retry</ButtonItem>
+                <ButtonItem layout="below" onClick={() => void refresh()}>
+                  {t("WORKAROUND_RETRY", "Retry")}
+                </ButtonItem>
               </PanelSectionRow>
             </>
           )}
           {status === "ready" && snapshot && (!snapshot.wrapperOwned || !snapshot.integrationInstalled) && (
             <>
               <PanelSectionRow>
-                <Field label="Wrapper needs to be reinstalled" />
+                <Field label={t("WORKAROUND_WRAPPER_NEEDS_REINSTALL", "Wrapper needs to be reinstalled")} />
               </PanelSectionRow>
               {onRepair && (
                 <PanelSectionRow>
                   <ButtonItem layout="below" disabled={repairing} onClick={() => void handleRepair()}>
-                    {repairing ? "Reinstalling..." : "Reinstall wrapper"}
+                    {repairing ? t("WORKAROUND_REINSTALLING", "Reinstalling...") : t("WORKAROUND_REINSTALL_WRAPPER", "Reinstall wrapper")}
                   </ButtonItem>
                 </PanelSectionRow>
               )}

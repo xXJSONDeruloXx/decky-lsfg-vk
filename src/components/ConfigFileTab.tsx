@@ -26,7 +26,7 @@ function usePersistentCollapsed(key: string) {
 
 function DebugFileSection({ file }: { file: DebugFileContent }) {
   const [collapsed, toggleCollapsed] = usePersistentCollapsed(`lsfg-debug-file-${file.id}-collapsed-v1`);
-  const status = file.exists ? "Present" : "Not present";
+  const status = file.exists ? t("DEBUG_FILE_PRESENT", "Present") : t("DEBUG_FILE_NOT_PRESENT", "Not present");
 
   return (
     <>
@@ -59,8 +59,8 @@ function DebugFileSection({ file }: { file: DebugFileContent }) {
             </pre>
           ) : (
             <Field
-              label="File unavailable"
-              description={file.error || "The file has not been created yet."}
+              label={t("DEBUG_FILE_UNAVAILABLE", "File unavailable")}
+              description={file.error || t("DEBUG_FILE_NOT_CREATED", "The file has not been created yet.")}
             />
           )}
         </PanelSectionRow>
@@ -111,7 +111,7 @@ export function ConfigFileTab() {
       <PanelSection title={t("NERD_CONFIG_FILE", "Config / Debug")}>
         {result.error && (
           <PanelSectionRow>
-            <Field label="Error" description={result.error} />
+            <Field label={t("DEBUG_FILE_ERROR", "Error")} description={result.error} />
           </PanelSectionRow>
         )}
         {result.success && result.files?.map((file) => (

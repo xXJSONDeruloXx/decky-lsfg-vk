@@ -1,8 +1,8 @@
 import { ButtonItem, ConfirmModal, Field, PanelSectionRow, showModal } from "@decky/ui";
 import { useEffect, useRef } from "react";
 import type { GameTarget, KnownGameSource } from "../utils/gameTargets";
-import { sourceLabel } from "../utils/gameTargets";
 import { CollapsibleItemGroup, collapsibleItemGroupStyles, usePersistentCollapsed } from "./CollapsibleItemGroup";
+import t from "../i18n/i18n";
 
 interface Props {
   targets: GameTarget[];
@@ -20,10 +20,11 @@ const ENABLED_COLLAPSED_KEY = "lsfg-enabled-games-collapsed-v4";
 const AVAILABLE_COLLAPSED_KEY = "lsfg-available-games-collapsed-v3";
 
 function targetDescription(game: GameTarget): string {
-  if (game.isFlatpakShortcut) return "Non-Steam | Use Flatpak Tab";
-  return game.source === "unknown"
-    ? "Unknown source · excluded from bulk actions"
-    : sourceLabel(game.source);
+  if (game.isFlatpakShortcut) return t("FLATPAK_USE_TAB", "Non-Steam | Use Flatpak Tab");
+  if (game.source === "unknown") return t("SOURCE_UNKNOWN_EXCLUDED", "Unknown source · excluded from bulk actions");
+  if (game.source === "nonSteam") return t("SOURCE_NON_STEAM", "Non-Steam");
+  if (game.source === "steam") return t("SOURCE_STEAM", "Steam");
+  return t("SOURCE_UNKNOWN", "Unknown source");
 }
 
 export function GameConfigurationSelector({
@@ -46,10 +47,15 @@ export function GameConfigurationSelector({
   const availableGames = sortGames(targets.filter((game) => !game.configured));
   const enableableGames = availableGames.filter((game) => game.source === source && !game.isFlatpakShortcut);
   const removableGames = enabledGames.filter((game) => game.source === source && !game.isFlatpakShortcut);
-  const sourceName = source === "nonSteam" ? "non-Steam shortcuts" : "Steam games";
+  const sourceName = source === "nonSteam"
+    ? t("SOURCE_NON_STEAM_SHORTCUTS", "non-Steam shortcuts")
+    : t("SOURCE_STEAM_GAMES", "Steam games");
+  const sourceTitle = source === "nonSteam"
+    ? t("SOURCE_NON_STEAM", "Non-Steam")
+    : t("SOURCE_STEAM", "Steam");
   const emptyDescription = source === "nonSteam"
-    ? "Steam has not reported any eligible non-Steam shortcuts"
-    : "Steam has not reported any eligible installed games";
+    ? t("NO_SHORTCUTS_DESC", "Steam has not reported any eligible non-Steam shortcuts")
+    : t("NO_GAMES_DESC", "Steam has not reported any eligible installed games");
   const toItem = (game: GameTarget) => ({
     id: game.appid,
     label: game.name,
@@ -72,9 +78,9 @@ export function GameConfigurationSelector({
   const confirmResetAll = () => {
     showModal(
       <ConfirmModal
-        strTitle={`Remove all ${sourceName} profiles?`}
-        strOKButtonText="Remove all"
-        strCancelButtonText="Cancel"
+        strTitle={t("MODAL_REMOVE_ALL_TITLE", "Remove all {source} profiles?", { source: sourceName })}
+        strOKButtonText={t("MODAL_REMOVE_ALL_CONFIRM", "Remove all")}
+        strCancelButtonText={t("MODAL_CANCEL", "Cancel")}
         onOK={() => void onResetAll(source)}
         onCancel={() => {}}
       />,
@@ -84,10 +90,10 @@ export function GameConfigurationSelector({
   const confirmEnableAll = () => {
     showModal(
       <ConfirmModal
-        strTitle={`Enable all available ${sourceName}?`}
-        strDescription={`Create individual LSFG-VK profiles for every available ${sourceName}. Unknown-source profiles are excluded. Flatpak profiles are managed separately in the Flatpak tab.`}
-        strOKButtonText="Enable all"
-        strCancelButtonText="Cancel"
+        strTitle={t("MODAL_ENABLE_ALL_TITLE", "Enable all available {source}?", { source: sourceName })}
+        strDescription={t("MODAL_ENABLE_ALL_DESC", "Create individual LSFG-VK profiles for every available {source}. Unknown-source profiles are excluded. Flatpak profiles are managed separately in the Flatpak tab.", { source: sourceName })}
+        strOKButtonText={t("MODAL_ENABLE_ALL_CONFIRM", "Enable all")}
+        strCancelButtonText={t("MODAL_CANCEL", "Cancel")}
         onOK={() => void onEnableAll(source)}
         onCancel={() => {}}
       />,
@@ -101,11 +107,11 @@ export function GameConfigurationSelector({
       </style>
       {targets.length === 0 && (
         <PanelSectionRow>
-          <Field label={`No ${sourceName} found`} description={emptyDescription} />
+          <Field label={t("NO_TARGETS_FOUND", "No {source} found", { source: sourceName })} description={emptyDescription} />
         </PanelSectionRow>
       )}
       <CollapsibleItemGroup
-        title="Enabled"
+        title={t("SECTION_ENABLED", "Enabled")}
         items={enabledGames.map(toItem)}
         collapsed={enabledCollapsed}
         onToggle={toggleEnabled}
@@ -113,7 +119,7 @@ export function GameConfigurationSelector({
         toggleRef={enabledToggleRef}
       />
       <CollapsibleItemGroup
-        title="Available"
+        title={t("SECTION_AVAILABLE", "Available")}
         items={availableGames.map(toItem)}
         collapsed={availableCollapsed}
         onToggle={toggleAvailable}
@@ -122,7 +128,7 @@ export function GameConfigurationSelector({
       {enableableGames.length > 0 && (
         <PanelSectionRow>
           <ButtonItem layout="below" onClick={confirmEnableAll} disabled={bulkOperationBusy}>
-            {`Enable all ${sourceName}`}
+            {t("BTN_ENABLE_ALL", "Enable all {source}", { source: sourceName })}
           </ButtonItem>
         </PanelSectionRow>
       )}
@@ -132,9 +138,10 @@ export function GameConfigurationSelector({
           onClick={confirmResetAll}
           disabled={bulkOperationBusy || removableGames.length === 0}
         >
-          {`Remove all ${sourceLabel(source)} profiles`}
+          {t("BTN_REMOVE_ALL", "Remove all {source} profiles", { source: sourceTitle })}
         </ButtonItem>
       </PanelSectionRow>
     </>
   );
 }
+

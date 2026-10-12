@@ -1,5 +1,6 @@
 import { DialogButton, ModalRoot, showModal } from "@decky/ui";
 import branchSetupGif from "../../assets/lsfg-vk-branch-setup.gif";
+import t from "../i18n/i18n";
 
 export function showBranchSetupModal() {
   let closeModal = () => {};
@@ -21,11 +22,11 @@ export function showBranchSetupModal() {
         }}
       >
         <div style={{ fontSize: "20px", fontWeight: 600, marginBottom: "8px" }}>
-          Switch Lossless Scaling to the lsfg-vk branch
+          {t("BRANCH_MODAL_HEADING", "Switch Lossless Scaling to the lsfg-vk branch")}
         </div>
         <img
           src={branchSetupGif}
-          alt="Steam steps for selecting the lsfg-vk branch"
+          alt={t("BRANCH_IMG_ALT", "Steam steps for selecting the lsfg-vk branch")}
           style={{
             display: "block",
             width: "100%",
@@ -37,22 +38,22 @@ export function showBranchSetupModal() {
           }}
         />
         <ol style={{ lineHeight: 1.5, margin: "14px 0 18px", paddingLeft: "24px" }}>
-          <li>Open Lossless Scaling in your Steam library.</li>
-          <li>Open Properties, then Game Versions &amp; Betas.</li>
-          <li>Select the <strong>lsfg-vk</strong> branch.</li>
-          <li>Wait for Steam to finish the update and reopen Decky LSFG-VK.</li>
+          <li>{t("BRANCH_STEP_1", "Open Lossless Scaling in your Steam library.")}</li>
+          <li>{t("BRANCH_STEP_2", "Open Properties, then Game Versions & Betas.")}</li>
+          <li>{t("BRANCH_STEP_3", "Select the lsfg-vk branch.")}</li>
+          <li>{t("BRANCH_STEP_4", "Wait for Steam to finish the update and reopen Decky LSFG-VK.")}</li>
         </ol>
         <DialogButton
           onClick={() => closeModal()}
           style={{ width: "100%" }}
         >
-          Close
+          {t("BRANCH_CLOSE", "Close")}
         </DialogButton>
       </div>
     </ModalRoot>,
     undefined,
     {
-      strTitle: "Finish LSFG-VK setup",
+      strTitle: t("BRANCH_MODAL_TITLE", "Finish LSFG-VK setup"),
       bNeverPopOut: true,
       popupWidth: 980,
       popupHeight: 760,
@@ -60,3 +61,4 @@ export function showBranchSetupModal() {
   );
   closeModal = modal.Close;
 }
+

@@ -4,6 +4,7 @@ import type { GameTarget } from "../utils/gameTargets";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import { NowPlayingSummary } from "./NowPlayingSummary";
+import t from "../i18n/i18n";
 
 interface Props {
   app: FlatpakApp;
@@ -25,10 +26,16 @@ export function FlatpakNowPlayingTab({ app, launcher, onConfigChange }: Props) {
       <NowPlayingSummary
         title={launcher?.name || app.app_name}
         details={[
-          launcher ? (launcher.source === "nonSteam" ? "Steam shortcut" : "Steam") : "Flatpak",
-          launcher && launcher.name !== app.app_name ? `Running in ${app.app_name}` : null,
-          launcher ? "Flatpak" : null,
-          `Controls: ${app.app_name} profile`,
+          launcher
+            ? (launcher.source === "nonSteam"
+                ? t("FLATPAK_STEAM_SHORTCUT", "Steam shortcut")
+                : t("SOURCE_STEAM", "Steam"))
+            : t("TAB_FLATPAK", "Flatpak"),
+          launcher && launcher.name !== app.app_name
+            ? t("FLATPAK_RUNNING_IN", "Running in {name}", { name: app.app_name })
+            : null,
+          launcher ? t("TAB_FLATPAK", "Flatpak") : null,
+          t("NOW_PLAYING_CONTROLS", "Controls: {name} profile", { name: app.app_name }),
         ].filter((detail): detail is string => detail !== null)}
       />
       <FpsMultiplierControl config={app.config} onConfigChange={changeConfig} />
@@ -36,3 +43,4 @@ export function FlatpakNowPlayingTab({ app, launcher, onConfigChange }: Props) {
     </Focusable>
   );
 }
+

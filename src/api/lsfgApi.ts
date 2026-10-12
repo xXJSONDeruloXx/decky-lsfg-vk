@@ -153,6 +153,7 @@ export interface FlatpakAppResult extends ApiResult, Partial<FlatpakApp> {
 export const installLsfgVk = callable<[], InstallationResult>("install_lsfg_vk");
 export const uninstallLsfgVk = callable<[], InstallationResult>("uninstall_lsfg_vk");
 export const checkLsfgVkInstalled = callable<[], InstallationStatus>("check_lsfg_vk_installed");
+export const getSteamLanguage = callable<[], string>("get_steam_language");
 export const getLosslessScalingBranchStatus = callable<[], SteamBranchStatus>("get_lossless_scaling_branch_status");
 export const getConfigFileContent = callable<[], FileContentResult>("get_config_file_content");
 export const getFlatpakApps = callable<[], FlatpakAppsResult>("get_flatpak_apps");

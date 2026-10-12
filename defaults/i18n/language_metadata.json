@@ -1,6 +1,92 @@
 {
-  "ko": { "name": "한국어" },
-  "en": { "name": "English" },
-  "ja": { "name": "日本語" },
-  "zh": { "name": "中文" }
+  "ru": {
+    "name": "Русский"
+  },
+  "en": {
+    "name": "English"
+  },
+  "zh-CN": {
+    "name": "简体中文"
+  },
+  "zh-TW": {
+    "name": "繁體中文"
+  },
+  "ja": {
+    "name": "日本語"
+  },
+  "ko": {
+    "name": "한국어"
+  },
+  "th": {
+    "name": "ไทย"
+  },
+  "id": {
+    "name": "Bahasa Indonesia"
+  },
+  "ms": {
+    "name": "Bahasa Melayu"
+  },
+  "bg": {
+    "name": "Български"
+  },
+  "cs": {
+    "name": "Čeština"
+  },
+  "da": {
+    "name": "Dansk"
+  },
+  "de": {
+    "name": "Deutsch"
+  },
+  "es": {
+    "name": "Español"
+  },
+  "es-419": {
+    "name": "Español (Latinoamérica)"
+  },
+  "el": {
+    "name": "Ελληνικά"
+  },
+  "fr": {
+    "name": "Français"
+  },
+  "it": {
+    "name": "Italiano"
+  },
+  "hu": {
+    "name": "Magyar"
+  },
+  "nl": {
+    "name": "Nederlands"
+  },
+  "no": {
+    "name": "Norsk"
+  },
+  "pl": {
+    "name": "Polski"
+  },
+  "pt": {
+    "name": "Português"
+  },
+  "pt-BR": {
+    "name": "Português (Brasil)"
+  },
+  "ro": {
+    "name": "Română"
+  },
+  "fi": {
+    "name": "Suomi"
+  },
+  "sv": {
+    "name": "Svenska"
+  },
+  "tr": {
+    "name": "Türkçe"
+  },
+  "vi": {
+    "name": "Tiếng Việt"
+  },
+  "uk": {
+    "name": "Українська"
+  }
 }

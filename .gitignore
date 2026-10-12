@@ -84,3 +84,5 @@ htmlcov/
 .vscode/settings.json
 .vscode/.ropeproject
 
+bin/
+*.zip

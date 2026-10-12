@@ -39,7 +39,7 @@ export function FpsMultiplierControl({
     <PanelSectionRow>
       <Focusable ref={focusableRef} noFocusRing>
         <SliderField
-          label={`FPS multiplier · ${multiplierLabel}`}
+          label={t("MULTIPLIER_LABEL", "FPS multiplier · {multiplier}", { multiplier: multiplierLabel })}
           value={config.multiplier}
           min={1}
           max={6}

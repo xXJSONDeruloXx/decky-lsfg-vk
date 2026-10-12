@@ -8,6 +8,7 @@ import { useInstallation } from "../hooks/useLsfgHooks";
 import { tabStyles } from "../styles";
 import { targetsForSource } from "../utils/gameTargets";
 import { resolveNowPlayingTarget, type NowPlayingTarget } from "../utils/nowPlaying";
+import t from "../i18n/i18n";
 import { ConfigFileTab } from "./ConfigFileTab";
 import { ConfigurationTab } from "./ConfigurationTab";
 import { FlatpakNowPlayingTab } from "./FlatpakNowPlayingTab";
@@ -188,7 +189,7 @@ export function Content() {
           title: tabIcons.steam,
           content: tabContent(
             <ConfigurationTab
-              title="Steam games"
+              title={t("TAB_STEAM_GAMES", "Steam games")}
               source="steam"
               config={config}
               targets={steamTargets}
@@ -209,7 +210,7 @@ export function Content() {
           title: tabIcons.nonSteam,
           content: tabContent(
             <ConfigurationTab
-              title="Non-Steam games"
+              title={t("TAB_NON_STEAM_GAMES", "Non-Steam games")}
               source="nonSteam"
               config={config}
               targets={nonSteamTargets}

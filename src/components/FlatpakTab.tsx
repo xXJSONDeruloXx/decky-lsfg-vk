@@ -2,6 +2,7 @@ import { ButtonItem, ConfirmModal, DialogButton, Field, Focusable, PanelSection,
 import { useCallback, useMemo, useState } from "react";
 import { FaArrowLeft } from "react-icons/fa";
 import type { FlatpakApp, LsfgConfig, WorkaroundState } from "../api/lsfgApi";
+import t from "../i18n/i18n";
 import { CollapsibleItemGroup, collapsibleItemGroupStyles, usePersistentCollapsed } from "./CollapsibleItemGroup";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FlatpakWorkaroundsSection } from "./FlatpakWorkaroundsSection";
@@ -62,10 +63,10 @@ export function FlatpakTab({
   const confirmEnableAll = () => {
     showModal(
       <ConfirmModal
-        strTitle="Enable all available Flatpaks?"
-        strDescription="Create individual LSFG-VK profiles for every Flatpak app this plugin can manage. Apps prepared externally or unavailable will be skipped."
-        strOKButtonText="Enable all"
-        strCancelButtonText="Cancel"
+        strTitle={t("FLATPAK_ENABLE_ALL_TITLE", "Enable all available Flatpaks?")}
+        strDescription={t("FLATPAK_ENABLE_ALL_DESC", "Create individual LSFG-VK profiles for every Flatpak app this plugin can manage. Apps prepared externally or unavailable will be skipped.")}
+        strOKButtonText={t("MODAL_ENABLE_ALL_CONFIRM", "Enable all")}
+        strCancelButtonText={t("MODAL_CANCEL", "Cancel")}
         onOK={() => void onEnableAll()}
         onCancel={() => {}}
       />,
@@ -74,9 +75,9 @@ export function FlatpakTab({
   const confirmRemoveAll = () => {
     showModal(
       <ConfirmModal
-        strTitle="Remove all Flatpak profiles?"
-        strOKButtonText="Remove all"
-        strCancelButtonText="Cancel"
+        strTitle={t("FLATPAK_REMOVE_ALL_TITLE", "Remove all Flatpak profiles?")}
+        strOKButtonText={t("MODAL_REMOVE_ALL_CONFIRM", "Remove all")}
+        strCancelButtonText={t("MODAL_CANCEL", "Cancel")}
         onOK={() => void onRemoveAll()}
         onCancel={() => {}}
       />,
@@ -85,26 +86,26 @@ export function FlatpakTab({
   const itemFor = (app: FlatpakApp) => ({
     id: app.app_id,
     label: app.app_name,
-    description: `${app.app_id} · ${app.prepared && !app.owned ? "Prepared externally" : "Available"}`,
+    description: `${app.app_id} · ${app.prepared && !app.owned ? t("FLATPAK_PREPARED_EXTERNALLY", "Prepared externally") : t("FLATPAK_AVAILABLE", "Available")}`,
   });
 
   if (!selectedAppId) {
     return (
-      <PanelSection title="Flatpak">
+      <PanelSection title={t("TAB_FLATPAK", "Flatpak")}>
         <style>{collapsibleItemGroupStyles}</style>
         <CollapsibleItemGroup
-          title="Enabled"
+          title={t("SECTION_ENABLED", "Enabled")}
           items={enabledApps.map((app) => ({
             id: app.app_id,
             label: app.app_name,
-            description: `${app.app_id}${app.app_id === runningApp?.app_id ? " · Running" : ""}`,
+            description: `${app.app_id}${app.app_id === runningApp?.app_id ? ` · ${t("FLATPAK_RUNNING", "Running")}` : ""}`,
           }))}
           collapsed={enabledCollapsed}
           onToggle={toggleEnabled}
           onSelect={setSelectedAppId}
         />
         <CollapsibleItemGroup
-          title="Available"
+          title={t("SECTION_AVAILABLE", "Available")}
           items={availableApps.map(itemFor)}
           collapsed={availableCollapsed}
           onToggle={toggleAvailable}
@@ -117,7 +118,7 @@ export function FlatpakTab({
               disabled={loading || Boolean(busyAppId)}
               onClick={confirmEnableAll}
             >
-              Enable all available Flatpaks
+              {t("FLATPAK_ENABLE_ALL_BTN", "Enable all available Flatpaks")}
             </ButtonItem>
           </PanelSectionRow>
         )}
@@ -127,17 +128,17 @@ export function FlatpakTab({
             disabled={loading || Boolean(busyAppId) || enabledApps.length === 0}
             onClick={confirmRemoveAll}
           >
-            Remove all profiles
+            {t("FLATPAK_REMOVE_ALL_BTN", "Remove all profiles")}
           </ButtonItem>
         </PanelSectionRow>
         {apps.length === 0 && !loading && (
           <PanelSectionRow>
-            <Field label="No Flatpak applications found" />
+            <Field label={t("FLATPAK_NO_APPS_FOUND", "No Flatpak applications found")} />
           </PanelSectionRow>
         )}
         <PanelSectionRow>
           <ButtonItem layout="below" disabled={loading || Boolean(busyAppId)} onClick={() => void onRefresh()}>
-            {loading ? "Refreshing..." : "Refresh Flatpaks"}
+            {loading ? t("FLATPAK_REFRESHING", "Refreshing...") : t("FLATPAK_REFRESH_BTN", "Refresh Flatpaks")}
           </ButtonItem>
         </PanelSectionRow>
       </PanelSection>
@@ -146,12 +147,12 @@ export function FlatpakTab({
 
   if (!selected) {
     return (
-      <PanelSection title="Flatpak">
+      <PanelSection title={t("TAB_FLATPAK", "Flatpak")}>
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={close}>Back</ButtonItem>
+          <ButtonItem layout="below" onClick={close}>{t("FLATPAK_BACK_BTN", "Back")}</ButtonItem>
         </PanelSectionRow>
         <PanelSectionRow>
-          <Field label="Flatpak application is no longer installed" />
+          <Field label={t("FLATPAK_APP_UNINSTALLED", "Flatpak application is no longer installed")} />
         </PanelSectionRow>
       </PanelSection>
     );
@@ -164,7 +165,7 @@ export function FlatpakTab({
     selected.app_id,
     selected.runtime_branch ? `runtime ${selected.runtime_branch}` : null,
     selected.enabled ? `profile ${selected.profile}` : null,
-    selected.app_id === runningApp?.app_id ? "Running" : null,
+    selected.app_id === runningApp?.app_id ? t("FLATPAK_RUNNING", "Running") : null,
   ].filter(Boolean).join(" · ");
 
   const changeConfig = async (
@@ -182,7 +183,7 @@ export function FlatpakTab({
           <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             <Focusable noFocusRing style={{ flex: "none" }}>
               <DialogButton
-                aria-label="Back to Flatpaks"
+                aria-label={t("FLATPAK_BACK_TO_FLATPAKS", "Back to Flatpaks")}
                 onClick={close}
                 style={{
                   width: "48px",
@@ -215,12 +216,12 @@ export function FlatpakTab({
               disabled={busy || external || Boolean(selected.error)}
               onClick={() => void onEnable(selected.app_id)}
             >
-              {busy ? "Enabling..." : external ? "Prepared externally" : "Enable LSFG-VK"}
+              {busy ? t("FLATPAK_ENABLING", "Enabling...") : external ? t("FLATPAK_PREPARED_EXTERNALLY", "Prepared externally") : t("FLATPAK_ENABLE_BTN", "Enable LSFG-VK")}
             </ButtonItem>
           </PanelSectionRow>
           {selected.error && (
             <PanelSectionRow>
-              <Field label="Unavailable" description={selected.error} />
+              <Field label={t("FLATPAK_UNAVAILABLE", "Unavailable")} description={selected.error} />
             </PanelSectionRow>
           )}
         </PanelSection>
@@ -236,7 +237,7 @@ export function FlatpakTab({
           />
           <PanelSectionRow>
             <ButtonItem layout="below" disabled={busy} onClick={() => void onRemove(selected.app_id)}>
-              {busy ? "Removing..." : "Remove Flatpak profile"}
+              {busy ? t("FLATPAK_REMOVING", "Removing...") : t("FLATPAK_REMOVE_BTN", "Remove Flatpak profile")}
             </ButtonItem>
           </PanelSectionRow>
         </>
