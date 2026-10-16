@@ -105,6 +105,17 @@ class WrapperServiceTests(unittest.TestCase):
         disabled_values = dict(line.split("=", 1) for line in disabled.stdout.splitlines() if "=" in line)
         self.assertEqual(disabled_values["SteamDeck"], "0")
 
+    def test_preserves_gamescope_wsi_unless_disabled(self):
+        self.service.set("123", self._state(disableGamescopeWsi=False))
+        inherited = self._run(123, "/usr/bin/env", env={"ENABLE_GAMESCOPE_WSI": "1"})
+        inherited_values = dict(line.split("=", 1) for line in inherited.stdout.splitlines() if "=" in line)
+        self.assertEqual(inherited_values["ENABLE_GAMESCOPE_WSI"], "1")
+
+        self.service.set("123", self._state(disableGamescopeWsi=True))
+        disabled = self._run(123, "/usr/bin/env", env={"ENABLE_GAMESCOPE_WSI": "1"})
+        disabled_values = dict(line.split("=", 1) for line in disabled.stdout.splitlines() if "=" in line)
+        self.assertEqual(disabled_values["ENABLE_GAMESCOPE_WSI"], "0")
+
     def test_wrapper_is_transport_agnostic(self):
         self.service.set("123", self._state())
         fake = self.home / "target"

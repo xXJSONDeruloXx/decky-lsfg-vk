@@ -150,7 +150,10 @@ class WrapperService(BaseService):
         return shlex.quote(value)
 
     def _state_lines(self, state: Dict[str, Any]) -> list[str]:
-        lines = ["    unset " + " ".join(self.MANAGED_ENV_KEYS)]
+        # Keep Steam's ENABLE_GAMESCOPE_WSI unless this app disables gamescope WSI.
+        managed = [key for key in self.MANAGED_ENV_KEYS
+                   if key != "ENABLE_GAMESCOPE_WSI" or state["disableGamescopeWsi"]]
+        lines = ["    unset " + " ".join(managed)]
         lines.extend([
             '    SteamAppId="$appid"',
             "    export SteamAppId",
