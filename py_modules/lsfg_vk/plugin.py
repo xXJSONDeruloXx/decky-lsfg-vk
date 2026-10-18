@@ -4,6 +4,7 @@ from typing import Any, Dict
 import decky
 
 from .configuration import ConfigurationService
+from .diagnostics_service import DiagnosticsService
 from .flatpak_profile_service import FlatpakProfileService
 from .flatpak_service import FlatpakService
 from .installation import InstallationService
@@ -27,6 +28,10 @@ class Plugin:
             self.configuration_service,
         )
         self.wrapper_service = WrapperService()
+        self.diagnostics_service = DiagnosticsService(
+            runtime_service=self.runtime_service,
+            steam_service=self.steam_service,
+        )
 
     async def install_lsfg_vk(self):
         return self.installation_service.install()
@@ -156,6 +161,9 @@ class Plugin:
             "error": None,
             "files": contents,
         }
+
+    async def get_diagnostics_report(self):
+        return self.diagnostics_service.get_report()
 
     async def get_lossless_scaling_branch_status(self):
         return self.steam_service.get_branch_status()

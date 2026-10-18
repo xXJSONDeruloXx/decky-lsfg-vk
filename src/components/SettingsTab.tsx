@@ -1,7 +1,39 @@
 import { ButtonItem, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
-import { type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
+import { getDiagnosticsReport, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
+import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 import { showBranchSetupModal } from "./BranchSetupModal";
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    // Fall back to execCommand when the async clipboard API is unavailable.
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if (!copied) throw new Error("Clipboard is not available");
+}
+
+async function copyDiagnostics(): Promise<void> {
+  try {
+    const result = await getDiagnosticsReport();
+    if (!result.success || !result.report) {
+      throw new Error(result.error || "Could not generate diagnostics");
+    }
+    await copyToClipboard(result.report);
+    showSuccessToast("Diagnostics copied", "Paste it into your support message");
+  } catch (error) {
+    showErrorToast("Diagnostics failed", error instanceof Error ? error.message : String(error));
+  }
+}
 
 interface SettingsTabProps {
   isInstalled: boolean;
@@ -132,6 +164,11 @@ export function SettingsTab(props: SettingsTabProps) {
                 checked={showDebugTab}
                 onChange={onShowDebugTabChange}
               />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={() => void copyDiagnostics()}>
+                Copy diagnostics
+              </ButtonItem>
             </PanelSectionRow>
           </PanelSection>
         </>

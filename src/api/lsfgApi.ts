@@ -116,6 +116,10 @@ export interface DebugFileContentsResult extends ApiResult {
   files?: DebugFileContent[];
 }
 
+export interface DiagnosticsReportResult extends ApiResult {
+  report?: string | null;
+}
+
 export interface FlatpakApp {
   app_id: string;
   app_name: string;
@@ -177,4 +181,5 @@ export const setWorkaroundState = callable<[
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
 export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
+export const getDiagnosticsReport = callable<[], DiagnosticsReportResult>("get_diagnostics_report");
 export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");
