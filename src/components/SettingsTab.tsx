@@ -2,6 +2,7 @@ import { ButtonItem, DialogButton, Field, PanelSection, PanelSectionRow, ToggleF
 import { type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 import { showBranchSetupModal } from "./BranchSetupModal";
+import { translateStatus } from "../utils/statusTranslation";
 
 interface SettingsTabProps {
   isInstalled: boolean;
@@ -53,7 +54,7 @@ export function SettingsTab(props: SettingsTabProps) {
 
   return (
     <>
-      <PanelSection title="Settings">
+      <PanelSection title={t("SETTINGS_TITLE", "Settings")}>
         {setupIncomplete && (
           <PanelSectionRow>
             <div
@@ -68,12 +69,12 @@ export function SettingsTab(props: SettingsTabProps) {
                 color: "#ffd7d7",
               }}
             >
-              <div style={{ fontWeight: 600 }}>Setup incomplete</div>
+              <div style={{ fontWeight: 600 }}>{t("SETTINGS_SETUP_INCOMPLETE", "Setup incomplete")}</div>
               <div style={{ marginTop: "6px", lineHeight: 1.35 }}>
                 {branchSetupIncomplete ? (
-                  <>Lossless Scaling is on <strong>{selectedBranch}</strong>. Select the <strong>{targetBranch}</strong> branch before launching games.</>
+                  <>{t("SETTINGS_BRANCH_NOTICE", "Lossless Scaling is on {selectedBranch}. Select the {targetBranch} branch before launching games.", { selectedBranch, targetBranch })}</>
                 ) : (
-                  <>Lossless Scaling is installed, but its LSFG-VK runtime is not ready yet.</>
+                  <>{t("SETTINGS_NOT_READY_NOTICE", "Lossless Scaling is installed, but its LSFG-VK runtime is not ready yet.")}</>
                 )}
               </div>
               {branchSetupIncomplete && (
@@ -81,7 +82,7 @@ export function SettingsTab(props: SettingsTabProps) {
                   onClick={showBranchSetupModal}
                   style={{ width: "100%", marginTop: "10px" }}
                 >
-                  Learn more
+                  {t("SETTINGS_LEARN_MORE", "Learn more")}
                 </DialogButton>
               )}
             </div>
@@ -89,18 +90,18 @@ export function SettingsTab(props: SettingsTabProps) {
         )}
         <PanelSectionRow>
           <Field
-            label="Lossless Scaling"
-            description={losslessScalingInstalled ? "Installed" : losslessScalingStatus || "Not installed"}
+            label={t("SETTINGS_LOSSLESS_SCALING", "Lossless Scaling")}
+            description={losslessScalingInstalled ? t("SETTINGS_INSTALLED", "Installed") : translateStatus(losslessScalingStatus) || t("SETTINGS_NOT_INSTALLED", "Not installed")}
           />
         </PanelSectionRow>
         <PanelSectionRow>
-          <Field label="LSFG-VK" description={installationStatus} />
+          <Field label={t("SETTINGS_LSFG_VK", "LSFG-VK")} description={translateStatus(installationStatus)} />
         </PanelSectionRow>
         {steamBranchStatus?.installed && !setupIncomplete && (
           <PanelSectionRow>
             <Field
-              label="Steam branch"
-              description={`${steamBranchStatus.selected_branch || "public"}${steamBranchStatus.needs_switch ? ` - ${steamBranchStatus.message}` : ""}`}
+              label={t("SETTINGS_STEAM_BRANCH", "Steam branch")}
+              description={`${steamBranchStatus.selected_branch || "public"}${steamBranchStatus.needs_switch ? ` - ${translateStatus(steamBranchStatus.message)}` : ""}`}
             />
           </PanelSectionRow>
         )}
@@ -116,19 +117,19 @@ export function SettingsTab(props: SettingsTabProps) {
       </PanelSection>
       {isInstalled && (
         <>
-          <PanelSection title="Global settings">
+          <PanelSection title={t("SETTINGS_GLOBAL_TITLE", "Global settings")}>
             <PanelSectionRow>
               <ToggleField
-                label="FP16 Acceleration"
+                label={t("SETTINGS_FP16", "FP16 Acceleration")}
                 checked={!globalConfig.no_fp16}
                 onChange={(value) => void onGlobalConfigChange({ ...globalConfig, no_fp16: !value })}
               />
             </PanelSectionRow>
           </PanelSection>
-          <PanelSection title="Advanced">
+          <PanelSection title={t("SETTINGS_ADVANCED_TITLE", "Advanced")}>
             <PanelSectionRow>
               <ToggleField
-                label="Show config file tab"
+                label={t("SETTINGS_SHOW_CONFIG_FILE_TAB", "Show config file tab")}
                 checked={showDebugTab}
                 onChange={onShowDebugTabChange}
               />

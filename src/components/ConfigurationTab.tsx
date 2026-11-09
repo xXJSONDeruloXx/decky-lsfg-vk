@@ -4,6 +4,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import { ConfigurationData } from "../config/configSchema";
 import type { GameTarget, KnownGameSource } from "../utils/gameTargets";
 import { sourceLabel } from "../utils/gameTargets";
+import t from "../i18n/i18n";
 import { GameConfigurationControls } from "./GameConfigurationControls";
 import { GameConfigurationSelector } from "./GameConfigurationSelector";
 import { ProfileDetails } from "./ProfileDetails";
@@ -97,11 +98,11 @@ export function ConfigurationTab({
     );
   }
 
-  const profileLabel = selectedTarget?.name || "Game profile";
+  const profileLabel = selectedTarget?.name || t("GAME_PROFILE", "Game profile");
   const profileTransport = selectedTarget ? sourceLabel(selectedTarget.source) : sourceLabel(source);
   const profileDescription = selectedTarget
-    ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? "LSFG-VK Enabled" : "LSFG-VK not enabled"}${selectedTarget.source === "unknown" ? " · Bulk actions exclude this profile" : ""}`
-    : "Game is no longer available";
+    ? `${profileTransport} · App ID ${selectedTarget.appid} · ${selectedTarget.configured ? t("PROFILE_ENABLED_STATUS", "LSFG-VK Enabled") : t("PROFILE_NOT_ENABLED_STATUS", "LSFG-VK not enabled")}${selectedTarget.source === "unknown" ? ` · ${t("PROFILE_EXCLUDED_BULK", "Bulk actions exclude this profile")}` : ""}`
+    : t("PROFILE_GAME_UNAVAILABLE", "Game is no longer available");
   const enableProfile = async (appid: string, quitRunningGame = false) => {
     if (!(await onEnable(appid))) return;
     if (quitRunningGame) SteamClient.Apps.TerminateApp(appid, false);
@@ -120,10 +121,10 @@ export function ConfigurationTab({
       if (isRunningUnconfigured) {
         showModal(
           <ConfirmModal
-            strTitle="Game is running"
-            strDescription="Quit the game now so LSFG-VK is used on its next launch?"
-            strOKButtonText="Quit and enable"
-            strCancelButtonText="Enable without quitting"
+            strTitle={t("PROFILE_GAME_RUNNING_TITLE", "Game is running")}
+            strDescription={t("PROFILE_GAME_RUNNING_DESC", "Quit the game now so LSFG-VK is used on its next launch?")}
+            strOKButtonText={t("PROFILE_QUIT_AND_ENABLE", "Quit and enable")}
+            strCancelButtonText={t("PROFILE_ENABLE_WITHOUT_QUITTING", "Enable without quitting")}
             onOK={() => void enableProfile(detailAppId, true)}
             onCancel={() => void enableProfile(detailAppId)}
           />,
@@ -141,7 +142,7 @@ export function ConfigurationTab({
           <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             <Focusable noFocusRing style={{ flex: "none" }}>
               <DialogButton
-                aria-label={`Back to ${title}`}
+                aria-label={t("BACK_TO", `Back to ${title}`, { title })}
                 onClick={closeDetails}
                 style={{
                   width: "48px",
@@ -171,12 +172,12 @@ export function ConfigurationTab({
           <PanelSectionRow>
             {selectedTarget.source === "unknown" ? (
               <Field
-                label="Target source unavailable"
-                description="Refresh Steam and try again before enabling this target."
+                label={t("PROFILE_SOURCE_UNAVAILABLE", "Target source unavailable")}
+                description={t("PROFILE_SOURCE_UNAVAILABLE_DESC", "Refresh Steam and try again before enabling this target.")}
               />
             ) : (
               <Focusable ref={enableRef} noFocusRing>
-                <ButtonItem layout="below" onClick={handleProfileAction}>Enable for next launch</ButtonItem>
+                <ButtonItem layout="below" onClick={handleProfileAction}>{t("PROFILE_ENABLE_NEXT_LAUNCH", "Enable for next launch")}</ButtonItem>
               </Focusable>
             )}
           </PanelSectionRow>
@@ -195,7 +196,7 @@ export function ConfigurationTab({
       )}
       {selectedTarget?.configured && (
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={handleProfileAction}>Remove profile</ButtonItem>
+          <ButtonItem layout="below" onClick={handleProfileAction}>{t("PROFILE_REMOVE", "Remove profile")}</ButtonItem>
         </PanelSectionRow>
       )}
       <ProfileDetails description={profileDescription} />

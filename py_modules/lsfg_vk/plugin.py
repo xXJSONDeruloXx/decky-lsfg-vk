@@ -31,6 +31,23 @@ class Plugin:
     async def install_lsfg_vk(self):
         return self.installation_service.install()
 
+    async def get_steam_language(self) -> str:
+        for p in [
+            os.path.expanduser("~/.steam/registry.vdf"),
+            os.path.expanduser("~/.local/share/Steam/registry.vdf"),
+            os.path.expanduser("~/.steam/steam/registry.vdf"),
+        ]:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                        import re
+                        m = re.search(r"\"language\"\s+\"([^\"]+)\"", f.read(), re.IGNORECASE)
+                        if m:
+                            return m.group(1).lower()
+                except Exception:
+                    pass
+        return "english"
+
     async def check_lsfg_vk_installed(self):
         return self.installation_service.check_installation()
 

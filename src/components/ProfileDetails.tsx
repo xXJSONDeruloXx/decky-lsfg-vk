@@ -1,6 +1,7 @@
 import { ButtonItem, Field, Focusable, PanelSectionRow } from "@decky/ui";
 import { useEffect, useRef, useState } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
+import t from "../i18n/i18n";
 
 interface ProfileDetailsProps {
   description: string;
@@ -24,14 +25,15 @@ export function ProfileDetails({ description }: ProfileDetailsProps) {
           bottomSeparator={expanded ? "none" : "standard"}
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? <RiArrowUpSFill /> : <RiArrowDownSFill />} Game Details
+          {expanded ? <RiArrowUpSFill /> : <RiArrowDownSFill />} {t("DETAILS_GAME_DETAILS", "Game Details")}
         </ButtonItem>
       </PanelSectionRow>
       {expanded && (
         <PanelSectionRow>
-          <Field label="Game Details" description={description} />
+          <Field label={t("DETAILS_GAME_DETAILS", "Game Details")} description={description} />
         </PanelSectionRow>
-        )}
+      )}
     </Focusable>
   );
 }
+
