@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
 
 ### Added
 - Quality preset dropdown (Quality, Balanced, Low latency) that sets Flow Scale and Performance Mode together; shows "Custom" when values don't match a preset.
@@ -9,6 +9,7 @@
 - Plain-language descriptions for Flow Scale, Performance Mode, Present Mode Override and Preserve Swapchain Image Count.
 
 ### Changed
+- Added `scripts/package.sh` to build the installable zip and a CI workflow that builds and runs the tests on every PR.
 - Reworded the Flow Scale, Performance Mode and Base FPS Cap descriptions.
 
 ### Fixed
