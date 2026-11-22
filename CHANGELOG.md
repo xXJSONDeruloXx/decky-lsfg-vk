@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.2
+
+### Fixed
+- The plugin now uses Lossless Scaling's `lsfg-vk.dll` whenever the file is present, instead of refusing it when Steam's app manifest says another branch is selected. The manifest can lag behind or be unreadable, which left the config without a DLL path and produced "lsfg-vk.dll is not configured" even though the file was there.
+
 ## 0.18.1
 
 ### Changed

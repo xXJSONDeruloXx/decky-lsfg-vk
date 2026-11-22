@@ -238,8 +238,9 @@ class SteamService(BaseService):
         }
 
     def find_lsfg_vk_dll(self) -> Optional[str]:
-        if self.get_branch_status().get("needs_switch"):
-            return None
+        # The file itself is what lsfg-vk needs. Steam's manifest can lag behind
+        # or be unreadable, so a present lsfg-vk.dll is used whatever the branch
+        # bookkeeping says; the branch status only explains a missing file.
         directory = self._lossless_scaling_path()
         path = directory / "lsfg-vk.dll" if directory else None
         return str(path) if path and path.is_file() else None
