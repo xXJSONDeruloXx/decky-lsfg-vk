@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
 
@@ -46,7 +47,7 @@ class ConfigurationService(BaseService):
     def _backup_path(self, index: int) -> Path:
         return self.config_file_path.with_name(f"{self.config_file_path.name}.bak.{index}")
 
-    def _rotate_backups(self, new_content: str) -> None:
+    def _rotate_backups(self, new_content: str, force: bool = False) -> None:
         """Keep the last few versions of conf.toml so a bad change can be undone.
 
         Slider drags save many times in a row, so a new snapshot is only taken
@@ -59,7 +60,7 @@ class ConfigurationService(BaseService):
             if current == new_content:
                 return
             newest = self._backup_path(1)
-            if newest.is_file() and time.time() - newest.stat().st_mtime < self.BACKUP_INTERVAL_SECONDS:
+            if not force and newest.is_file() and time.time() - newest.stat().st_mtime < self.BACKUP_INTERVAL_SECONDS:
                 return
             for index in range(self.BACKUP_COUNT, 1, -1):
                 older = self._backup_path(index - 1)
@@ -69,10 +70,10 @@ class ConfigurationService(BaseService):
         except Exception as error:
             self.log.warning(f"Could not back up lsfg-vk configuration: {error}")
 
-    def _save_profile_data(self, data: ProfileData) -> None:
+    def _save_profile_data(self, data: ProfileData, force_backup: bool = False) -> None:
         content = ConfigurationManager.generate_toml_content_multi_profile(data)
         self.runtime_service.validate_config_content(content)
-        self._rotate_backups(content)
+        self._rotate_backups(content, force=force_backup)
         self._write_file(self.config_file_path, content, 0o644)
 
     def get_config_backup_info(self) -> Dict[str, Any]:
@@ -162,6 +163,101 @@ class ConfigurationService(BaseService):
             return self._success_response(dict, appid=str(appid), config=self._public_config(profile))
         except Exception as error:
             return self._error_response(dict, str(error), appid=str(appid), config=None)
+
+    EXPORT_FILENAME = "lsfg-vk-profiles.json"
+    EXPORT_FORMAT = "decky-lsfg-vk-profiles"
+    EXPORT_MAX_BYTES = 1_000_000
+    EXPORT_MAX_PROFILES = 5000
+
+    @property
+    def export_path(self) -> Path:
+        return self.user_home / self.EXPORT_FILENAME
+
+    def export_profiles(self) -> Dict[str, Any]:
+        """Write every game profile's tuning to a JSON file in the home folder."""
+        try:
+            data = self._get_profile_data()
+            profiles = []
+            for name, profile in data["profiles"].items():
+                active_in = profile.get("active_in", [])
+                if len(active_in) != 1 or not re.fullmatch(r"-?[0-9]+", str(active_in[0])):
+                    continue
+                profiles.append({
+                    "appid": str(active_in[0]),
+                    "name": name,
+                    **{field: profile[field] for field in self.SHARED_PROFILE_FIELDS},
+                })
+            bundle = {
+                "format": self.EXPORT_FORMAT,
+                "version": 1,
+                "exported_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "new_game_defaults": self._read_new_game_defaults() or None,
+                "profiles": profiles,
+            }
+            self._write_file(self.export_path, json.dumps(bundle, indent=2, sort_keys=True) + "\n")
+            return self._success_response(dict, path=str(self.export_path), count=len(profiles))
+        except Exception as error:
+            self.log.error(f"Error exporting lsfg-vk profiles: {error}")
+            return self._error_response(dict, str(error), path=str(self.export_path), count=0)
+
+    def import_profiles(self) -> Dict[str, Any]:
+        """Add or update game profiles from the export file. Existing ones are backed up first."""
+        try:
+            path = self.export_path
+            if path.is_symlink() or not path.is_file():
+                raise FileNotFoundError(f"No export file found at {path}")
+            if path.stat().st_size > self.EXPORT_MAX_BYTES:
+                raise ValueError("The export file is too large")
+            bundle = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(bundle, dict) or bundle.get("format") != self.EXPORT_FORMAT:
+                raise ValueError("This is not a Decky LSFG-VK profile export")
+            if bundle.get("version") != 1:
+                raise ValueError("This export was made by a newer version of the plugin")
+            entries = bundle.get("profiles")
+            if not isinstance(entries, list) or len(entries) > self.EXPORT_MAX_PROFILES:
+                raise ValueError("The export file has no usable profile list")
+
+            data = self._get_profile_data()
+            imported = skipped = 0
+            for entry in entries:
+                try:
+                    if not isinstance(entry, dict):
+                        raise ValueError("entry is not an object")
+                    appid = str(entry.get("appid", ""))
+                    name = str(entry.get("name", "")).strip()
+                    if not re.fullmatch(r"[0-9]+", appid) or not name or len(name) > 200:
+                        raise ValueError("entry has no valid App ID or name")
+                    fields = {f: entry[f] for f in self.SHARED_PROFILE_FIELDS if f in entry}
+                    validated = self._public_config({**data["global_config"], **fields})
+                    old_name, _ = self._profile_for_appid(data, appid)
+                    final_name = self._profile_name(data, appid, name)
+                    if old_name and old_name != final_name:
+                        data["profiles"].pop(old_name, None)
+                    validated["active_in"] = [appid]
+                    data["profiles"][final_name] = validated
+                    imported += 1
+                except (ValueError, TypeError):
+                    skipped += 1
+
+            if imported:
+                self._save_profile_data(data, force_backup=True)
+            defaults = bundle.get("new_game_defaults")
+            if isinstance(defaults, dict) and defaults:
+                clean = {f: defaults[f] for f in self.SHARED_PROFILE_FIELDS if f in defaults}
+                validated_defaults = self._public_config(clean)
+                self._write_file(
+                    self.new_game_defaults_path,
+                    json.dumps({f: validated_defaults[f] for f in clean}, indent=2, sort_keys=True) + "\n",
+                )
+            return self._success_response(
+                dict,
+                f"Imported {imported} profile(s)" + (f", skipped {skipped}" if skipped else ""),
+                imported=imported,
+                skipped=skipped,
+            )
+        except Exception as error:
+            self.log.error(f"Error importing lsfg-vk profiles: {error}")
+            return self._error_response(dict, str(error), imported=0, skipped=0)
 
     def apply_config_to_all_games(self, appid: str) -> Dict[str, Any]:
         """Copy one game's tuning to every other game profile (not Flatpak apps)."""

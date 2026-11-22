@@ -117,6 +117,19 @@ export interface DebugFileContentsResult extends ApiResult {
   files?: DebugFileContent[];
 }
 
+export interface UpdateCheckResult extends ApiResult {
+  installed_version?: string;
+  latest_version?: string | null;
+  update_available?: boolean;
+}
+
+export interface ProfileTransferResult extends ApiResult {
+  path?: string;
+  count?: number;
+  imported?: number;
+  skipped?: number;
+}
+
 export interface ApplyToAllResult extends ApiResult {
   updated?: number;
 }
@@ -196,6 +209,9 @@ export const applyConfigToAllGames = callable<[string], ApplyToAllResult>("apply
 export const setNewGameDefaults = callable<[string], ApiResult>("set_new_game_defaults");
 export const clearNewGameDefaults = callable<[], ApiResult>("clear_new_game_defaults");
 export const resetGameSettings = callable<[string], GameConfigResult>("reset_game_settings");
+export const checkForLsfgUpdate = callable<[boolean], UpdateCheckResult>("check_for_lsfg_update");
+export const exportProfiles = callable<[], ProfileTransferResult>("export_profiles");
+export const importProfiles = callable<[], ProfileTransferResult>("import_profiles");
 export const getConfigBackupInfo = callable<[], ConfigBackupInfoResult>("get_config_backup_info");
 export const restoreConfigBackup = callable<[], ApiResult>("restore_config_backup");
 export const getDiagnosticsReport = callable<[], DiagnosticsReportResult>("get_diagnostics_report");

@@ -60,6 +60,8 @@ lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from 
 - **Game list summaries**: enabled games show their setup (for example "3x · Balanced") at a glance
 - **Use these settings for new games**: set your preferred starting point once; every game you enable afterwards uses it (Settings > Advanced > Reset new-game defaults clears it)
 - **Reset settings to defaults**: put one game back to the defaults without removing its profile
+- **Export / import profiles**: Settings > Advanced saves all your game profiles to `~/lsfg-vk-profiles.json` and loads them back (with an automatic backup first), for moving to another Deck or sharing a setup
+- **Check for lsfg-vk updates**: one button in Settings tells you whether upstream has released a newer lsfg-vk than the one bundled in the plugin
 - **Restore previous config**: the last few versions of your config are kept automatically; Settings > Advanced > Restore previous config undoes recent changes (and can be undone itself)
 
 ## Feedback and Support

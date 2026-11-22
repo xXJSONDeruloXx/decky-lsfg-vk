@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+
+### Added
+- **Export / import profiles**: Settings > Advanced > Export profiles to file writes every game's multiplier, Flow Scale, Performance Mode, quirks and your new-game defaults to `~/lsfg-vk-profiles.json`. Import profiles from file adds or updates profiles from that file. The current config is backed up first, so Restore previous config can undo an import. Malformed entries are skipped, and the file is refused if it is a symlink, larger than 1 MB, or not a Decky LSFG-VK export. Machine-specific settings (DLL path, FP16) and Flatpak profiles are not exported.
+- **Check for lsfg-vk updates**: Settings has a button that looks up the newest lsfg-vk release on lsfg-vk.dev and compares it to the bundled version (2.0.0). It only reads a public web page; nothing is downloaded or installed, and a newer lsfg-vk arrives through a new plugin release.
+
 ## 0.17.0
 
 ### Added

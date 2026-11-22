@@ -23,3 +23,7 @@ LEGACY_LIB_FILENAME = "liblsfg-vk.so"
 LEGACY_JSON_FILENAME = "VkLayer_LS_frame_generation.json"
 
 BIN_DIR = "bin"
+
+# Version of the lsfg-vk build bundled in the plugin's zip (see ARCHIVE_FILENAME).
+BUNDLED_LSFG_VERSION = "2.0.0"
+LSFG_BUILDS_URL = "https://builds.lsfg-vk.dev/"

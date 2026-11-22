@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Any, Dict
 
@@ -10,6 +11,7 @@ from .flatpak_service import FlatpakService
 from .installation import InstallationService
 from .runtime_service import RuntimeService
 from .steam_service import SteamService
+from .update_service import UpdateService
 from .wrapper_service import WrapperService
 
 
@@ -28,6 +30,7 @@ class Plugin:
             self.configuration_service,
         )
         self.wrapper_service = WrapperService()
+        self.update_service = UpdateService()
         self.diagnostics_service = DiagnosticsService(
             runtime_service=self.runtime_service,
             steam_service=self.steam_service,
@@ -85,6 +88,16 @@ class Plugin:
 
     async def reset_game_settings(self, appid: str):
         return self.configuration_service.reset_game_settings(appid)
+
+    async def check_for_lsfg_update(self, force: bool = False):
+        # Blocking network call: keep it off the event loop.
+        return await asyncio.to_thread(self.update_service.check, force)
+
+    async def export_profiles(self):
+        return self.configuration_service.export_profiles()
+
+    async def import_profiles(self):
+        return self.configuration_service.import_profiles()
 
     async def get_config_backup_info(self):
         return self.configuration_service.get_config_backup_info()

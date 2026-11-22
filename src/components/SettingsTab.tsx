@@ -1,5 +1,6 @@
 import { ButtonItem, ConfirmModal, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField, showModal } from "@decky/ui";
-import { clearNewGameDefaults, getConfigBackupInfo, getDiagnosticsReport, restoreConfigBackup, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
+import { useState } from "react";
+import { checkForLsfgUpdate, clearNewGameDefaults, exportProfiles, importProfiles, getConfigBackupInfo, getDiagnosticsReport, restoreConfigBackup, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 import { showBranchSetupModal } from "./BranchSetupModal";
@@ -49,6 +50,37 @@ async function resetNewGameDefaults(): Promise<void> {
   const result = await clearNewGameDefaults();
   if (result.success) showSuccessToast("Defaults reset", "New games will use the standard defaults");
   else showErrorToast("Could not reset defaults", result.error || "Unknown error");
+}
+
+const PROFILE_FILE = "~/lsfg-vk-profiles.json";
+
+async function exportProfilesToFile(): Promise<void> {
+  const result = await exportProfiles();
+  if (result.success) {
+    showSuccessToast("Profiles exported", `${result.count ?? 0} game profile(s) saved to ${PROFILE_FILE}`);
+  } else {
+    showErrorToast("Export failed", result.error || "Could not write the export file");
+  }
+}
+
+async function importProfilesFromFile(): Promise<void> {
+  const result = await importProfiles();
+  if (result.success) {
+    showSuccessToast("Profiles imported", `${result.message ?? ""} Reopen the plugin to see them`.trim());
+  } else {
+    showErrorToast("Import failed", result.error || "Could not read the export file");
+  }
+}
+
+function confirmImport(): void {
+  showModal(
+    <ConfirmModal
+      strTitle="Import profiles?"
+      strDescription={`Adds or updates game profiles from ${PROFILE_FILE}. Your current config is backed up first, so Restore previous config can undo it. Imported games get their launch workarounds when you open them in the plugin.`}
+      strOKButtonText="Import"
+      onOK={() => void importProfilesFromFile()}
+    />,
+  );
 }
 
 async function confirmRestore(): Promise<void> {
@@ -102,6 +134,25 @@ export function SettingsTab(props: SettingsTabProps) {
     onInstall,
     onUninstall,
   } = props;
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const runUpdateCheck = async () => {
+    setCheckingUpdate(true);
+    try {
+      const result = await checkForLsfgUpdate(true);
+      if (!result.success) {
+        setUpdateStatus(`Could not check: ${result.error || "unknown error"}`);
+      } else if (result.update_available) {
+        setUpdateStatus(`lsfg-vk ${result.latest_version} is out. This plugin bundles ${result.installed_version}; a newer plugin release will include it.`);
+      } else {
+        setUpdateStatus(`You have the latest lsfg-vk (${result.installed_version}).`);
+      }
+    } catch (error) {
+      setUpdateStatus(`Could not check: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
   const setupIncomplete = isInstalled && !setupComplete;
   const branchSetupIncomplete = Boolean(
     setupIncomplete && steamBranchStatus?.installed && steamBranchStatus.needs_switch,
@@ -161,6 +212,16 @@ export function SettingsTab(props: SettingsTabProps) {
         <PanelSectionRow>
           <Field label="LSFG-VK" description={installationStatus} />
         </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            disabled={checkingUpdate}
+            description={updateStatus ?? "Looks up the newest lsfg-vk release on lsfg-vk.dev. Nothing is downloaded or installed."}
+            onClick={() => void runUpdateCheck()}
+          >
+            {checkingUpdate ? "Checking..." : "Check for lsfg-vk updates"}
+          </ButtonItem>
+        </PanelSectionRow>
         {steamBranchStatus?.installed && !setupIncomplete && (
           <PanelSectionRow>
             <Field
@@ -205,6 +266,24 @@ export function SettingsTab(props: SettingsTabProps) {
                 onClick={() => void confirmRestore()}
               >
                 Restore previous config
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description={`Saves every game's multiplier, Flow Scale and quirks to ${PROFILE_FILE} so you can keep or share them.`}
+                onClick={() => void exportProfilesToFile()}
+              >
+                Export profiles to file
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description={`Loads profiles from ${PROFILE_FILE}. Your current config is backed up first.`}
+                onClick={confirmImport}
+              >
+                Import profiles from file
               </ButtonItem>
             </PanelSectionRow>
             <PanelSectionRow>
