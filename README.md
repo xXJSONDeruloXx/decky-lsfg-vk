@@ -47,7 +47,7 @@ Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk**
 
 ### Simple mode and 1x
 
-- **Simple mode** (Settings > Global settings) shows only FPS multiplier, Flow Scale and Performance Mode for each game, like the original plugin
+- **Simple mode** (on by default; Settings > Global settings) shows only FPS multiplier, Flow Scale and Performance Mode for each game, like the original plugin. Turn it off for presets, quirks, workarounds and the bulk tools
 - **1x** is the lowest multiplier: no extra frames are generated, so it works as a pass-through for comparing against 2x or higher
 
 ### Smoothness and latency

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1
+
+### Changed
+- Simple mode is now on by default, so a fresh install shows only the FPS multiplier, Flow Scale and Performance Mode for each game. Turn it off in Settings > Global settings for presets, quirks, workarounds and the bulk tools. If you had already switched it on or off yourself, your choice is kept.
+
 ## 0.19.0
 
 ### Added

@@ -248,7 +248,7 @@ export function SettingsTab(props: SettingsTabProps) {
             <PanelSectionRow>
               <ToggleField
                 label="Simple mode"
-                description="Shows only the basics for each game: FPS multiplier, Flow Scale and Performance Mode. Hides presets, quirks, workarounds and the bulk tools."
+                description="Shows only the basics for each game: FPS multiplier, Flow Scale and Performance Mode. Hides presets, quirks, workarounds and the bulk tools. Turn it off for the full set of controls."
                 checked={simpleMode}
                 onChange={setSimpleMode}
               />

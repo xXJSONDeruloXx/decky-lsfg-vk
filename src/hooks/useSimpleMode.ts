@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 const KEY = "lsfg-simple-mode-v1";
 const EVENT = "lsfg-simple-mode-changed";
 
+// Simple mode is on until the user switches it off.
 function read(): boolean {
   try {
-    return localStorage.getItem(KEY) === "true";
+    return localStorage.getItem(KEY) !== "false";
   } catch {
-    return false;
+    return true;
   }
 }
 
