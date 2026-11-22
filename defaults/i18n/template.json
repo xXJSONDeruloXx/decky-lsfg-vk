@@ -93,12 +93,17 @@
   "PRESET_CUSTOM": "Custom",
   "PRESET_CUSTOM_DESC": "Flow Scale and Performance Mode are set by hand below.",
   "PRESET_QUALITY": "Quality",
-  "PRESET_QUALITY_DESC": "Full-resolution motion estimation with the standard model. Cleanest image, heaviest on the GPU.",
+  "PRESET_QUALITY_DESC": "Full-resolution motion estimation with the standard model. Fewest warping, bubbling and blur artifacts, heaviest on the GPU.",
   "PRESET_BALANCED": "Balanced",
   "PRESET_BALANCED_DESC": "80% motion estimation with the standard model. A good starting point for most games.",
   "PRESET_LOW_LATENCY": "Low latency",
   "PRESET_LOW_LATENCY_DESC": "50% motion estimation with the lighter model. Frames are generated faster, which shortens the delay frame generation adds and saves battery. Slightly softer motion.",
-  "STABLE_30": "Use Stable 30 FPS (30 → 60)",
-  "STABLE_30_ACTIVE": "Stable 30 FPS is on",
-  "STABLE_30_DESC": "Caps the game at 30 FPS and uses 2x frame generation for an even 60 FPS. Best for demanding games that can't hold 60 FPS. Requires game restart to apply."
+  "PACING_TARGET": "Smooth pacing target",
+  "PACING_OFF": "Off",
+  "PACING_TARGET_DESC": "Locks the game to a steady frame rate that multiplies exactly onto your screen's refresh rate. This is the best fix for uneven motion, and a steady, lighter load also cuts input lag. Requires game restart to apply.",
+  "PACING_30X2": "30 → 60 FPS (60 Hz screens)",
+  "PACING_45X2": "45 → 90 FPS (90 Hz OLED)",
+  "PACING_30X3": "30 → 90 FPS (90 Hz OLED)",
+  "TIPS_LABEL": "Seeing warping, blur or tearing?",
+  "TIPS_DESC": "Warping and bubbling: use the Quality preset and a higher base FPS (40+ looks best). Tearing: keep Present Mode Override on. Laggy or uneven: pick a Smooth pacing target in Workarounds and keep the GPU below 100%."
 }

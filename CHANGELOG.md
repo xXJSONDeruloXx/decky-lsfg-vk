@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.1
+
+### Changed
+- The "Use Stable 30 FPS" button is now a **Smooth pacing target** dropdown: 30 → 60 (60 Hz), 45 → 90 or 30 → 90 (90 Hz OLED). Each sets a steady base cap and the matching multiplier, so frame pacing lands exactly on the screen's refresh rate.
+- Added a tip row under the settings for warping/bubbling, tearing and input lag, and clarified that the Quality preset gives the fewest artifacts.
+
 ## 0.15.0
 
 ### Added

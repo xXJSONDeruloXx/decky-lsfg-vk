@@ -1,4 +1,4 @@
-import { DropdownItem, PanelSectionRow, ToggleField, SliderField } from "@decky/ui";
+import { DropdownItem, Field, PanelSectionRow, ToggleField, SliderField } from "@decky/ui";
 import { ConfigurationData } from "../config/configSchema";
 import { FLOW_SCALE, PERFORMANCE_MODE, OVERRIDE_PRESENT_MODE, PRESERVE_SWAPCHAIN_IMAGE_COUNT } from "../config/configSchema";
 import t from "../i18n/i18n";
@@ -70,6 +70,13 @@ export function ConfigurationSection({ config, onConfigChange }: ConfigurationSe
         description={t("CONFIG_PRESERVE_SWAPCHAIN_DESC", "Keeps the game's own swapchain size. Turn on only if a Vulkan game crashes on launch; it can make pacing less smooth.")}
         checked={config.preserve_swapchain_image_count}
         onChange={(value) => onConfigChange(PRESERVE_SWAPCHAIN_IMAGE_COUNT, value)}
+      />
+    </PanelSectionRow>
+    <PanelSectionRow>
+      <Field
+        label={t("TIPS_LABEL", "Seeing warping, blur or tearing?")}
+        description={t("TIPS_DESC", "Warping and bubbling: use the Quality preset and a higher base FPS (40+ looks best). Tearing: keep Present Mode Override on. Laggy or uneven: pick a Smooth pacing target in Workarounds and keep the GPU below 100%.")}
+        focusable
       />
     </PanelSectionRow>
   </>;

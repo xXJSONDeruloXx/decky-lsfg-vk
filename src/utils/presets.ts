@@ -17,13 +17,32 @@ export interface PresetDefinition {
 export const STABLE_BASE_FPS = 30;
 export const STABLE_MULTIPLIER = 2;
 
+export interface PacingTarget {
+  id: string;
+  cap: number;
+  multiplier: number;
+  labelKey: string;
+  label: string;
+}
+
+/** Base cap x multiplier that lands exactly on a common display refresh rate. */
+export const PACING_TARGETS: readonly PacingTarget[] = [
+  { id: "30x2", cap: 30, multiplier: 2, labelKey: "PACING_30X2", label: "30 → 60 FPS (60 Hz screens)" },
+  { id: "45x2", cap: 45, multiplier: 2, labelKey: "PACING_45X2", label: "45 → 90 FPS (90 Hz OLED)" },
+  { id: "30x3", cap: 30, multiplier: 3, labelKey: "PACING_30X3", label: "30 → 90 FPS (90 Hz OLED)" },
+];
+
+export function detectPacingTarget(cap: number, multiplier: number): string | null {
+  return PACING_TARGETS.find((t) => t.cap === cap && t.multiplier === multiplier)?.id ?? null;
+}
+
 export const PRESETS: readonly PresetDefinition[] = [
   {
     id: "quality",
     labelKey: "PRESET_QUALITY",
     label: "Quality",
     descriptionKey: "PRESET_QUALITY_DESC",
-    description: "Full-resolution motion estimation with the standard model. Cleanest image, heaviest on the GPU.",
+    description: "Full-resolution motion estimation with the standard model. Fewest warping, bubbling and blur artifacts, heaviest on the GPU.",
     values: { flow_scale: 1, performance_mode: false },
   },
   {

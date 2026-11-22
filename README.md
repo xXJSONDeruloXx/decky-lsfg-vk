@@ -49,7 +49,8 @@ Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk**
 
 lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from feeding it a steady frame rate:
 
-- **Stable 30 FPS**: In a game's Workarounds section, one button caps the game at 30 FPS and sets 2x for an even 60 FPS. Best for demanding games that can't hold 60
+- **Smooth pacing target**: In a game's Workarounds section, pick 30 → 60 (60 Hz), 45 → 90 or 30 → 90 (90 Hz OLED). It caps the game and sets the multiplier so output matches your screen. Best fix for uneven motion; a steady, lighter load also cuts input lag
+- **Fewer artifacts**: For warping, bubbling or blur, use the Quality preset and keep the base FPS at 40+ where you can. Keep Present Mode Override on to avoid tearing
 - **Base FPS Cap**: Shows the resulting output (cap x multiplier) so you can match your display's refresh rate, for example 30 x 3 on a 90 Hz screen
 - **Low latency preset**: Faster generation shortens the delay frame generation adds. It does not remove Vsync latency
 
