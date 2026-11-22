@@ -37,10 +37,21 @@ Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk**
 
 ### Core Settings
 
-- **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
-- **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
-- **Performance Mode**: Uses a lighter processing model (recommended for most games)
+- **Quality preset**: One-tap Quality, Balanced or Low latency profiles that set Flow Scale and Performance Mode together. Shows "Custom" once you adjust either by hand
+- **FPS Multiplier**: Choose how many frames are shown per game frame (2x, 3x, 4x and up)
+- **Flow Scale**: Resolution used to track motion between frames. Lower is faster and lighter, higher gives cleaner generated frames
+- **Performance Mode**: Uses a much lighter frame generation model with a small quality cost (recommended on handhelds)
+- **Present Mode Override**: Forces Vsync, which frame pacing needs. Leave on unless a game misbehaves
+- **Preserve Swapchain Image Count**: Only for Vulkan games that crash on launch; can make pacing less smooth
 - **FP16 Acceleration**: Use half-precision acceleration when supported
+
+### Smoothness and latency
+
+lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from feeding it a steady frame rate:
+
+- **Stable 30 FPS**: In a game's Workarounds section, one button caps the game at 30 FPS and sets 2x for an even 60 FPS. Best for demanding games that can't hold 60
+- **Base FPS Cap**: Shows the resulting output (cap x multiplier) so you can match your display's refresh rate, for example 30 x 3 on a 90 Hz screen
+- **Low latency preset**: Faster generation shortens the delay frame generation adds. It does not remove Vsync latency
 
 ## Feedback and Support
 

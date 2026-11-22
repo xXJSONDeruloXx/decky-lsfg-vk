@@ -1,4 +1,5 @@
 import { ConfigurationData } from "../config/configSchema";
+import { MULTIPLIER } from "../config/generatedConfigSchema";
 import type { GameTarget } from "../hooks/useGameConfiguration";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
@@ -37,6 +38,8 @@ export function GameConfigurationControls({
           appId={workaroundTarget.appid}
           nonSteam={workaroundTarget.nonSteam}
           onRepair={onRepairWorkaround}
+          multiplier={config.multiplier}
+          onSetMultiplier={(value) => onConfigChange(MULTIPLIER, value)}
         />
       )}
     </>

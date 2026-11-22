@@ -4,11 +4,14 @@ import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { usePerAppWorkarounds } from "../hooks/usePerAppWorkarounds";
 import t from "../i18n/i18n";
 import type { WorkaroundField } from "../hooks/usePerAppWorkarounds";
+import { STABLE_BASE_FPS, STABLE_MULTIPLIER, outputFps } from "../utils/presets";
 
 interface WorkaroundsSectionProps {
   appId: string;
   nonSteam: boolean;
   onRepair?: () => Promise<boolean>;
+  multiplier?: number;
+  onSetMultiplier?: (value: number) => Promise<void>;
 }
 
 const WORKAROUNDS_COLLAPSED_KEY = "lsfg-workarounds-collapsed-v2";
@@ -77,7 +80,7 @@ function usePersistentCollapsed() {
   return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
-export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSectionProps) {
+export function WorkaroundsSection({ appId, nonSteam, onRepair, multiplier = 2, onSetMultiplier }: WorkaroundsSectionProps) {
   const [collapsed, toggleCollapsed] = usePersistentCollapsed();
   const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam);
   const [repairing, setRepairing] = useState(false);
@@ -88,6 +91,15 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
   const fpsLabel = effectiveFpsValue > 0
     ? `${effectiveFpsValue} FPS`
     : t("CONFIG_BASE_FPS_CAP_OFF", "Off");
+
+  const resultingFps = outputFps(effectiveFpsValue, multiplier);
+  const stableActive = effectiveFpsValue === STABLE_BASE_FPS && multiplier === STABLE_MULTIPLIER;
+
+  const applyStable30 = async () => {
+    setFpsValue(STABLE_BASE_FPS);
+    if (multiplier !== STABLE_MULTIPLIER) await onSetMultiplier?.(STABLE_MULTIPLIER);
+    await update("dxvkFrameRate", STABLE_BASE_FPS);
+  };
 
   const handleRepair = async () => {
     if (!onRepair || repairing) return;
@@ -182,7 +194,14 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
           <PanelSectionRow>
             <SliderField
               label={`${t("CONFIG_BASE_FPS_CAP", "Base FPS Cap")} (${fpsLabel})`}
-              description={t("CONFIG_BASE_FPS_CAP_DESC", "Base cap for DXVK-backed games before frame generation; 0 disables. Requires game restart to apply.")}
+              description={
+                (resultingFps
+                  ? t("CONFIG_BASE_FPS_CAP_OUTPUT", "With {multiplier}x frame generation you will see about {fps} FPS. ")
+                      .replace("{multiplier}", String(multiplier))
+                      .replace("{fps}", String(resultingFps))
+                  : "")
+                + t("CONFIG_BASE_FPS_CAP_DESC", "Caps the game's own frame rate before frame generation (DXVK games only); 0 disables. A steady cap gives steadier pacing than a fluctuating frame rate. Requires game restart to apply.")
+              }
               value={effectiveFpsValue}
               min={0}
               max={60}
@@ -193,6 +212,16 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
               }}
               disabled={controlsDisabled}
             />
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <ButtonItem
+              layout="below"
+              disabled={controlsDisabled || stableActive}
+              description={t("STABLE_30_DESC", "Caps the game at 30 FPS and uses 2x frame generation for an even 60 FPS. Best for demanding games that can't hold 60 FPS. Requires game restart to apply.")}
+              onClick={() => void applyStable30()}
+            >
+              {stableActive ? t("STABLE_30_ACTIVE", "Stable 30 FPS is on") : t("STABLE_30", "Use Stable 30 FPS (30 → 60)")}
+            </ButtonItem>
           </PanelSectionRow>
           {TOGGLE_ROWS.map((row) => (
             <PanelSectionRow key={row.field}>
