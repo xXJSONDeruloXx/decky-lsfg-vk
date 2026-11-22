@@ -232,6 +232,31 @@ class InstallationService(BaseService):
             except OSError:
                 continue
 
+    DLL_PROBLEM_MARKERS = ("lsfg-vk.dll is not configured", "lsfg-vk.dll was not found")
+
+    def _explain_missing_dll(self, status: str) -> str:
+        """Say why the DLL is missing instead of only reporting that it is."""
+        if not any(marker in status for marker in self.DLL_PROBLEM_MARKERS):
+            return status
+        try:
+            branch = self.steam_service.get_branch_status()
+            if not branch.get("installed"):
+                return "Lossless Scaling is not installed in Steam. Install it from Steam, then reopen this plugin."
+            if branch.get("needs_switch"):
+                selected = branch.get("selected_branch") or "public"
+                return (
+                    f"Lossless Scaling is on the \"{selected}\" Steam branch. In Steam, open Lossless Scaling > "
+                    "Properties > Betas, select \"lsfg-vk\", let it finish downloading, then reopen this plugin."
+                )
+            if not self.steam_service.find_lsfg_vk_dll():
+                return (
+                    "The lsfg-vk branch is selected, but Steam has not downloaded lsfg-vk.dll yet. "
+                    "Let the Lossless Scaling update finish in Steam's Downloads, then reopen this plugin."
+                )
+        except Exception as error:
+            self.log.warning(f"Could not work out why lsfg-vk.dll is missing: {error}")
+        return status
+
     def check_installation(self) -> InstallationCheckResponse:
         try:
             installed = all(
@@ -251,7 +276,7 @@ class InstallationService(BaseService):
             return {
                 "installed": installed,
                 "lossless_scaling_installed": bool(lossless_scaling["installed"]),
-                "lossless_scaling_status": str(lossless_scaling["status"]),
+                "lossless_scaling_status": self._explain_missing_dll(str(lossless_scaling["status"])),
                 "error": None,
             }
         except Exception as error:

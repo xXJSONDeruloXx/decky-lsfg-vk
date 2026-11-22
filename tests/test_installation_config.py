@@ -114,6 +114,42 @@ class InstallationConfigTests(unittest.TestCase):
         for destination, _mode in destinations.values():
             self.assertEqual(destination.read_text(encoding="utf-8"), "old")
 
+    def _status_with(self, branch, dll=None):
+        self._write_config()
+        self._mark_installed()
+        self.service.runtime_service.check_lossless_scaling.return_value = {
+            "installed": False,
+            "status": "Lossless Scaling's lsfg-vk.dll is not configured",
+        }
+        self.steam.get_branch_status.return_value = branch
+        self.steam.find_lsfg_vk_dll.return_value = dll
+        return self.service.check_installation()["lossless_scaling_status"]
+
+    def test_missing_dll_explains_that_lossless_scaling_is_not_installed(self):
+        status = self._status_with({"installed": False})
+        self.assertIn("not installed in Steam", status)
+
+    def test_missing_dll_explains_the_wrong_steam_branch(self):
+        status = self._status_with(
+            {"installed": True, "needs_switch": True, "selected_branch": "public"}
+        )
+        self.assertIn('"public" Steam branch', status)
+        self.assertIn("Betas", status)
+
+    def test_missing_dll_explains_a_download_that_has_not_finished(self):
+        status = self._status_with({"installed": True, "needs_switch": False}, dll=None)
+        self.assertIn("not downloaded lsfg-vk.dll yet", status)
+
+    def test_other_statuses_are_left_alone(self):
+        self._write_config()
+        self._mark_installed()
+        self.service.runtime_service.check_lossless_scaling.return_value = {
+            "installed": True,
+            "status": "Lossless Scaling detected by lsfg-vk",
+        }
+        status = self.service.check_installation()["lossless_scaling_status"]
+        self.assertEqual(status, "Lossless Scaling detected by lsfg-vk")
+
     def test_uninstall_removes_backups_and_new_game_defaults(self):
         self._write_config()
         for name in ("conf.toml.bak.1", "conf.toml.bak.2", "new_game_defaults.json"):

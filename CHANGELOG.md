@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1
+
+### Changed
+- When Lossless Scaling's `lsfg-vk.dll` is missing or not configured, Settings now says why: Lossless Scaling is not installed in Steam, it is on the wrong Steam branch (with the steps to select `lsfg-vk`), or the branch is right but Steam has not finished downloading the file. It used to show the same generic message for all three.
+
 ## 0.18.0
 
 ### Added
