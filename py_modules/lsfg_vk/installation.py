@@ -2,9 +2,10 @@ import os
 import shutil
 import tarfile
 import tempfile
+import time
 import traceback
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from .base_service import BaseService
 from .config_schema import ConfigurationManager, ProfileData, UnsupportedConfigurationVersion
@@ -90,13 +91,16 @@ class InstallationService(BaseService):
                 for member in archive.getmembers()
                 if member.isfile()
             }
+            # Check the whole payload first so a bad archive can't leave a
+            # half-updated install behind.
+            missing = sorted(set(destinations) - members.keys())
+            if missing:
+                raise OSError("Archive is missing required files: " + ", ".join(missing))
             for source_path, (destination, mode) in destinations.items():
-                member = members.get(source_path)
-                if member is None:
-                    continue
+                member = members[source_path]
                 source = archive.extractfile(member)
                 if source is None:
-                    continue
+                    raise OSError(f"Archive entry {source_path} could not be read")
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 temporary_path = None
                 try:
@@ -146,7 +150,14 @@ class InstallationService(BaseService):
                 f"Removed legacy lsfg-vk configuration version {error.version!r} during installation"
             )
             profile_data = self._default_config()
-        except ValueError:
+        except ValueError as error:
+            # An unreadable file (typo, partial write) must not silently wipe
+            # the user's profiles: keep a copy before starting from defaults.
+            backup = self._backup_unreadable_config()
+            self.log.warning(
+                f"Could not read lsfg-vk configuration ({error}); "
+                + (f"saved a copy to {backup}" if backup else "could not save a backup")
+            )
             profile_data = self._default_config()
         self._resolve_dll_path(profile_data)
         defaults = ConfigurationManager.get_defaults()
@@ -155,6 +166,18 @@ class InstallationService(BaseService):
                 {**defaults, **profile, **profile_data["global_config"]}
             )
         return profile_data
+
+    def _backup_unreadable_config(self) -> Optional[Path]:
+        if not self.config_file_path.is_file():
+            return None
+        backup = self.config_file_path.with_name(
+            f"{self.config_file_path.name}.bak-{time.strftime('%Y%m%d-%H%M%S')}"
+        )
+        try:
+            shutil.copy2(self.config_file_path, backup)
+        except OSError:
+            return None
+        return backup
 
     def _resolve_dll_path(self, profile_data: ProfileData) -> bool:
         current_path = str(profile_data["global_config"].get("dll") or "")

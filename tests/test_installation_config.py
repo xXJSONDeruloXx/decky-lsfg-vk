@@ -1,4 +1,6 @@
+import io
 import sys
+import tarfile
 import tempfile
 import types
 import unittest
@@ -79,6 +81,38 @@ class InstallationConfigTests(unittest.TestCase):
         self.assertEqual(data["global_config"], {"dll": "", "no_fp16": False})
         self.assertFalse(self.service.config_file_path.exists())
         self.service.log.warning.assert_called_once()
+
+    def test_unreadable_config_is_backed_up_before_defaults_are_used(self):
+        self.service.config_dir.mkdir(parents=True)
+        broken = 'version = 2\n[[profile]\nname = "My Game"\n'
+        self.service.config_file_path.write_text(broken, encoding="utf-8")
+
+        data = self.service._prepare_config()
+
+        self.assertEqual(data["profiles"], {})
+        backups = list(self.service.config_dir.glob("conf.toml.bak-*"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_text(encoding="utf-8"), broken)
+
+    def test_incomplete_archive_leaves_installed_files_untouched(self):
+        archive_path = Path(self.tempdir.name) / "payload.tar.gz"
+        destinations = self.service._payload_destinations()
+        present = list(destinations)[:-1]
+        with tarfile.open(archive_path, "w:gz") as archive:
+            for name in present:
+                data = b"new"
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+        for destination, _mode in destinations.values():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text("old", encoding="utf-8")
+
+        with self.assertRaises(OSError):
+            self.service._install_archive(archive_path)
+
+        for destination, _mode in destinations.values():
+            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
 
     def test_installation_does_not_overwrite_a_future_config_version(self):
         self.service.config_dir.mkdir(parents=True)
