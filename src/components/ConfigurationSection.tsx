@@ -7,11 +7,12 @@ import { PRESETS, detectPreset } from "../utils/presets";
 interface ConfigurationSectionProps {
   config: ConfigurationData;
   onConfigChange: (fieldName: keyof ConfigurationData, value: boolean | number | string | string[]) => Promise<void>;
+  simple?: boolean;
 }
 
 const CUSTOM_PRESET = "custom";
 
-export function ConfigurationSection({ config, onConfigChange }: ConfigurationSectionProps) {
+export function ConfigurationSection({ config, onConfigChange, simple = false }: ConfigurationSectionProps) {
   const activePreset = detectPreset(config);
   const presetDescription = PRESETS.find((preset) => preset.id === activePreset);
 
@@ -23,7 +24,7 @@ export function ConfigurationSection({ config, onConfigChange }: ConfigurationSe
   };
 
   return <>
-    <PanelSectionRow>
+    {!simple && <PanelSectionRow>
       <DropdownItem
         label={t("PRESET_LABEL", "Quality preset")}
         description={presetDescription
@@ -36,7 +37,7 @@ export function ConfigurationSection({ config, onConfigChange }: ConfigurationSe
         selectedOption={activePreset ?? CUSTOM_PRESET}
         onChange={(option) => void applyPreset(String(option.data))}
       />
-    </PanelSectionRow>
+    </PanelSectionRow>}
     <PanelSectionRow>
       <SliderField
         label={`${t("CONFIG_FLOW_SCALE", "Flow Scale")} (${Math.round(config.flow_scale * 100)}%)`}
@@ -56,6 +57,7 @@ export function ConfigurationSection({ config, onConfigChange }: ConfigurationSe
         onChange={(value) => onConfigChange(PERFORMANCE_MODE, value)}
       />
     </PanelSectionRow>
+    {!simple && <>
     <PanelSectionRow>
       <ToggleField
         label={t("CONFIG_PRESENT_MODE_OVERRIDE", "Present Mode Override")}
@@ -79,5 +81,6 @@ export function ConfigurationSection({ config, onConfigChange }: ConfigurationSe
         focusable
       />
     </PanelSectionRow>
+    </>}
   </>;
 }

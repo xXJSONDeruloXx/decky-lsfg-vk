@@ -4,6 +4,7 @@ import { checkForLsfgUpdate, clearNewGameDefaults, exportProfiles, importProfile
 import t from "../i18n/i18n";
 import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 import { showBranchSetupModal } from "./BranchSetupModal";
+import { useSimpleMode } from "../hooks/useSimpleMode";
 
 async function copyToClipboard(text: string): Promise<void> {
   try {
@@ -134,6 +135,7 @@ export function SettingsTab(props: SettingsTabProps) {
     onInstall,
     onUninstall,
   } = props;
+  const [simpleMode, setSimpleMode] = useSimpleMode();
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const runUpdateCheck = async () => {
@@ -243,6 +245,14 @@ export function SettingsTab(props: SettingsTabProps) {
       {isInstalled && (
         <>
           <PanelSection title="Global settings">
+            <PanelSectionRow>
+              <ToggleField
+                label="Simple mode"
+                description="Shows only the basics for each game: FPS multiplier, Flow Scale and Performance Mode. Hides presets, quirks, workarounds and the bulk tools."
+                checked={simpleMode}
+                onChange={setSimpleMode}
+              />
+            </PanelSectionRow>
             <PanelSectionRow>
               <ToggleField
                 label="FP16 Acceleration"

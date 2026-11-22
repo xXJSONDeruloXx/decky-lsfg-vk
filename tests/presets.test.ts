@@ -39,5 +39,5 @@ test("summaries name presets and spell out custom values", () => {
   assert.equal(summarizeConfig({ multiplier: 3, flow_scale: 0.8, performance_mode: false }), "3x · Balanced");
   assert.equal(summarizeConfig({ multiplier: 2, flow_scale: 0.65, performance_mode: true }), "2x · 65% light model");
   assert.equal(summarizeConfig({ multiplier: 2, flow_scale: 0.65, performance_mode: false }), "2x · 65%");
-  assert.equal(summarizeConfig({ multiplier: 1, flow_scale: 1, performance_mode: false }), "Off · Quality");
+  assert.equal(summarizeConfig({ multiplier: 1, flow_scale: 1, performance_mode: false }), "1x · Quality");
 });

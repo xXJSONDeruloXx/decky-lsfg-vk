@@ -7,6 +7,7 @@ import { sourceLabel } from "../utils/gameTargets";
 import { GameConfigurationControls } from "./GameConfigurationControls";
 import { GameConfigurationSelector } from "./GameConfigurationSelector";
 import { ProfileDetails } from "./ProfileDetails";
+import { useSimpleMode } from "../hooks/useSimpleMode";
 
 interface ConfigurationTabProps {
   title: string;
@@ -53,6 +54,7 @@ export function ConfigurationTab({
   summaries,
   newGameSummary,
 }: ConfigurationTabProps) {
+  const [simple] = useSimpleMode();
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
   const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "fps" | null>(null);
@@ -204,7 +206,7 @@ export function ConfigurationTab({
           onRepairWorkaround={selectedTarget.source !== "unknown" ? () => onRepair(selectedTarget.appid) : undefined}
         />
       )}
-      {selectedTarget?.configured && onUseAsNewGameDefaults && (
+      {selectedTarget?.configured && !simple && onUseAsNewGameDefaults && (
         <PanelSectionRow>
           <ButtonItem
             layout="below"
@@ -217,7 +219,7 @@ export function ConfigurationTab({
           </ButtonItem>
         </PanelSectionRow>
       )}
-      {selectedTarget?.configured && onResetSettings && (
+      {selectedTarget?.configured && !simple && onResetSettings && (
         <PanelSectionRow>
           <ButtonItem
             layout="below"
@@ -235,7 +237,7 @@ export function ConfigurationTab({
           </ButtonItem>
         </PanelSectionRow>
       )}
-      {selectedTarget?.configured && onApplyToAll && (
+      {selectedTarget?.configured && !simple && onApplyToAll && (
         <PanelSectionRow>
           <ButtonItem
             layout="below"

@@ -45,6 +45,11 @@ Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk**
 - **Preserve Swapchain Image Count**: Only for Vulkan games that crash on launch; can make pacing less smooth
 - **FP16 Acceleration**: Use half-precision acceleration when supported
 
+### Simple mode and 1x
+
+- **Simple mode** (Settings > Global settings) shows only FPS multiplier, Flow Scale and Performance Mode for each game, like the original plugin
+- **1x** is the lowest multiplier: no extra frames are generated, so it works as a pass-through for comparing against 2x or higher
+
 ### Smoothness and latency
 
 lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from feeding it a steady frame rate:

@@ -97,7 +97,7 @@ export interface SummarizableConfig extends PresetValues {
 
 /** Short one-line description of a profile, e.g. "3x · Balanced" or "2x · 65% · light model". */
 export function summarizeConfig(config: SummarizableConfig): string {
-  const parts = [config.multiplier <= 1 ? "Off" : `${config.multiplier}x`];
+  const parts = [`${Math.max(1, config.multiplier)}x`];
   const preset = PRESETS.find((entry) => entry.id === detectPreset(config));
   if (preset) {
     parts.push(preset.label);

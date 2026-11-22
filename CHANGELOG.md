@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0
+
+### Added
+- **1x mode**: the lowest FPS multiplier is now labelled 1x instead of Off. At 1x no extra frames are generated and frames pass through lsfg-vk unchanged, which is handy for comparing against 2x or higher. (Removing a game's profile is what actually turns lsfg-vk off for it.)
+- **Simple mode** (Settings > Global settings): shows only the basics for each game, FPS multiplier, Flow Scale and Performance Mode, like the original plugin. It hides presets, quirks, workarounds and the bulk tools, which come back when you switch it off. Your settings are untouched either way.
+
 ## 0.18.2
 
 ### Fixed
