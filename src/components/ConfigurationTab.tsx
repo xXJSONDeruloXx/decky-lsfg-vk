@@ -27,6 +27,10 @@ interface ConfigurationTabProps {
   onReset: () => Promise<void>;
   onResetAll: (source: KnownGameSource) => Promise<void>;
   onApplyToAll?: () => Promise<void>;
+  onUseAsNewGameDefaults?: () => Promise<void>;
+  onResetSettings?: () => Promise<void>;
+  summaries?: Record<string, string>;
+  newGameSummary?: string | null;
 }
 
 export function ConfigurationTab({
@@ -44,6 +48,10 @@ export function ConfigurationTab({
   onReset,
   onResetAll,
   onApplyToAll,
+  onUseAsNewGameDefaults,
+  onResetSettings,
+  summaries,
+  newGameSummary,
 }: ConfigurationTabProps) {
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
@@ -83,6 +91,7 @@ export function ConfigurationTab({
             runningGame={runningGame}
             source={source}
             bulkOperationBusy={bulkOperationBusy}
+            summaries={summaries}
             onSelect={(appid) => {
               setFocusConfiguredToggle(false);
               setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
@@ -194,6 +203,37 @@ export function ConfigurationTab({
           workaroundTarget={selectedTarget.source !== "unknown" ? selectedTarget : undefined}
           onRepairWorkaround={selectedTarget.source !== "unknown" ? () => onRepair(selectedTarget.appid) : undefined}
         />
+      )}
+      {selectedTarget?.configured && onUseAsNewGameDefaults && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            description={newGameSummary
+              ? `New games currently start with: ${newGameSummary}`
+              : "New games currently start with the standard defaults."}
+            onClick={() => void onUseAsNewGameDefaults()}
+          >
+            Use these settings for new games
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+      {selectedTarget?.configured && onResetSettings && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            description="Puts this game's multiplier, Flow Scale and quirks back to the new-game defaults. The profile and workarounds stay."
+            onClick={() => showModal(
+              <ConfirmModal
+                strTitle="Reset this game's settings?"
+                strDescription="Multiplier, Flow Scale, Performance Mode and quirks go back to the new-game defaults. You can undo it from Settings > Restore previous config."
+                strOKButtonText="Reset settings"
+                onOK={() => void onResetSettings()}
+              />,
+            )}
+          >
+            Reset settings to defaults
+          </ButtonItem>
+        </PanelSectionRow>
       )}
       {selectedTarget?.configured && onApplyToAll && (
         <PanelSectionRow>

@@ -110,6 +110,47 @@ class ConfigBackupAndBulkTests(unittest.TestCase):
         self.assertFalse(result["success"])
         self.assertEqual(result["updated"], 0)
 
+    def test_new_game_defaults_round_trip_and_reach_the_config_listing(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 3, "flow_scale": 0.6, "performance_mode": True})
+
+        saved = self.service.set_new_game_defaults("1")
+
+        self.assertEqual(saved["new_game_defaults"]["multiplier"], 3)
+        listing = self.service.get_game_configs()
+        self.assertEqual(listing["new_game_defaults"]["flow_scale"], 0.6)
+        self.assertNotIn("active_in", listing["new_game_defaults"])
+
+        self.service.clear_new_game_defaults()
+        self.assertIsNone(self.service.get_game_configs()["new_game_defaults"])
+
+    def test_unreadable_new_game_defaults_are_ignored(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2})
+        self.service.new_game_defaults_path.write_text("{oops", encoding="utf-8")
+        self.assertIsNone(self.service.get_game_configs()["new_game_defaults"])
+
+    def test_reset_game_settings_keeps_the_profile_and_uses_new_game_defaults(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2, "flow_scale": 0.8})
+        self.service.set_new_game_defaults("1")
+        self.service.update_game_config("2", "Game Two", {"multiplier": 6, "flow_scale": 0.3, "performance_mode": True})
+
+        result = self.service.reset_game_settings("2")
+
+        self.assertTrue(result["success"])
+        config = {g["appid"]: g["config"] for g in self.service.get_game_configs()["games"]}["2"]
+        self.assertEqual(config["multiplier"], 2)
+        self.assertEqual(config["flow_scale"], 0.8)
+        self.assertFalse(config["performance_mode"])
+        self.assertEqual(config["active_in"], ["2"])
+
+    def test_reset_game_settings_falls_back_to_standard_defaults(self):
+        self.service.update_game_config("2", "Game Two", {"multiplier": 6, "flow_scale": 0.3})
+        self.service.reset_game_settings("2")
+        config = self.service.get_game_configs()["games"][0]["config"]
+        self.assertEqual((config["multiplier"], config["flow_scale"]), (2, 0.8))
+
+    def test_reset_game_settings_requires_a_profile(self):
+        self.assertFalse(self.service.reset_game_settings("999")["success"])
+
 
 if __name__ == "__main__":
     unittest.main()

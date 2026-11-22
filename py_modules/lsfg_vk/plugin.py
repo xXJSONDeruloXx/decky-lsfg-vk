@@ -77,6 +77,15 @@ class Plugin:
     async def apply_config_to_all_games(self, appid: str):
         return self.configuration_service.apply_config_to_all_games(appid)
 
+    async def set_new_game_defaults(self, appid: str):
+        return self.configuration_service.set_new_game_defaults(appid)
+
+    async def clear_new_game_defaults(self):
+        return self.configuration_service.clear_new_game_defaults()
+
+    async def reset_game_settings(self, appid: str):
+        return self.configuration_service.reset_game_settings(appid)
+
     async def get_config_backup_info(self):
         return self.configuration_service.get_config_backup_info()
 

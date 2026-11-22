@@ -90,3 +90,19 @@ export function suggestBaseCap(refreshHz: number, multiplier: number): number | 
   if (!Number.isInteger(cap) || cap < 1 || cap > 60) return null;
   return cap;
 }
+
+export interface SummarizableConfig extends PresetValues {
+  multiplier: number;
+}
+
+/** Short one-line description of a profile, e.g. "3x · Balanced" or "2x · 65% · light model". */
+export function summarizeConfig(config: SummarizableConfig): string {
+  const parts = [config.multiplier <= 1 ? "Off" : `${config.multiplier}x`];
+  const preset = PRESETS.find((entry) => entry.id === detectPreset(config));
+  if (preset) {
+    parts.push(preset.label);
+  } else {
+    parts.push(`${Math.round(config.flow_scale * 100)}%${config.performance_mode ? " light model" : ""}`);
+  }
+  return parts.join(" · ");
+}

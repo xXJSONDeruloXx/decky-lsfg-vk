@@ -1,5 +1,5 @@
 import { ButtonItem, ConfirmModal, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField, showModal } from "@decky/ui";
-import { getConfigBackupInfo, getDiagnosticsReport, restoreConfigBackup, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
+import { clearNewGameDefaults, getConfigBackupInfo, getDiagnosticsReport, restoreConfigBackup, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 import { showBranchSetupModal } from "./BranchSetupModal";
@@ -43,6 +43,12 @@ async function restorePreviousConfig(): Promise<void> {
   } catch (error) {
     showErrorToast("Restore failed", error instanceof Error ? error.message : String(error));
   }
+}
+
+async function resetNewGameDefaults(): Promise<void> {
+  const result = await clearNewGameDefaults();
+  if (result.success) showSuccessToast("Defaults reset", "New games will use the standard defaults");
+  else showErrorToast("Could not reset defaults", result.error || "Unknown error");
 }
 
 async function confirmRestore(): Promise<void> {
@@ -199,6 +205,15 @@ export function SettingsTab(props: SettingsTabProps) {
                 onClick={() => void confirmRestore()}
               >
                 Restore previous config
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description="Forget the settings saved with Use these settings for new games."
+                onClick={() => void resetNewGameDefaults()}
+              >
+                Reset new-game defaults
               </ButtonItem>
             </PanelSectionRow>
             <PanelSectionRow>

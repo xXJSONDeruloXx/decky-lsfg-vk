@@ -1,10 +1,11 @@
+import json
 import re
 import time
 from pathlib import Path
 from typing import Any, Dict
 
 from .base_service import BaseService
-from .config_schema import ConfigurationManager, ProfileData, UnsupportedConfigurationVersion
+from .config_schema import PROFILE_DEFAULTS, ConfigurationManager, ProfileData, UnsupportedConfigurationVersion
 from .runtime_service import RuntimeService
 
 
@@ -111,6 +112,57 @@ class ConfigurationService(BaseService):
         "preserve_swapchain_image_count",
     )
 
+    @property
+    def new_game_defaults_path(self) -> Path:
+        return self.config_dir / "new_game_defaults.json"
+
+    def _read_new_game_defaults(self) -> Dict[str, Any]:
+        """Tuning saved with "use for new games"; empty when unset or unreadable."""
+        try:
+            raw = json.loads(self.new_game_defaults_path.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                return {}
+            merged = ConfigurationManager.validate_config(
+                {**{field: raw[field] for field in self.SHARED_PROFILE_FIELDS if field in raw}}
+            )
+            return {field: merged[field] for field in self.SHARED_PROFILE_FIELDS if field in raw}
+        except (OSError, ValueError, TypeError):
+            return {}
+
+    def set_new_game_defaults(self, appid: str) -> Dict[str, Any]:
+        """Remember one game's tuning as the starting point for games enabled later."""
+        try:
+            _, source = self._profile_for_appid(self._get_profile_data(), appid)
+            if source is None:
+                raise ValueError("That game has no profile to copy from")
+            values = {field: source[field] for field in self.SHARED_PROFILE_FIELDS}
+            self._write_file(self.new_game_defaults_path, json.dumps(values, indent=2, sort_keys=True) + "\n")
+            return self._success_response(dict, "New games will start with these settings", new_game_defaults=values)
+        except Exception as error:
+            return self._error_response(dict, str(error), new_game_defaults=None)
+
+    def clear_new_game_defaults(self) -> Dict[str, Any]:
+        try:
+            self._remove_if_exists(self.new_game_defaults_path)
+            return self._success_response(dict, "New games will use the standard defaults", new_game_defaults=None)
+        except Exception as error:
+            return self._error_response(dict, str(error))
+
+    def reset_game_settings(self, appid: str) -> Dict[str, Any]:
+        """Put one game's tuning back to the new-game defaults, keeping its profile."""
+        try:
+            data = self._get_profile_data()
+            name, profile = self._profile_for_appid(data, appid)
+            if profile is None:
+                raise ValueError("That game has no profile to reset")
+            baseline = {field: PROFILE_DEFAULTS[field] for field in self.SHARED_PROFILE_FIELDS}
+            baseline.update(self._read_new_game_defaults())
+            profile.update(baseline)
+            self._save_profile_data(data)
+            return self._success_response(dict, appid=str(appid), config=self._public_config(profile))
+        except Exception as error:
+            return self._error_response(dict, str(error), appid=str(appid), config=None)
+
     def apply_config_to_all_games(self, appid: str) -> Dict[str, Any]:
         """Copy one game's tuning to every other game profile (not Flatpak apps)."""
         try:
@@ -174,7 +226,12 @@ class ConfigurationService(BaseService):
                 if len(active_in) != 1 or not re.fullmatch(r"-?[0-9]+", str(active_in[0])):
                     continue
                 games.append({"appid": str(active_in[0]), "profile": name, "config": self._public_config(raw)})
-            return self._success_response(dict, global_config=dict(data["global_config"]), games=games)
+            return self._success_response(
+                dict,
+                global_config=dict(data["global_config"]),
+                games=games,
+                new_game_defaults=self._read_new_game_defaults() or None,
+            )
         except Exception as error:
             self.log.error(f"Error reading game configs: {error}")
             return self._error_response(dict, str(error), games=[])

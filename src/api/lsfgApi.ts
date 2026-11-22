@@ -82,6 +82,7 @@ export interface WorkaroundAppsResult extends ApiResult {
 export interface GameConfigsResult extends ApiResult {
   global_config?: GlobalConfig;
   games?: GameConfigEntry[];
+  new_game_defaults?: Partial<LsfgConfig> | null;
 }
 
 export interface GlobalConfigResult extends ApiResult {
@@ -192,6 +193,9 @@ export const setWorkaroundState = callable<[
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
 export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
 export const applyConfigToAllGames = callable<[string], ApplyToAllResult>("apply_config_to_all_games");
+export const setNewGameDefaults = callable<[string], ApiResult>("set_new_game_defaults");
+export const clearNewGameDefaults = callable<[], ApiResult>("clear_new_game_defaults");
+export const resetGameSettings = callable<[string], GameConfigResult>("reset_game_settings");
 export const getConfigBackupInfo = callable<[], ConfigBackupInfoResult>("get_config_backup_info");
 export const restoreConfigBackup = callable<[], ApiResult>("restore_config_backup");
 export const getDiagnosticsReport = callable<[], DiagnosticsReportResult>("get_diagnostics_report");

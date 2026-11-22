@@ -9,6 +9,7 @@ interface Props {
   runningGame: GameTarget | null;
   source: KnownGameSource;
   bulkOperationBusy: boolean;
+  summaries?: Record<string, string>;
   onSelect: (appid: string) => void;
   onEnableAll: (source: KnownGameSource) => Promise<void>;
   onResetAll: (source: KnownGameSource) => Promise<void>;
@@ -31,6 +32,7 @@ export function GameConfigurationSelector({
   runningGame,
   source,
   bulkOperationBusy,
+  summaries,
   onSelect,
   onEnableAll,
   onResetAll,
@@ -53,7 +55,9 @@ export function GameConfigurationSelector({
   const toItem = (game: GameTarget) => ({
     id: game.appid,
     label: game.name,
-    description: targetDescription(game),
+    description: game.configured && summaries?.[game.appid]
+      ? `${summaries[game.appid]} · ${targetDescription(game)}`
+      : targetDescription(game),
     disabled: game.isFlatpakShortcut,
   });
   const [enabledCollapsed, toggleEnabled] = usePersistentCollapsed(`${ENABLED_COLLAPSED_KEY}-${source}`);

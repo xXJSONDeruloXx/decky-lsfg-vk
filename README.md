@@ -57,6 +57,9 @@ lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from 
 ### Quality of life
 
 - **Apply these settings to all games**: tune one game, then copy its settings to every other game profile in one tap
+- **Game list summaries**: enabled games show their setup (for example "3x · Balanced") at a glance
+- **Use these settings for new games**: set your preferred starting point once; every game you enable afterwards uses it (Settings > Advanced > Reset new-game defaults clears it)
+- **Reset settings to defaults**: put one game back to the defaults without removing its profile
 - **Restore previous config**: the last few versions of your config are kept automatically; Settings > Advanced > Restore previous config undoes recent changes (and can be undone itself)
 
 ## Feedback and Support

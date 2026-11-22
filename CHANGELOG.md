@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0
+
+### Added
+- **Settings summary in the game list**: each enabled game shows its setup, such as "3x · Balanced" or "2x · 65% light model".
+- **Use these settings for new games**: saves a game's multiplier, Flow Scale, Performance Mode and quirks as the starting point for every game enabled afterwards (including Enable all). Settings > Advanced > Reset new-game defaults clears it.
+- **Reset settings to defaults**: puts one game's tuning back to the new-game defaults without removing its profile or workarounds.
+
+### Fixed
+- Uninstalling now also removes the config backups and the saved new-game defaults, so the config folder is no longer left behind.
+
 ## 0.16.0
 
 ### Added

@@ -114,6 +114,16 @@ class InstallationConfigTests(unittest.TestCase):
         for destination, _mode in destinations.values():
             self.assertEqual(destination.read_text(encoding="utf-8"), "old")
 
+    def test_uninstall_removes_backups_and_new_game_defaults(self):
+        self._write_config()
+        for name in ("conf.toml.bak.1", "conf.toml.bak.2", "new_game_defaults.json"):
+            (self.service.config_dir / name).write_text("x", encoding="utf-8")
+
+        result = self.service.uninstall()
+
+        self.assertTrue(result["success"])
+        self.assertFalse(self.service.config_dir.exists())
+
     def test_installation_does_not_overwrite_a_future_config_version(self):
         self.service.config_dir.mkdir(parents=True)
         original = "version = 3\n\n[global]\nallow_fp16 = true\n"

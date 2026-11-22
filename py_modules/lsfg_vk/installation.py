@@ -264,6 +264,10 @@ class InstallationService(BaseService):
 
     def uninstall(self) -> UninstallationResponse:
         try:
+            plugin_extras = [
+                self.config_dir / "new_game_defaults.json",
+                *sorted(self.config_dir.glob(f"{self.config_file_path.name}.bak.*")),
+            ]
             removed = [
                 str(path)
                 for path in (
@@ -279,6 +283,7 @@ class InstallationService(BaseService):
                     self.legacy_json_file,
                     self.legacy_script_path,
                     self.config_file_path,
+                    *plugin_extras,
                 )
                 if self._remove_if_exists(path)
             ]
