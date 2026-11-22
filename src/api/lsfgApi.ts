@@ -116,6 +116,16 @@ export interface DebugFileContentsResult extends ApiResult {
   files?: DebugFileContent[];
 }
 
+export interface ApplyToAllResult extends ApiResult {
+  updated?: number;
+}
+
+export interface ConfigBackupInfoResult extends ApiResult {
+  available?: boolean;
+  saved_at?: number | null;
+  count?: number;
+}
+
 export interface DiagnosticsReportResult extends ApiResult {
   report?: string | null;
 }
@@ -181,5 +191,8 @@ export const setWorkaroundState = callable<[
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
 export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
+export const applyConfigToAllGames = callable<[string], ApplyToAllResult>("apply_config_to_all_games");
+export const getConfigBackupInfo = callable<[], ConfigBackupInfoResult>("get_config_backup_info");
+export const restoreConfigBackup = callable<[], ApiResult>("restore_config_backup");
 export const getDiagnosticsReport = callable<[], DiagnosticsReportResult>("get_diagnostics_report");
 export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

@@ -74,6 +74,15 @@ class Plugin:
     async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]):
         return self.configuration_service.update_game_config(appid, game_name, config)
 
+    async def apply_config_to_all_games(self, appid: str):
+        return self.configuration_service.apply_config_to_all_games(appid)
+
+    async def get_config_backup_info(self):
+        return self.configuration_service.get_config_backup_info()
+
+    async def restore_config_backup(self):
+        return self.configuration_service.restore_config_backup()
+
     async def reset_game_config(self, appid: str):
         return self.configuration_service.reset_game_config(appid)
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0
+
+### Added
+- **Apply these settings to all games**: in a game's profile, copies its multiplier, Flow Scale, Performance Mode and quirk settings to every other game profile (after a confirmation). Flatpak profiles and per-game workarounds are left alone.
+- **Restore previous config**: the plugin now keeps the last three versions of `conf.toml` (a new snapshot at most every 10 minutes, so slider drags don't flood them). Settings > Advanced > Restore previous config swaps back to the newest one, and restoring again swaps forward, so it can always be undone. A backup that no longer parses is never restored.
+
 ## 0.15.1
 
 ### Changed

@@ -1,5 +1,5 @@
-import { ButtonItem, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
-import { getDiagnosticsReport, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
+import { ButtonItem, ConfirmModal, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField, showModal } from "@decky/ui";
+import { getConfigBackupInfo, getDiagnosticsReport, restoreConfigBackup, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
 import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 import { showBranchSetupModal } from "./BranchSetupModal";
@@ -33,6 +33,33 @@ async function copyDiagnostics(): Promise<void> {
   } catch (error) {
     showErrorToast("Diagnostics failed", error instanceof Error ? error.message : String(error));
   }
+}
+
+async function restorePreviousConfig(): Promise<void> {
+  try {
+    const result = await restoreConfigBackup();
+    if (!result.success) throw new Error(result.error || "Could not restore the previous configuration");
+    showSuccessToast("Configuration restored", "Reopen the plugin to see the restored settings");
+  } catch (error) {
+    showErrorToast("Restore failed", error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function confirmRestore(): Promise<void> {
+  const info = await getConfigBackupInfo();
+  if (!info.success || !info.available) {
+    showErrorToast("Nothing to restore", "No earlier configuration has been saved yet");
+    return;
+  }
+  const savedAt = info.saved_at ? new Date(info.saved_at * 1000).toLocaleString() : "an earlier time";
+  showModal(
+    <ConfirmModal
+      strTitle="Restore previous config?"
+      strDescription={`Go back to your settings as they were before changes made after ${savedAt}. Your current settings are kept, so you can restore again to switch back.`}
+      strOKButtonText="Restore"
+      onOK={() => void restorePreviousConfig()}
+    />,
+  );
 }
 
 interface SettingsTabProps {
@@ -164,6 +191,15 @@ export function SettingsTab(props: SettingsTabProps) {
                 checked={showDebugTab}
                 onChange={onShowDebugTabChange}
               />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description="Undo recent settings changes. The last few versions of your config are kept automatically."
+                onClick={() => void confirmRestore()}
+              >
+                Restore previous config
+              </ButtonItem>
             </PanelSectionRow>
             <PanelSectionRow>
               <ButtonItem layout="below" onClick={() => void copyDiagnostics()}>

@@ -54,6 +54,11 @@ lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from 
 - **Base FPS Cap**: Shows the resulting output (cap x multiplier) so you can match your display's refresh rate, for example 30 x 3 on a 90 Hz screen
 - **Low latency preset**: Faster generation shortens the delay frame generation adds. It does not remove Vsync latency
 
+### Quality of life
+
+- **Apply these settings to all games**: tune one game, then copy its settings to every other game profile in one tap
+- **Restore previous config**: the last few versions of your config are kept automatically; Settings > Advanced > Restore previous config undoes recent changes (and can be undone itself)
+
 ## Feedback and Support
 
 For per-game feedback and community support, please join the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3)

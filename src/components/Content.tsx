@@ -69,6 +69,7 @@ export function Content() {
     repair,
     resetSelected,
     resetAll,
+    applyToAll,
     cleanupAllWorkarounds,
     reload,
   } = useGameConfiguration();
@@ -201,6 +202,7 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
+              onApplyToAll={applyToAll}
             />,
           ),
         },
@@ -222,6 +224,7 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
+              onApplyToAll={applyToAll}
             />
           ),
         },

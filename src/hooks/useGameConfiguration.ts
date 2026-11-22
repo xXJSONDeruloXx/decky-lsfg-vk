@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
-import { getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundApp, type WorkaroundState } from "../api/lsfgApi";
+import { applyConfigToAllGames, getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundApp, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
 import { getDefaultWrapperPath, installWrapperIntegration, removeWrapperIntegration } from "../utils/steamLaunchOptions";
 import { getTargetSource, mergeGameTargets, type GameTarget, type KnownGameSource } from "../utils/gameTargets";
-import { showErrorToast } from "../utils/toastUtils";
+import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 
 export type { GameSource, GameTarget, KnownGameSource } from "../utils/gameTargets";
 
@@ -349,6 +349,21 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, selectedAppId, targets]);
 
+  const applyToAll = useCallback(async () => {
+    if (!selectedAppId) return;
+    const result = await applyConfigToAllGames(selectedAppId);
+    if (!result.success) {
+      showErrorToast("Could not apply settings", result.error || "Could not copy settings to your other games");
+      return;
+    }
+    const count = result.updated ?? 0;
+    showSuccessToast(
+      count > 0 ? "Settings applied" : "Nothing to update",
+      count > 0 ? `Copied to ${count} other game${count === 1 ? "" : "s"}` : "You have no other game profiles",
+    );
+    await load();
+  }, [load, selectedAppId]);
+
   const resetAll = useCallback(async (source: KnownGameSource) => {
     if (!acquireBulkOperation()) return;
     try {
@@ -374,5 +389,5 @@ export function useGameConfiguration() {
     }
   }, [acquireBulkOperation, load, removeTargetWorkarounds, releaseBulkOperation, targets]);
 
-  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, bulkOperationBusy, cleanupAllWorkarounds, reload: load };
+  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, applyToAll, bulkOperationBusy, cleanupAllWorkarounds, reload: load };
 }

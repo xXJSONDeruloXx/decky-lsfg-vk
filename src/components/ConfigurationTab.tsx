@@ -26,6 +26,7 @@ interface ConfigurationTabProps {
   onRepair: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
   onResetAll: (source: KnownGameSource) => Promise<void>;
+  onApplyToAll?: () => Promise<void>;
 }
 
 export function ConfigurationTab({
@@ -42,6 +43,7 @@ export function ConfigurationTab({
   onRepair,
   onReset,
   onResetAll,
+  onApplyToAll,
 }: ConfigurationTabProps) {
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
@@ -192,6 +194,24 @@ export function ConfigurationTab({
           workaroundTarget={selectedTarget.source !== "unknown" ? selectedTarget : undefined}
           onRepairWorkaround={selectedTarget.source !== "unknown" ? () => onRepair(selectedTarget.appid) : undefined}
         />
+      )}
+      {selectedTarget?.configured && onApplyToAll && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            description="Copies this game's multiplier, Flow Scale, Performance Mode and quirks to every other game profile. Their workarounds are left alone."
+            onClick={() => showModal(
+              <ConfirmModal
+                strTitle="Apply to all games?"
+                strDescription="Every other game profile will use this game's multiplier, Flow Scale, Performance Mode and quirk settings. You can undo it from Settings > Restore previous config."
+                strOKButtonText="Apply to all"
+                onOK={() => void onApplyToAll()}
+              />,
+            )}
+          >
+            Apply these settings to all games
+          </ButtonItem>
+        </PanelSectionRow>
       )}
       {selectedTarget?.configured && (
         <PanelSectionRow>
