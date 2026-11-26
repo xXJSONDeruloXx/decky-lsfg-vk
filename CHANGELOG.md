@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.20.0
+
+### Added
+- **Profiles are saved when the plugin is removed.** Removing the plugin from Decky, which is also what happens when you delete it to install a newer zip, deletes `conf.toml`. It now first saves your game profiles to `~/lsfg-vk-profiles.json` (only when you have some), so Settings > Advanced > Import profiles from file brings them back. A failure to save never blocks the removal.
+- README sections for where the plugin keeps your data and for developing and packaging it.
+- `scripts/build_i18n_json.py`, a jq-free way to rebuild `src/i18n/languages.json`.
+- Tests that fail when the translation bundle is out of date, when the UI uses a string key that is not in the template, or when the template keeps keys nothing uses.
+
+### Fixed
+- `src/i18n/languages.json` was out of date, so some strings were missing from it and four had old text. It is rebuilt.
+- `CONFIG_DISABLE_HDR`, its description and the 1x description were used in the UI but missing from the template.
+- `pnpm test` no longer requires a `python3.12` binary by name.
+
+### Removed
+- 64 translation keys left over from screens that no longer exist (profile management, the config viewer and others), from the template, Japanese and Korean files.
+- Unused `STABLE_BASE_FPS`, `STABLE_MULTIPLIER` and `suggestBaseCap` helpers.
+
 ## 0.19.1
 
 ### Changed

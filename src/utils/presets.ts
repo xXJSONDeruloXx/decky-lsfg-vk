@@ -14,9 +14,6 @@ export interface PresetDefinition {
   values: PresetValues;
 }
 
-export const STABLE_BASE_FPS = 30;
-export const STABLE_MULTIPLIER = 2;
-
 export interface PacingTarget {
   id: string;
   cap: number;
@@ -77,18 +74,6 @@ export function detectPreset(config: PresetValues): PresetId | null {
 export function outputFps(baseFpsCap: number, multiplier: number): number | null {
   if (!Number.isFinite(baseFpsCap) || baseFpsCap <= 0) return null;
   return Math.round(baseFpsCap * Math.max(1, multiplier));
-}
-
-/**
- * Base cap that makes cap x multiplier equal the display refresh rate, which
- * is what vsync pacing needs to stay even. Null when it doesn't divide cleanly
- * into a usable cap (1-60 FPS).
- */
-export function suggestBaseCap(refreshHz: number, multiplier: number): number | null {
-  if (!Number.isFinite(refreshHz) || refreshHz <= 0 || multiplier < 2) return null;
-  const cap = refreshHz / multiplier;
-  if (!Number.isInteger(cap) || cap < 1 || cap > 60) return null;
-  return cap;
 }
 
 export interface SummarizableConfig extends PresetValues {

@@ -69,6 +69,31 @@ lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from 
 - **Check for lsfg-vk updates**: one button in Settings tells you whether upstream has released a newer lsfg-vk than the one bundled in the plugin
 - **Restore previous config**: the last few versions of your config are kept automatically; Settings > Advanced > Restore previous config undoes recent changes (and can be undone itself)
 
+## Your data
+
+| What | Where |
+| --- | --- |
+| lsfg-vk config and all game profiles | `~/.config/lsfg-vk/conf.toml` |
+| Last three versions of that config (Restore previous config) | `~/.config/lsfg-vk/conf.toml.bak.1` to `.bak.3` |
+| Per-game workarounds | `~/.config/lsfg-vk/workarounds.json` |
+| Settings for new games | `~/.config/lsfg-vk/new_game_defaults.json` |
+| Exported profiles (Export / Import) | `~/lsfg-vk-profiles.json` |
+
+Removing the plugin from Decky (which is also what happens when you delete it to install a newer zip) deletes the config, but first saves your game profiles to `~/lsfg-vk-profiles.json`. After reinstalling, use Settings > Advanced > Import profiles from file to get them back. A reinstall does not need Lossless Scaling's DLL again; it is found automatically when the `lsfg-vk` Steam branch has downloaded.
+
+## Development
+
+Needs Node 22.18 or newer (an official build, so TypeScript tests can run), pnpm, and Python 3.11 or newer.
+
+```bash
+pnpm install
+pnpm build      # builds dist/
+pnpm test       # TypeScript and Python tests
+./scripts/package.sh   # builds out/Decky LSFG-VK.zip and its SHA-256
+```
+
+`package.sh` bundles lsfg-vk from `bin/lsfg-vk-2.0.0.tar.xz`, from `$LSFG_ARCHIVE`, or from the latest published release, in that order. After editing anything in `defaults/i18n/`, run `python3 scripts/build_i18n_json.py`; a test fails if `src/i18n/languages.json` is out of date or a string key is missing or unused.
+
 ## Feedback and Support
 
 For per-game feedback and community support, please join the [decky-lsfg-vk Discord Channel](https://discord.gg/TwvHdVucC3)

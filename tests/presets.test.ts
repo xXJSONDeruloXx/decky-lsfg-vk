@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PACING_TARGETS, PRESETS, detectPacingTarget, detectPreset, outputFps, summarizeConfig, suggestBaseCap } from "../src/utils/presets.ts";
+import { PACING_TARGETS, PRESETS, detectPacingTarget, detectPreset, outputFps, summarizeConfig } from "../src/utils/presets.ts";
 
 test("every preset is detected from its own values", () => {
   for (const preset of PRESETS) {
@@ -16,15 +16,6 @@ test("output fps multiplies the cap and ignores an unset cap", () => {
   assert.equal(outputFps(30, 2), 60);
   assert.equal(outputFps(30, 3), 90);
   assert.equal(outputFps(0, 2), null);
-});
-
-test("suggested base cap divides the refresh rate evenly", () => {
-  assert.equal(suggestBaseCap(60, 2), 30);
-  assert.equal(suggestBaseCap(90, 3), 30);
-  assert.equal(suggestBaseCap(90, 2), 45);
-  assert.equal(suggestBaseCap(60, 4), 15);
-  assert.equal(suggestBaseCap(60, 7), null);
-  assert.equal(suggestBaseCap(60, 1), null);
 });
 
 test("every pacing target lands on 60 or 90 FPS and is detected", () => {
