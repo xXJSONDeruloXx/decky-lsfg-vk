@@ -173,8 +173,11 @@ class ConfigurationService(BaseService):
     def export_path(self) -> Path:
         return self.user_home / self.EXPORT_FILENAME
 
-    def export_profiles(self) -> Dict[str, Any]:
-        """Write every game profile's tuning to a JSON file in the home folder."""
+    def export_profiles(self, skip_if_empty: bool = False) -> Dict[str, Any]:
+        """Write every game profile's tuning to a JSON file in the home folder.
+
+        With skip_if_empty, nothing is written when there are no game profiles.
+        """
         try:
             data = self._get_profile_data()
             profiles = []
@@ -187,6 +190,8 @@ class ConfigurationService(BaseService):
                     "name": name,
                     **{field: profile[field] for field in self.SHARED_PROFILE_FIELDS},
                 })
+            if skip_if_empty and not profiles:
+                return self._success_response(dict, path=str(self.export_path), count=0)
             bundle = {
                 "format": self.EXPORT_FORMAT,
                 "version": 1,

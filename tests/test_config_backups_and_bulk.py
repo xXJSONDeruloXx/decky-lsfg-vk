@@ -175,6 +175,13 @@ class ConfigBackupAndBulkTests(unittest.TestCase):
         self.assertEqual(games["2"]["multiplier"], 4)
         self.assertEqual(self.service.get_game_configs()["new_game_defaults"]["multiplier"], 3)
 
+    def test_export_can_skip_writing_when_there_is_nothing_to_save(self):
+        self._set_home()
+        result = self.service.export_profiles(skip_if_empty=True)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 0)
+        self.assertFalse(self.service.export_path.exists())
+
     def test_import_backs_up_current_config_and_can_be_undone(self):
         self._set_home()
         self.service.update_game_config("1", "Game One", {"multiplier": 3})

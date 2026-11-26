@@ -231,6 +231,17 @@ class Plugin:
 
     async def _uninstall(self):
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
+        # Removing the plugin also removes conf.toml, and updating from a zip
+        # goes through the same path. Keep the user's game profiles so they can
+        # be re-imported after reinstalling. A failure here must not block cleanup.
+        try:
+            saved = self.configuration_service.export_profiles(skip_if_empty=True)
+            if saved.get("success") and saved.get("count"):
+                decky.logger.info(f"Saved {saved['count']} game profile(s) to {saved.get('path')}")
+            elif not saved.get("success"):
+                decky.logger.warning(f"Could not save game profiles before uninstall: {saved.get('error')}")
+        except Exception as error:
+            decky.logger.warning(f"Could not save game profiles before uninstall: {error}")
         try:
             error = self._cleanup_runtime_state(preserve_wrapper=True)
             if error:
