@@ -1,0 +1,235 @@
+import os
+import sys
+import tempfile
+import types
+import unittest
+from pathlib import Path
+from unittest.mock import Mock
+
+
+sys.modules.setdefault(
+    "decky",
+    types.SimpleNamespace(DECKY_USER_HOME="/home/deck", logger=Mock()),
+)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "py_modules"))
+
+from lsfg_vk.configuration import ConfigurationService
+
+
+class ConfigBackupAndBulkTests(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.home = Path(self.tempdir.name) / "home" / "deck"
+        self.home.mkdir(parents=True)
+        self.service = ConfigurationService(logger=Mock(), runtime_service=Mock())
+        self.service.user_home = self.home
+        self.service.config_dir = self.home / ".config/lsfg-vk"
+        self.service.config_file_path = self.service.config_dir / "conf.toml"
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def _age_backup(self, index=1, seconds=3600):
+        path = self.service._backup_path(index)
+        old = path.stat().st_mtime - seconds
+        os.utime(path, (old, old))
+
+    def test_first_save_has_nothing_to_back_up(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2})
+        self.assertFalse(self.service.get_config_backup_info()["available"])
+
+    def test_change_snapshots_the_previous_version_and_restore_undoes_it(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2})
+        self.service.update_game_config("1", "Game One", {"multiplier": 3})
+
+        self.assertTrue(self.service.get_config_backup_info()["available"])
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 3)
+
+        self.assertTrue(self.service.restore_config_backup()["success"])
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 2)
+
+        # restoring again swaps back, so the undo can itself be undone
+        self.assertTrue(self.service.restore_config_backup()["success"])
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 3)
+
+    def test_rapid_saves_do_not_overwrite_the_snapshot(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2})
+        self.service.update_game_config("1", "Game One", {"multiplier": 3})
+        for value in (4, 5, 6):
+            self.service.update_game_config("1", "Game One", {"multiplier": value})
+
+        self.service.restore_config_backup()
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 2)
+
+    def test_old_snapshots_rotate_and_are_capped(self):
+        multiplier = 2
+        self.service.update_game_config("1", "Game One", {"multiplier": multiplier})
+        for _ in range(6):
+            multiplier = multiplier % 6 + 1
+            self.service.update_game_config("1", "Game One", {"multiplier": multiplier})
+            self._age_backup()
+
+        backups = sorted(self.service.config_dir.glob("conf.toml.bak.*"))
+        self.assertEqual(len(backups), self.service.BACKUP_COUNT)
+
+    def test_restore_without_backup_fails_cleanly(self):
+        result = self.service.restore_config_backup()
+        self.assertFalse(result["success"])
+        self.assertIn("no earlier", result["error"])
+
+    def test_corrupt_backup_is_not_restored(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2})
+        self.service.update_game_config("1", "Game One", {"multiplier": 3})
+        self.service._backup_path(1).write_text("not = [valid", encoding="utf-8")
+
+        self.assertFalse(self.service.restore_config_backup()["success"])
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 3)
+
+    def test_apply_to_all_copies_tuning_but_not_identity(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2, "flow_scale": 0.8})
+        self.service.update_game_config("2", "Game Two", {"multiplier": 2, "flow_scale": 0.8})
+        self.service.update_flatpak_config("org.example.App", {"multiplier": 2})
+        self.service.update_game_config(
+            "1", "Game One",
+            {"multiplier": 4, "flow_scale": 0.5, "performance_mode": True},
+        )
+
+        result = self.service.apply_config_to_all_games("1")
+
+        self.assertEqual(result["updated"], 1)
+        games = {game["appid"]: game["config"] for game in self.service.get_game_configs()["games"]}
+        self.assertEqual(games["2"]["multiplier"], 4)
+        self.assertEqual(games["2"]["flow_scale"], 0.5)
+        self.assertTrue(games["2"]["performance_mode"])
+        self.assertEqual(games["2"]["active_in"], ["2"])
+        flatpak = self.service.get_flatpak_config("org.example.App")["config"]
+        self.assertEqual(flatpak["multiplier"], 2)
+
+    def test_apply_to_all_requires_a_source_profile(self):
+        result = self.service.apply_config_to_all_games("999")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["updated"], 0)
+
+    def test_new_game_defaults_round_trip_and_reach_the_config_listing(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 3, "flow_scale": 0.6, "performance_mode": True})
+
+        saved = self.service.set_new_game_defaults("1")
+
+        self.assertEqual(saved["new_game_defaults"]["multiplier"], 3)
+        listing = self.service.get_game_configs()
+        self.assertEqual(listing["new_game_defaults"]["flow_scale"], 0.6)
+        self.assertNotIn("active_in", listing["new_game_defaults"])
+
+        self.service.clear_new_game_defaults()
+        self.assertIsNone(self.service.get_game_configs()["new_game_defaults"])
+
+    def test_unreadable_new_game_defaults_are_ignored(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2})
+        self.service.new_game_defaults_path.write_text("{oops", encoding="utf-8")
+        self.assertIsNone(self.service.get_game_configs()["new_game_defaults"])
+
+    def test_reset_game_settings_keeps_the_profile_and_uses_new_game_defaults(self):
+        self.service.update_game_config("1", "Game One", {"multiplier": 2, "flow_scale": 0.8})
+        self.service.set_new_game_defaults("1")
+        self.service.update_game_config("2", "Game Two", {"multiplier": 6, "flow_scale": 0.3, "performance_mode": True})
+
+        result = self.service.reset_game_settings("2")
+
+        self.assertTrue(result["success"])
+        config = {g["appid"]: g["config"] for g in self.service.get_game_configs()["games"]}["2"]
+        self.assertEqual(config["multiplier"], 2)
+        self.assertEqual(config["flow_scale"], 0.8)
+        self.assertFalse(config["performance_mode"])
+        self.assertEqual(config["active_in"], ["2"])
+
+    def test_reset_game_settings_falls_back_to_standard_defaults(self):
+        self.service.update_game_config("2", "Game Two", {"multiplier": 6, "flow_scale": 0.3})
+        self.service.reset_game_settings("2")
+        config = self.service.get_game_configs()["games"][0]["config"]
+        self.assertEqual((config["multiplier"], config["flow_scale"]), (2, 0.8))
+
+    def test_reset_game_settings_requires_a_profile(self):
+        self.assertFalse(self.service.reset_game_settings("999")["success"])
+
+    def _set_home(self):
+        self.service.user_home = self.home
+
+    def test_export_then_import_into_a_fresh_config_round_trips(self):
+        self._set_home()
+        self.service.update_game_config("1", "Game One", {"multiplier": 3, "flow_scale": 0.6, "performance_mode": True})
+        self.service.update_game_config("2", "Game Two", {"multiplier": 4})
+        self.service.update_flatpak_config("org.example.App", {"multiplier": 2})
+        self.service.set_new_game_defaults("1")
+
+        exported = self.service.export_profiles()
+        self.assertEqual(exported["count"], 2)
+
+        self.service.reset_all_game_configs()
+        self.service.clear_new_game_defaults()
+        result = self.service.import_profiles()
+
+        self.assertEqual((result["imported"], result["skipped"]), (2, 0))
+        games = {g["appid"]: g["config"] for g in self.service.get_game_configs()["games"]}
+        self.assertEqual(games["1"]["multiplier"], 3)
+        self.assertEqual(games["1"]["flow_scale"], 0.6)
+        self.assertEqual(games["2"]["multiplier"], 4)
+        self.assertEqual(self.service.get_game_configs()["new_game_defaults"]["multiplier"], 3)
+
+    def test_export_can_skip_writing_when_there_is_nothing_to_save(self):
+        self._set_home()
+        result = self.service.export_profiles(skip_if_empty=True)
+        self.assertTrue(result["success"])
+        self.assertEqual(result["count"], 0)
+        self.assertFalse(self.service.export_path.exists())
+
+    def test_import_backs_up_current_config_and_can_be_undone(self):
+        self._set_home()
+        self.service.update_game_config("1", "Game One", {"multiplier": 3})
+        self.service.export_profiles()
+        self.service.update_game_config("1", "Game One", {"multiplier": 5})
+
+        self.service.import_profiles()
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 3)
+
+        self.service.restore_config_backup()
+        self.assertEqual(self.service.get_game_configs()["games"][0]["config"]["multiplier"], 5)
+
+    def test_import_skips_bad_entries_but_keeps_good_ones(self):
+        self._set_home()
+        import json
+        bundle = {
+            "format": "decky-lsfg-vk-profiles", "version": 1, "profiles": [
+                {"appid": "10", "name": "Good", "multiplier": 3},
+                {"appid": "abc", "name": "Bad id"},
+                {"appid": "11", "name": "Bad value", "multiplier": 0},
+                "not an object",
+            ],
+        }
+        self.service.export_path.write_text(json.dumps(bundle), encoding="utf-8")
+
+        result = self.service.import_profiles()
+
+        self.assertEqual((result["imported"], result["skipped"]), (1, 3))
+        self.assertEqual([g["appid"] for g in self.service.get_game_configs()["games"]], ["10"])
+
+    def test_import_rejects_wrong_or_missing_files(self):
+        self._set_home()
+        self.assertFalse(self.service.import_profiles()["success"])
+        self.service.export_path.write_text('{"format": "something-else"}', encoding="utf-8")
+        self.assertIn("not a Decky", self.service.import_profiles()["error"])
+        self.service.export_path.write_text("{broken", encoding="utf-8")
+        self.assertFalse(self.service.import_profiles()["success"])
+
+    def test_import_refuses_symlinks_and_oversized_files(self):
+        self._set_home()
+        target = self.home / "elsewhere.json"
+        target.write_text("{}", encoding="utf-8")
+        self.service.export_path.symlink_to(target)
+        self.assertFalse(self.service.import_profiles()["success"])
+        self.service.export_path.unlink()
+        self.service.export_path.write_text(" " * (self.service.EXPORT_MAX_BYTES + 1), encoding="utf-8")
+        self.assertIn("too large", self.service.import_profiles()["error"])
+
+
+if __name__ == "__main__":
+    unittest.main()

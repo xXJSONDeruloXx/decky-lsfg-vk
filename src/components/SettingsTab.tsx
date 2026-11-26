@@ -1,7 +1,105 @@
-import { ButtonItem, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField } from "@decky/ui";
-import { type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
+import { ButtonItem, ConfirmModal, DialogButton, Field, PanelSection, PanelSectionRow, ToggleField, showModal } from "@decky/ui";
+import { useState } from "react";
+import { checkForLsfgUpdate, clearNewGameDefaults, exportProfiles, importProfiles, getConfigBackupInfo, getDiagnosticsReport, restoreConfigBackup, type GlobalConfig, type SteamBranchStatus } from "../api/lsfgApi";
 import t from "../i18n/i18n";
+import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 import { showBranchSetupModal } from "./BranchSetupModal";
+import { useSimpleMode } from "../hooks/useSimpleMode";
+
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    // Fall back to execCommand when the async clipboard API is unavailable.
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if (!copied) throw new Error("Clipboard is not available");
+}
+
+async function copyDiagnostics(): Promise<void> {
+  try {
+    const result = await getDiagnosticsReport();
+    if (!result.success || !result.report) {
+      throw new Error(result.error || "Could not generate diagnostics");
+    }
+    await copyToClipboard(result.report);
+    showSuccessToast("Diagnostics copied", "Paste it into your support message");
+  } catch (error) {
+    showErrorToast("Diagnostics failed", error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function restorePreviousConfig(): Promise<void> {
+  try {
+    const result = await restoreConfigBackup();
+    if (!result.success) throw new Error(result.error || "Could not restore the previous configuration");
+    showSuccessToast("Configuration restored", "Reopen the plugin to see the restored settings");
+  } catch (error) {
+    showErrorToast("Restore failed", error instanceof Error ? error.message : String(error));
+  }
+}
+
+async function resetNewGameDefaults(): Promise<void> {
+  const result = await clearNewGameDefaults();
+  if (result.success) showSuccessToast("Defaults reset", "New games will use the standard defaults");
+  else showErrorToast("Could not reset defaults", result.error || "Unknown error");
+}
+
+const PROFILE_FILE = "~/lsfg-vk-profiles.json";
+
+async function exportProfilesToFile(): Promise<void> {
+  const result = await exportProfiles();
+  if (result.success) {
+    showSuccessToast("Profiles exported", `${result.count ?? 0} game profile(s) saved to ${PROFILE_FILE}`);
+  } else {
+    showErrorToast("Export failed", result.error || "Could not write the export file");
+  }
+}
+
+async function importProfilesFromFile(): Promise<void> {
+  const result = await importProfiles();
+  if (result.success) {
+    showSuccessToast("Profiles imported", `${result.message ?? ""} Reopen the plugin to see them`.trim());
+  } else {
+    showErrorToast("Import failed", result.error || "Could not read the export file");
+  }
+}
+
+function confirmImport(): void {
+  showModal(
+    <ConfirmModal
+      strTitle="Import profiles?"
+      strDescription={`Adds or updates game profiles from ${PROFILE_FILE}. Your current config is backed up first, so Restore previous config can undo it. Imported games get their launch workarounds when you open them in the plugin.`}
+      strOKButtonText="Import"
+      onOK={() => void importProfilesFromFile()}
+    />,
+  );
+}
+
+async function confirmRestore(): Promise<void> {
+  const info = await getConfigBackupInfo();
+  if (!info.success || !info.available) {
+    showErrorToast("Nothing to restore", "No earlier configuration has been saved yet");
+    return;
+  }
+  const savedAt = info.saved_at ? new Date(info.saved_at * 1000).toLocaleString() : "an earlier time";
+  showModal(
+    <ConfirmModal
+      strTitle="Restore previous config?"
+      strDescription={`Go back to your settings as they were before changes made after ${savedAt}. Your current settings are kept, so you can restore again to switch back.`}
+      strOKButtonText="Restore"
+      onOK={() => void restorePreviousConfig()}
+    />,
+  );
+}
 
 interface SettingsTabProps {
   isInstalled: boolean;
@@ -37,6 +135,26 @@ export function SettingsTab(props: SettingsTabProps) {
     onInstall,
     onUninstall,
   } = props;
+  const [simpleMode, setSimpleMode] = useSimpleMode();
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const runUpdateCheck = async () => {
+    setCheckingUpdate(true);
+    try {
+      const result = await checkForLsfgUpdate(true);
+      if (!result.success) {
+        setUpdateStatus(`Could not check: ${result.error || "unknown error"}`);
+      } else if (result.update_available) {
+        setUpdateStatus(`lsfg-vk ${result.latest_version} is out. This plugin bundles ${result.installed_version}; a newer plugin release will include it.`);
+      } else {
+        setUpdateStatus(`You have the latest lsfg-vk (${result.installed_version}).`);
+      }
+    } catch (error) {
+      setUpdateStatus(`Could not check: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
   const setupIncomplete = isInstalled && !setupComplete;
   const branchSetupIncomplete = Boolean(
     setupIncomplete && steamBranchStatus?.installed && steamBranchStatus.needs_switch,
@@ -96,6 +214,16 @@ export function SettingsTab(props: SettingsTabProps) {
         <PanelSectionRow>
           <Field label="LSFG-VK" description={installationStatus} />
         </PanelSectionRow>
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            disabled={checkingUpdate}
+            description={updateStatus ?? "Looks up the newest lsfg-vk release on lsfg-vk.dev. Nothing is downloaded or installed."}
+            onClick={() => void runUpdateCheck()}
+          >
+            {checkingUpdate ? "Checking..." : "Check for lsfg-vk updates"}
+          </ButtonItem>
+        </PanelSectionRow>
         {steamBranchStatus?.installed && !setupIncomplete && (
           <PanelSectionRow>
             <Field
@@ -119,6 +247,14 @@ export function SettingsTab(props: SettingsTabProps) {
           <PanelSection title="Global settings">
             <PanelSectionRow>
               <ToggleField
+                label="Simple mode"
+                description="Shows only the basics for each game: FPS multiplier, Flow Scale and Performance Mode. Hides presets, quirks, workarounds and the bulk tools. Turn it off for the full set of controls."
+                checked={simpleMode}
+                onChange={setSimpleMode}
+              />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ToggleField
                 label="FP16 Acceleration"
                 checked={!globalConfig.no_fp16}
                 onChange={(value) => void onGlobalConfigChange({ ...globalConfig, no_fp16: !value })}
@@ -132,6 +268,47 @@ export function SettingsTab(props: SettingsTabProps) {
                 checked={showDebugTab}
                 onChange={onShowDebugTabChange}
               />
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description="Undo recent settings changes. The last few versions of your config are kept automatically."
+                onClick={() => void confirmRestore()}
+              >
+                Restore previous config
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description={`Saves every game's multiplier, Flow Scale and quirks to ${PROFILE_FILE} so you can keep or share them.`}
+                onClick={() => void exportProfilesToFile()}
+              >
+                Export profiles to file
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description={`Loads profiles from ${PROFILE_FILE}. Your current config is backed up first.`}
+                onClick={confirmImport}
+              >
+                Import profiles from file
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                description="Forget the settings saved with Use these settings for new games."
+                onClick={() => void resetNewGameDefaults()}
+              >
+                Reset new-game defaults
+              </ButtonItem>
+            </PanelSectionRow>
+            <PanelSectionRow>
+              <ButtonItem layout="below" onClick={() => void copyDiagnostics()}>
+                Copy diagnostics
+              </ButtonItem>
             </PanelSectionRow>
           </PanelSection>
         </>

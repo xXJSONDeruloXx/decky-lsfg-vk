@@ -1,14 +1,17 @@
+import asyncio
 import os
 from typing import Any, Dict
 
 import decky
 
 from .configuration import ConfigurationService
+from .diagnostics_service import DiagnosticsService
 from .flatpak_profile_service import FlatpakProfileService
 from .flatpak_service import FlatpakService
 from .installation import InstallationService
 from .runtime_service import RuntimeService
 from .steam_service import SteamService
+from .update_service import UpdateService
 from .wrapper_service import WrapperService
 
 
@@ -27,6 +30,11 @@ class Plugin:
             self.configuration_service,
         )
         self.wrapper_service = WrapperService()
+        self.update_service = UpdateService()
+        self.diagnostics_service = DiagnosticsService(
+            runtime_service=self.runtime_service,
+            steam_service=self.steam_service,
+        )
 
     async def install_lsfg_vk(self):
         return self.installation_service.install()
@@ -68,6 +76,34 @@ class Plugin:
 
     async def update_game_config(self, appid: str, game_name: str, config: Dict[str, Any]):
         return self.configuration_service.update_game_config(appid, game_name, config)
+
+    async def apply_config_to_all_games(self, appid: str):
+        return self.configuration_service.apply_config_to_all_games(appid)
+
+    async def set_new_game_defaults(self, appid: str):
+        return self.configuration_service.set_new_game_defaults(appid)
+
+    async def clear_new_game_defaults(self):
+        return self.configuration_service.clear_new_game_defaults()
+
+    async def reset_game_settings(self, appid: str):
+        return self.configuration_service.reset_game_settings(appid)
+
+    async def check_for_lsfg_update(self, force: bool = False):
+        # Blocking network call: keep it off the event loop.
+        return await asyncio.to_thread(self.update_service.check, force)
+
+    async def export_profiles(self):
+        return self.configuration_service.export_profiles()
+
+    async def import_profiles(self):
+        return self.configuration_service.import_profiles()
+
+    async def get_config_backup_info(self):
+        return self.configuration_service.get_config_backup_info()
+
+    async def restore_config_backup(self):
+        return self.configuration_service.restore_config_backup()
 
     async def reset_game_config(self, appid: str):
         return self.configuration_service.reset_game_config(appid)
@@ -157,6 +193,9 @@ class Plugin:
             "files": contents,
         }
 
+    async def get_diagnostics_report(self):
+        return self.diagnostics_service.get_report()
+
     async def get_lossless_scaling_branch_status(self):
         return self.steam_service.get_branch_status()
 
@@ -192,6 +231,17 @@ class Plugin:
 
     async def _uninstall(self):
         decky.logger.info("decky-lsfg-vk plugin being uninstalled")
+        # Removing the plugin also removes conf.toml, and updating from a zip
+        # goes through the same path. Keep the user's game profiles so they can
+        # be re-imported after reinstalling. A failure here must not block cleanup.
+        try:
+            saved = self.configuration_service.export_profiles(skip_if_empty=True)
+            if saved.get("success") and saved.get("count"):
+                decky.logger.info(f"Saved {saved['count']} game profile(s) to {saved.get('path')}")
+            elif not saved.get("success"):
+                decky.logger.warning(f"Could not save game profiles before uninstall: {saved.get('error')}")
+        except Exception as error:
+            decky.logger.warning(f"Could not save game profiles before uninstall: {error}")
         try:
             error = self._cleanup_runtime_state(preserve_wrapper=True)
             if error:

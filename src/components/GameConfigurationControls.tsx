@@ -1,8 +1,10 @@
 import { ConfigurationData } from "../config/configSchema";
+import { MULTIPLIER } from "../config/generatedConfigSchema";
 import type { GameTarget } from "../hooks/useGameConfiguration";
 import { ConfigurationSection } from "./ConfigurationSection";
 import { FpsMultiplierControl } from "./FpsMultiplierControl";
 import { WorkaroundsSection } from "./WorkaroundsSection";
+import { useSimpleMode } from "../hooks/useSimpleMode";
 
 interface Props {
   config: ConfigurationData;
@@ -23,6 +25,7 @@ export function GameConfigurationControls({
   workaroundTarget,
   onRepairWorkaround,
 }: Props) {
+  const [simple] = useSimpleMode();
   return (
     <>
       <FpsMultiplierControl
@@ -31,12 +34,14 @@ export function GameConfigurationControls({
         autoFocus={autoFocusFpsMultiplier}
         onAutoFocus={onFpsMultiplierFocused}
       />
-      <ConfigurationSection config={config} onConfigChange={onConfigChange} />
-      {showWorkarounds && workaroundTarget && (
+      <ConfigurationSection config={config} onConfigChange={onConfigChange} simple={simple} />
+      {showWorkarounds && !simple && workaroundTarget && (
         <WorkaroundsSection
           appId={workaroundTarget.appid}
           nonSteam={workaroundTarget.nonSteam}
           onRepair={onRepairWorkaround}
+          multiplier={config.multiplier}
+          onSetMultiplier={(value) => onConfigChange(MULTIPLIER, value)}
         />
       )}
     </>

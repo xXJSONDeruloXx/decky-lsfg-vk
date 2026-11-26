@@ -37,10 +37,62 @@ Decky LSFG-VK is a Decky plugin that streamlines the installation of **lsfg-vk**
 
 ### Core Settings
 
-- **FPS Multiplier**: Choose 2x, 3x, or 4x frame generation
-- **Flow Scale**: Adjust motion estimation quality (lower = better performance, higher = better quality)
-- **Performance Mode**: Uses a lighter processing model (recommended for most games)
+- **Quality preset**: One-tap Quality, Balanced or Low latency profiles that set Flow Scale and Performance Mode together. Shows "Custom" once you adjust either by hand
+- **FPS Multiplier**: Choose how many frames are shown per game frame (2x, 3x, 4x and up)
+- **Flow Scale**: Resolution used to track motion between frames. Lower is faster and lighter, higher gives cleaner generated frames
+- **Performance Mode**: Uses a much lighter frame generation model with a small quality cost (recommended on handhelds)
+- **Present Mode Override**: Forces Vsync, which frame pacing needs. Leave on unless a game misbehaves
+- **Preserve Swapchain Image Count**: Only for Vulkan games that crash on launch; can make pacing less smooth
 - **FP16 Acceleration**: Use half-precision acceleration when supported
+
+### Simple mode and 1x
+
+- **Simple mode** (on by default; Settings > Global settings) shows only FPS multiplier, Flow Scale and Performance Mode for each game, like the original plugin. Turn it off for presets, quirks, workarounds and the bulk tools
+- **1x** is the lowest multiplier: no extra frames are generated, so it works as a pass-through for comparing against 2x or higher
+
+### Smoothness and latency
+
+lsfg-vk currently offers a single pacing mode (Vsync), so smoothness comes from feeding it a steady frame rate:
+
+- **Smooth pacing target**: In a game's Workarounds section, pick 30 → 60 (60 Hz), 45 → 90 or 30 → 90 (90 Hz OLED). It caps the game and sets the multiplier so output matches your screen. Best fix for uneven motion; a steady, lighter load also cuts input lag
+- **Fewer artifacts**: For warping, bubbling or blur, use the Quality preset and keep the base FPS at 40+ where you can. Keep Present Mode Override on to avoid tearing
+- **Base FPS Cap**: Shows the resulting output (cap x multiplier) so you can match your display's refresh rate, for example 30 x 3 on a 90 Hz screen
+- **Low latency preset**: Faster generation shortens the delay frame generation adds. It does not remove Vsync latency
+
+### Quality of life
+
+- **Apply these settings to all games**: tune one game, then copy its settings to every other game profile in one tap
+- **Game list summaries**: enabled games show their setup (for example "3x · Balanced") at a glance
+- **Use these settings for new games**: set your preferred starting point once; every game you enable afterwards uses it (Settings > Advanced > Reset new-game defaults clears it)
+- **Reset settings to defaults**: put one game back to the defaults without removing its profile
+- **Export / import profiles**: Settings > Advanced saves all your game profiles to `~/lsfg-vk-profiles.json` and loads them back (with an automatic backup first), for moving to another Deck or sharing a setup
+- **Check for lsfg-vk updates**: one button in Settings tells you whether upstream has released a newer lsfg-vk than the one bundled in the plugin
+- **Restore previous config**: the last few versions of your config are kept automatically; Settings > Advanced > Restore previous config undoes recent changes (and can be undone itself)
+
+## Your data
+
+| What | Where |
+| --- | --- |
+| lsfg-vk config and all game profiles | `~/.config/lsfg-vk/conf.toml` |
+| Last three versions of that config (Restore previous config) | `~/.config/lsfg-vk/conf.toml.bak.1` to `.bak.3` |
+| Per-game workarounds | `~/.config/lsfg-vk/workarounds.json` |
+| Settings for new games | `~/.config/lsfg-vk/new_game_defaults.json` |
+| Exported profiles (Export / Import) | `~/lsfg-vk-profiles.json` |
+
+Removing the plugin from Decky (which is also what happens when you delete it to install a newer zip) deletes the config, but first saves your game profiles to `~/lsfg-vk-profiles.json`. After reinstalling, use Settings > Advanced > Import profiles from file to get them back. A reinstall does not need Lossless Scaling's DLL again; it is found automatically when the `lsfg-vk` Steam branch has downloaded.
+
+## Development
+
+Needs Node 22.18 or newer (an official build, so TypeScript tests can run), pnpm, and Python 3.11 or newer.
+
+```bash
+pnpm install
+pnpm build      # builds dist/
+pnpm test       # TypeScript and Python tests
+./scripts/package.sh   # builds out/Decky LSFG-VK.zip and its SHA-256
+```
+
+`package.sh` bundles lsfg-vk from `bin/lsfg-vk-2.0.0.tar.xz`, from `$LSFG_ARCHIVE`, or from the latest published release, in that order. After editing anything in `defaults/i18n/`, run `python3 scripts/build_i18n_json.py`; a test fails if `src/i18n/languages.json` is out of date or a string key is missing or unused.
 
 ## Feedback and Support
 

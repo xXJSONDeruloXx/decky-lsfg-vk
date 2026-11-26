@@ -61,7 +61,7 @@ export const getLanguageName = (lang?: string): string => {
  * @returns Translated string or original text if translation not found
  *
  * @example
- * t('CONTENT_FPS_MULTIPLIER', 'FPS Multiplier')
+ * t('CONFIG_FLOW_SCALE', 'Flow Scale')
  */
 const t = (key: string, originalString: string): string => {
   const lang = getCurrentLanguage();

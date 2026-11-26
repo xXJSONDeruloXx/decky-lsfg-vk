@@ -1,4 +1,6 @@
+import io
 import sys
+import tarfile
 import tempfile
 import types
 import unittest
@@ -79,6 +81,84 @@ class InstallationConfigTests(unittest.TestCase):
         self.assertEqual(data["global_config"], {"dll": "", "no_fp16": False})
         self.assertFalse(self.service.config_file_path.exists())
         self.service.log.warning.assert_called_once()
+
+    def test_unreadable_config_is_backed_up_before_defaults_are_used(self):
+        self.service.config_dir.mkdir(parents=True)
+        broken = 'version = 2\n[[profile]\nname = "My Game"\n'
+        self.service.config_file_path.write_text(broken, encoding="utf-8")
+
+        data = self.service._prepare_config()
+
+        self.assertEqual(data["profiles"], {})
+        backups = list(self.service.config_dir.glob("conf.toml.bak-*"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_text(encoding="utf-8"), broken)
+
+    def test_incomplete_archive_leaves_installed_files_untouched(self):
+        archive_path = Path(self.tempdir.name) / "payload.tar.gz"
+        destinations = self.service._payload_destinations()
+        present = list(destinations)[:-1]
+        with tarfile.open(archive_path, "w:gz") as archive:
+            for name in present:
+                data = b"new"
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+        for destination, _mode in destinations.values():
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text("old", encoding="utf-8")
+
+        with self.assertRaises(OSError):
+            self.service._install_archive(archive_path)
+
+        for destination, _mode in destinations.values():
+            self.assertEqual(destination.read_text(encoding="utf-8"), "old")
+
+    def _status_with(self, branch, dll=None):
+        self._write_config()
+        self._mark_installed()
+        self.service.runtime_service.check_lossless_scaling.return_value = {
+            "installed": False,
+            "status": "Lossless Scaling's lsfg-vk.dll is not configured",
+        }
+        self.steam.get_branch_status.return_value = branch
+        self.steam.find_lsfg_vk_dll.return_value = dll
+        return self.service.check_installation()["lossless_scaling_status"]
+
+    def test_missing_dll_explains_that_lossless_scaling_is_not_installed(self):
+        status = self._status_with({"installed": False})
+        self.assertIn("not installed in Steam", status)
+
+    def test_missing_dll_explains_the_wrong_steam_branch(self):
+        status = self._status_with(
+            {"installed": True, "needs_switch": True, "selected_branch": "public"}
+        )
+        self.assertIn('"public" Steam branch', status)
+        self.assertIn("Betas", status)
+
+    def test_missing_dll_explains_a_download_that_has_not_finished(self):
+        status = self._status_with({"installed": True, "needs_switch": False}, dll=None)
+        self.assertIn("not downloaded lsfg-vk.dll yet", status)
+
+    def test_other_statuses_are_left_alone(self):
+        self._write_config()
+        self._mark_installed()
+        self.service.runtime_service.check_lossless_scaling.return_value = {
+            "installed": True,
+            "status": "Lossless Scaling detected by lsfg-vk",
+        }
+        status = self.service.check_installation()["lossless_scaling_status"]
+        self.assertEqual(status, "Lossless Scaling detected by lsfg-vk")
+
+    def test_uninstall_removes_backups_and_new_game_defaults(self):
+        self._write_config()
+        for name in ("conf.toml.bak.1", "conf.toml.bak.2", "new_game_defaults.json"):
+            (self.service.config_dir / name).write_text("x", encoding="utf-8")
+
+        result = self.service.uninstall()
+
+        self.assertTrue(result["success"])
+        self.assertFalse(self.service.config_dir.exists())
 
     def test_installation_does_not_overwrite_a_future_config_version(self):
         self.service.config_dir.mkdir(parents=True)

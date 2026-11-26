@@ -69,6 +69,11 @@ export function Content() {
     repair,
     resetSelected,
     resetAll,
+    applyToAll,
+    useAsNewGameDefaults,
+    resetSettings,
+    summaries,
+    newGameSummary,
     cleanupAllWorkarounds,
     reload,
   } = useGameConfiguration();
@@ -201,6 +206,11 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
+              onApplyToAll={applyToAll}
+              onUseAsNewGameDefaults={useAsNewGameDefaults}
+              onResetSettings={resetSettings}
+              summaries={summaries}
+              newGameSummary={newGameSummary}
             />,
           ),
         },
@@ -222,6 +232,11 @@ export function Content() {
               onRepair={repair}
               onReset={resetSelected}
               onResetAll={resetAll}
+              onApplyToAll={applyToAll}
+              onUseAsNewGameDefaults={useAsNewGameDefaults}
+              onResetSettings={resetSettings}
+              summaries={summaries}
+              newGameSummary={newGameSummary}
             />
           ),
         },

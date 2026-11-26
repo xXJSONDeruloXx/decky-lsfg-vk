@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuickAccessVisible } from "@decky/api";
 import { Router } from "@decky/ui";
-import { getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundApp, type WorkaroundState } from "../api/lsfgApi";
+import { applyConfigToAllGames, resetGameSettings, setNewGameDefaults, getGameConfigs, getInstalledGames, getWorkaroundApps, getWorkaroundState, removeWorkaroundState, resetGameConfig, resetGameConfigs, setWorkaroundState, updateGameConfig, updateGlobalConfig as saveGlobalConfig, type GameConfigEntry, type GlobalConfig, type InstalledGame, type WorkaroundApp, type WorkaroundState } from "../api/lsfgApi";
 import { ConfigurationData, getDefaults } from "../config/configSchema";
+import { summarizeConfig } from "../utils/presets";
 import { getDefaultWrapperPath, installWrapperIntegration, removeWrapperIntegration } from "../utils/steamLaunchOptions";
 import { getTargetSource, mergeGameTargets, type GameTarget, type KnownGameSource } from "../utils/gameTargets";
-import { showErrorToast } from "../utils/toastUtils";
+import { showErrorToast, showSuccessToast } from "../utils/toastUtils";
 
 export type { GameSource, GameTarget, KnownGameSource } from "../utils/gameTargets";
 
@@ -56,6 +57,7 @@ function asError(error: unknown): Error {
 export function useGameConfiguration() {
   const [games, setGames] = useState<GameConfigEntry[]>([]);
   const [globalConfig, setGlobalConfig] = useState<GlobalConfig>({ dll: "", no_fp16: false });
+  const [newGameDefaults, setNewGameDefaultsState] = useState<Partial<ConfigurationData> | null>(null);
   const [installedGames, setInstalledGames] = useState<InstalledGame[]>([]);
   const [workaroundApps, setWorkaroundApps] = useState<WorkaroundApp[]>([]);
   const [configsLoaded, setConfigsLoaded] = useState(false);
@@ -77,6 +79,7 @@ export function useGameConfiguration() {
     if (result.success) {
       setGlobalConfig(result.global_config || { dll: "", no_fp16: false });
       setGames(result.games || []);
+      setNewGameDefaultsState(result.new_game_defaults || null);
     }
     setInstalledGames(mergeInstalledGames(installed.success ? installed.games || [] : [], shortcuts));
     setWorkaroundApps(workaroundResult.success ? workaroundResult.apps || [] : []);
@@ -133,7 +136,18 @@ export function useGameConfiguration() {
   const targets = useMemo<GameTarget[]>(() => {
     return mergeGameTargets(games, installedGames, workaroundApps, runningGame);
   }, [games, installedGames, runningGame, workaroundApps]);
-  const template = useMemo(() => ({ ...getDefaults(), ...globalConfig }), [globalConfig]);
+  const template = useMemo(
+    () => ({ ...getDefaults(), ...(newGameDefaults || {}), ...globalConfig }),
+    [globalConfig, newGameDefaults],
+  );
+  const summaries = useMemo(
+    () => Object.fromEntries(games.map((game) => [game.appid, summarizeConfig(game.config)])),
+    [games],
+  );
+  const newGameSummary = useMemo(
+    () => (newGameDefaults ? summarizeConfig({ ...getDefaults(), ...newGameDefaults }) : null),
+    [newGameDefaults],
+  );
   const config = games.find((game) => game.appid === selectedAppId)?.config || template;
   const runningConfig = runningGame
     ? games.find((game) => game.appid === runningGame.appid)?.config || template
@@ -349,6 +363,43 @@ export function useGameConfiguration() {
     }
   }, [load, removeTargetWorkarounds, selectedAppId, targets]);
 
+  const useAsNewGameDefaults = useCallback(async () => {
+    if (!selectedAppId) return;
+    const result = await setNewGameDefaults(selectedAppId);
+    if (!result.success) {
+      showErrorToast("Could not save defaults", result.error || "Could not save these settings as the default");
+      return;
+    }
+    showSuccessToast("Defaults saved", "Games you enable from now on start with these settings");
+    await load();
+  }, [load, selectedAppId]);
+
+  const resetSettings = useCallback(async () => {
+    if (!selectedAppId) return;
+    const result = await resetGameSettings(selectedAppId);
+    if (!result.success) {
+      showErrorToast("Could not reset settings", result.error || "Could not reset this game's settings");
+      return;
+    }
+    showSuccessToast("Settings reset", "This game is back to the default settings");
+    await load();
+  }, [load, selectedAppId]);
+
+  const applyToAll = useCallback(async () => {
+    if (!selectedAppId) return;
+    const result = await applyConfigToAllGames(selectedAppId);
+    if (!result.success) {
+      showErrorToast("Could not apply settings", result.error || "Could not copy settings to your other games");
+      return;
+    }
+    const count = result.updated ?? 0;
+    showSuccessToast(
+      count > 0 ? "Settings applied" : "Nothing to update",
+      count > 0 ? `Copied to ${count} other game${count === 1 ? "" : "s"}` : "You have no other game profiles",
+    );
+    await load();
+  }, [load, selectedAppId]);
+
   const resetAll = useCallback(async (source: KnownGameSource) => {
     if (!acquireBulkOperation()) return;
     try {
@@ -374,5 +425,5 @@ export function useGameConfiguration() {
     }
   }, [acquireBulkOperation, load, removeTargetWorkarounds, releaseBulkOperation, targets]);
 
-  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, bulkOperationBusy, cleanupAllWorkarounds, reload: load };
+  return { config, runningConfig, globalConfig, targets, runningGame, selectedAppId, setSelectedAppId, save, saveFor, updateGlobal, enable, enableAll, repair, resetSelected, resetAll, applyToAll, useAsNewGameDefaults, resetSettings, summaries, newGameSummary, bulkOperationBusy, cleanupAllWorkarounds, reload: load };
 }

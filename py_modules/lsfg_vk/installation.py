@@ -2,9 +2,10 @@ import os
 import shutil
 import tarfile
 import tempfile
+import time
 import traceback
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from .base_service import BaseService
 from .config_schema import ConfigurationManager, ProfileData, UnsupportedConfigurationVersion
@@ -90,13 +91,16 @@ class InstallationService(BaseService):
                 for member in archive.getmembers()
                 if member.isfile()
             }
+            # Check the whole payload first so a bad archive can't leave a
+            # half-updated install behind.
+            missing = sorted(set(destinations) - members.keys())
+            if missing:
+                raise OSError("Archive is missing required files: " + ", ".join(missing))
             for source_path, (destination, mode) in destinations.items():
-                member = members.get(source_path)
-                if member is None:
-                    continue
+                member = members[source_path]
                 source = archive.extractfile(member)
                 if source is None:
-                    continue
+                    raise OSError(f"Archive entry {source_path} could not be read")
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 temporary_path = None
                 try:
@@ -146,7 +150,14 @@ class InstallationService(BaseService):
                 f"Removed legacy lsfg-vk configuration version {error.version!r} during installation"
             )
             profile_data = self._default_config()
-        except ValueError:
+        except ValueError as error:
+            # An unreadable file (typo, partial write) must not silently wipe
+            # the user's profiles: keep a copy before starting from defaults.
+            backup = self._backup_unreadable_config()
+            self.log.warning(
+                f"Could not read lsfg-vk configuration ({error}); "
+                + (f"saved a copy to {backup}" if backup else "could not save a backup")
+            )
             profile_data = self._default_config()
         self._resolve_dll_path(profile_data)
         defaults = ConfigurationManager.get_defaults()
@@ -155,6 +166,18 @@ class InstallationService(BaseService):
                 {**defaults, **profile, **profile_data["global_config"]}
             )
         return profile_data
+
+    def _backup_unreadable_config(self) -> Optional[Path]:
+        if not self.config_file_path.is_file():
+            return None
+        backup = self.config_file_path.with_name(
+            f"{self.config_file_path.name}.bak-{time.strftime('%Y%m%d-%H%M%S')}"
+        )
+        try:
+            shutil.copy2(self.config_file_path, backup)
+        except OSError:
+            return None
+        return backup
 
     def _resolve_dll_path(self, profile_data: ProfileData) -> bool:
         current_path = str(profile_data["global_config"].get("dll") or "")
@@ -209,6 +232,31 @@ class InstallationService(BaseService):
             except OSError:
                 continue
 
+    DLL_PROBLEM_MARKERS = ("lsfg-vk.dll is not configured", "lsfg-vk.dll was not found")
+
+    def _explain_missing_dll(self, status: str) -> str:
+        """Say why the DLL is missing instead of only reporting that it is."""
+        if not any(marker in status for marker in self.DLL_PROBLEM_MARKERS):
+            return status
+        try:
+            branch = self.steam_service.get_branch_status()
+            if not branch.get("installed"):
+                return "Lossless Scaling is not installed in Steam. Install it from Steam, then reopen this plugin."
+            if branch.get("needs_switch"):
+                selected = branch.get("selected_branch") or "public"
+                return (
+                    f"Lossless Scaling is on the \"{selected}\" Steam branch. In Steam, open Lossless Scaling > "
+                    "Properties > Betas, select \"lsfg-vk\", let it finish downloading, then reopen this plugin."
+                )
+            if not self.steam_service.find_lsfg_vk_dll():
+                return (
+                    "The lsfg-vk branch is selected, but Steam has not downloaded lsfg-vk.dll yet. "
+                    "Let the Lossless Scaling update finish in Steam's Downloads, then reopen this plugin."
+                )
+        except Exception as error:
+            self.log.warning(f"Could not work out why lsfg-vk.dll is missing: {error}")
+        return status
+
     def check_installation(self) -> InstallationCheckResponse:
         try:
             installed = all(
@@ -228,7 +276,7 @@ class InstallationService(BaseService):
             return {
                 "installed": installed,
                 "lossless_scaling_installed": bool(lossless_scaling["installed"]),
-                "lossless_scaling_status": str(lossless_scaling["status"]),
+                "lossless_scaling_status": self._explain_missing_dll(str(lossless_scaling["status"])),
                 "error": None,
             }
         except Exception as error:
@@ -241,6 +289,10 @@ class InstallationService(BaseService):
 
     def uninstall(self) -> UninstallationResponse:
         try:
+            plugin_extras = [
+                self.config_dir / "new_game_defaults.json",
+                *sorted(self.config_dir.glob(f"{self.config_file_path.name}.bak.*")),
+            ]
             removed = [
                 str(path)
                 for path in (
@@ -256,6 +308,7 @@ class InstallationService(BaseService):
                     self.legacy_json_file,
                     self.legacy_script_path,
                     self.config_file_path,
+                    *plugin_extras,
                 )
                 if self._remove_if_exists(path)
             ]

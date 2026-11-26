@@ -1,14 +1,17 @@
-import { ButtonItem, Field, PanelSectionRow, SliderField, ToggleField } from "@decky/ui";
+import { ButtonItem, DropdownItem, Field, PanelSectionRow, SliderField, ToggleField } from "@decky/ui";
 import { useEffect, useState } from "react";
 import { RiArrowDownSFill, RiArrowUpSFill } from "react-icons/ri";
 import { usePerAppWorkarounds } from "../hooks/usePerAppWorkarounds";
 import t from "../i18n/i18n";
 import type { WorkaroundField } from "../hooks/usePerAppWorkarounds";
+import { PACING_TARGETS, detectPacingTarget, outputFps } from "../utils/presets";
 
 interface WorkaroundsSectionProps {
   appId: string;
   nonSteam: boolean;
   onRepair?: () => Promise<boolean>;
+  multiplier?: number;
+  onSetMultiplier?: (value: number) => Promise<void>;
 }
 
 const WORKAROUNDS_COLLAPSED_KEY = "lsfg-workarounds-collapsed-v2";
@@ -77,7 +80,7 @@ function usePersistentCollapsed() {
   return [collapsed, () => setCollapsed((value) => !value)] as const;
 }
 
-export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSectionProps) {
+export function WorkaroundsSection({ appId, nonSteam, onRepair, multiplier = 2, onSetMultiplier }: WorkaroundsSectionProps) {
   const [collapsed, toggleCollapsed] = usePersistentCollapsed();
   const { status, snapshot, refresh, update, error } = usePerAppWorkarounds(appId, nonSteam);
   const [repairing, setRepairing] = useState(false);
@@ -88,6 +91,22 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
   const fpsLabel = effectiveFpsValue > 0
     ? `${effectiveFpsValue} FPS`
     : t("CONFIG_BASE_FPS_CAP_OFF", "Off");
+
+  const resultingFps = outputFps(effectiveFpsValue, multiplier);
+  const activeTarget = detectPacingTarget(effectiveFpsValue, multiplier);
+
+  const applyPacingTarget = async (id: string) => {
+    if (id === "off") {
+      setFpsValue(0);
+      await update("dxvkFrameRate", 0);
+      return;
+    }
+    const target = PACING_TARGETS.find((entry) => entry.id === id);
+    if (!target) return;
+    setFpsValue(target.cap);
+    if (multiplier !== target.multiplier) await onSetMultiplier?.(target.multiplier);
+    await update("dxvkFrameRate", target.cap);
+  };
 
   const handleRepair = async () => {
     if (!onRepair || repairing) return;
@@ -182,7 +201,14 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
           <PanelSectionRow>
             <SliderField
               label={`${t("CONFIG_BASE_FPS_CAP", "Base FPS Cap")} (${fpsLabel})`}
-              description={t("CONFIG_BASE_FPS_CAP_DESC", "Base cap for DXVK-backed games before frame generation; 0 disables. Requires game restart to apply.")}
+              description={
+                (resultingFps
+                  ? t("CONFIG_BASE_FPS_CAP_OUTPUT", "With {multiplier}x frame generation you will see about {fps} FPS. ")
+                      .replace("{multiplier}", String(multiplier))
+                      .replace("{fps}", String(resultingFps))
+                  : "")
+                + t("CONFIG_BASE_FPS_CAP_DESC", "Caps the game's own frame rate before frame generation (DXVK games only); 0 disables. A steady cap gives steadier pacing than a fluctuating frame rate. Requires game restart to apply.")
+              }
               value={effectiveFpsValue}
               min={0}
               max={60}
@@ -191,6 +217,20 @@ export function WorkaroundsSection({ appId, nonSteam, onRepair }: WorkaroundsSec
                 setFpsValue(value);
                 void update("dxvkFrameRate", value);
               }}
+              disabled={controlsDisabled}
+            />
+          </PanelSectionRow>
+          <PanelSectionRow>
+            <DropdownItem
+              label={t("PACING_TARGET", "Smooth pacing target")}
+              description={t("PACING_TARGET_DESC", "Locks the game to a steady frame rate that multiplies exactly onto your screen's refresh rate. This is the best fix for uneven motion, and a steady, lighter load also cuts input lag. Requires game restart to apply.")}
+              rgOptions={[
+                { data: "off", label: t("PACING_OFF", "Off") },
+                ...PACING_TARGETS.map((target) => ({ data: target.id, label: t(target.labelKey, target.label) })),
+                ...(effectiveFpsValue > 0 && !activeTarget ? [{ data: "custom", label: t("PRESET_CUSTOM", "Custom") }] : []),
+              ]}
+              selectedOption={effectiveFpsValue === 0 ? "off" : activeTarget ?? "custom"}
+              onChange={(option) => void applyPacingTarget(String(option.data))}
               disabled={controlsDisabled}
             />
           </PanelSectionRow>

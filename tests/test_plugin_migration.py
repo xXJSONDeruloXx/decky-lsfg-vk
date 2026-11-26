@@ -56,6 +56,41 @@ class PluginMigrationTests(unittest.TestCase):
         finally:
             self._restore(previous_decky, previous_tomllib, previous_plugin)
 
+    def _uninstall_plugin(self, export_side_effect=None):
+        Plugin, _decky, previous_decky, previous_tomllib, previous_plugin = self._load_plugin()
+        try:
+            plugin = Plugin.__new__(Plugin)
+            plugin.installation_service = Mock()
+            plugin.flatpak_service = Mock()
+            plugin.configuration_service = Mock()
+            plugin.wrapper_service = Mock()
+            plugin.flatpak_service.remove_plugin_owned_environment.return_value = {"success": True}
+            plugin.configuration_service.reset_all_flatpak_configs.return_value = {"success": True}
+            plugin.wrapper_service.neutralize.return_value = {"success": True}
+            if export_side_effect is not None:
+                plugin.configuration_service.export_profiles.side_effect = export_side_effect
+            else:
+                plugin.configuration_service.export_profiles.return_value = {
+                    "success": True, "count": 2, "path": "/home/deck/lsfg-vk-profiles.json",
+                }
+            asyncio.run(plugin._uninstall())
+            return plugin
+        finally:
+            self._restore(previous_decky, previous_tomllib, previous_plugin)
+
+    def test_uninstall_saves_game_profiles_before_removing_anything(self):
+        plugin = self._uninstall_plugin()
+
+        plugin.configuration_service.export_profiles.assert_called_once_with(skip_if_empty=True)
+        names = [call[0] for call in plugin.configuration_service.mock_calls]
+        self.assertLess(names.index("export_profiles"), names.index("reset_all_flatpak_configs"))
+        plugin.installation_service.cleanup_on_uninstall.assert_called_once()
+
+    def test_failed_profile_export_does_not_block_uninstall_cleanup(self):
+        plugin = self._uninstall_plugin(export_side_effect=OSError("disk full"))
+
+        plugin.installation_service.cleanup_on_uninstall.assert_called_once()
+
     def test_uninstall_cleans_owned_flatpak_state_and_profiles(self):
         Plugin, _decky, previous_decky, previous_tomllib, previous_plugin = self._load_plugin()
         try:

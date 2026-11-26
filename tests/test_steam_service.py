@@ -1,8 +1,9 @@
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 sys.modules.setdefault(
@@ -70,6 +71,40 @@ class SteamShortcutTests(unittest.TestCase):
         self.assertIsNone(SteamService._shortcut_game({"appid": 0, "AppName": "Bad"}))
         self.assertIsNone(SteamService._shortcut_game({"appid": 1, "AppName": ""}))
         self.assertIsNone(SteamService._shortcut_game("bad"))
+
+
+class FindDllTests(unittest.TestCase):
+    def _service_with_library(self, root: Path) -> SteamService:
+        service = SteamService(logger=Mock())
+        patcher = patch.object(SteamService, "_steam_library_roots", return_value=[root])
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return service
+
+    def test_dll_is_used_even_when_the_manifest_says_another_branch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            game = root / "steamapps/common/Lossless Scaling"
+            game.mkdir(parents=True)
+            (game / "lsfg-vk.dll").write_bytes(b"dll")
+            (root / "steamapps/appmanifest_993090.acf").write_text(
+                '"AppState"\n{\n\t"UserConfig"\n\t{\n\t\t"BetaKey"\t\t"public"\n\t}\n}\n',
+                encoding="utf-8",
+            )
+            service = self._service_with_library(root)
+
+            self.assertTrue(service.get_branch_status()["needs_switch"])
+            self.assertEqual(service.find_lsfg_vk_dll(), str(game / "lsfg-vk.dll"))
+
+    def test_no_dll_when_the_file_is_absent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "steamapps/common/Lossless Scaling").mkdir(parents=True)
+            self.assertIsNone(self._service_with_library(root).find_lsfg_vk_dll())
+
+    def test_no_dll_when_lossless_scaling_is_not_installed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIsNone(self._service_with_library(Path(tmp)).find_lsfg_vk_dll())
 
 
 if __name__ == "__main__":

@@ -82,6 +82,7 @@ export interface WorkaroundAppsResult extends ApiResult {
 export interface GameConfigsResult extends ApiResult {
   global_config?: GlobalConfig;
   games?: GameConfigEntry[];
+  new_game_defaults?: Partial<LsfgConfig> | null;
 }
 
 export interface GlobalConfigResult extends ApiResult {
@@ -114,6 +115,33 @@ export interface DebugFileContent {
 
 export interface DebugFileContentsResult extends ApiResult {
   files?: DebugFileContent[];
+}
+
+export interface UpdateCheckResult extends ApiResult {
+  installed_version?: string;
+  latest_version?: string | null;
+  update_available?: boolean;
+}
+
+export interface ProfileTransferResult extends ApiResult {
+  path?: string;
+  count?: number;
+  imported?: number;
+  skipped?: number;
+}
+
+export interface ApplyToAllResult extends ApiResult {
+  updated?: number;
+}
+
+export interface ConfigBackupInfoResult extends ApiResult {
+  available?: boolean;
+  saved_at?: number | null;
+  count?: number;
+}
+
+export interface DiagnosticsReportResult extends ApiResult {
+  report?: string | null;
 }
 
 export interface FlatpakApp {
@@ -177,4 +205,14 @@ export const setWorkaroundState = callable<[
 ], WorkaroundStateResult>("set_workaround_state");
 export const removeWorkaroundState = callable<[string], WorkaroundStateResult>("remove_workaround_state");
 export const getWorkaroundApps = callable<[], WorkaroundAppsResult>("get_workaround_apps");
+export const applyConfigToAllGames = callable<[string], ApplyToAllResult>("apply_config_to_all_games");
+export const setNewGameDefaults = callable<[string], ApiResult>("set_new_game_defaults");
+export const clearNewGameDefaults = callable<[], ApiResult>("clear_new_game_defaults");
+export const resetGameSettings = callable<[string], GameConfigResult>("reset_game_settings");
+export const checkForLsfgUpdate = callable<[boolean], UpdateCheckResult>("check_for_lsfg_update");
+export const exportProfiles = callable<[], ProfileTransferResult>("export_profiles");
+export const importProfiles = callable<[], ProfileTransferResult>("import_profiles");
+export const getConfigBackupInfo = callable<[], ConfigBackupInfoResult>("get_config_backup_info");
+export const restoreConfigBackup = callable<[], ApiResult>("restore_config_backup");
+export const getDiagnosticsReport = callable<[], DiagnosticsReportResult>("get_diagnostics_report");
 export const getDebugFileContents = callable<[], DebugFileContentsResult>("get_debug_file_contents");

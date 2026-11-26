@@ -7,6 +7,7 @@ import { sourceLabel } from "../utils/gameTargets";
 import { GameConfigurationControls } from "./GameConfigurationControls";
 import { GameConfigurationSelector } from "./GameConfigurationSelector";
 import { ProfileDetails } from "./ProfileDetails";
+import { useSimpleMode } from "../hooks/useSimpleMode";
 
 interface ConfigurationTabProps {
   title: string;
@@ -26,6 +27,11 @@ interface ConfigurationTabProps {
   onRepair: (appid: string) => Promise<boolean>;
   onReset: () => Promise<void>;
   onResetAll: (source: KnownGameSource) => Promise<void>;
+  onApplyToAll?: () => Promise<void>;
+  onUseAsNewGameDefaults?: () => Promise<void>;
+  onResetSettings?: () => Promise<void>;
+  summaries?: Record<string, string>;
+  newGameSummary?: string | null;
 }
 
 export function ConfigurationTab({
@@ -42,7 +48,13 @@ export function ConfigurationTab({
   onRepair,
   onReset,
   onResetAll,
+  onApplyToAll,
+  onUseAsNewGameDefaults,
+  onResetSettings,
+  summaries,
+  newGameSummary,
 }: ConfigurationTabProps) {
+  const [simple] = useSimpleMode();
   const [detailAppId, setDetailAppId] = useState<string | null>(null);
   const [focusFpsMultiplier, setFocusFpsMultiplier] = useState(false);
   const [focusDetailAction, setFocusDetailAction] = useState<"enable" | "fps" | null>(null);
@@ -81,6 +93,7 @@ export function ConfigurationTab({
             runningGame={runningGame}
             source={source}
             bulkOperationBusy={bulkOperationBusy}
+            summaries={summaries}
             onSelect={(appid) => {
               setFocusConfiguredToggle(false);
               setFocusDetailAction(targets.find((target) => target.appid === appid)?.configured ? "fps" : "enable");
@@ -192,6 +205,55 @@ export function ConfigurationTab({
           workaroundTarget={selectedTarget.source !== "unknown" ? selectedTarget : undefined}
           onRepairWorkaround={selectedTarget.source !== "unknown" ? () => onRepair(selectedTarget.appid) : undefined}
         />
+      )}
+      {selectedTarget?.configured && !simple && onUseAsNewGameDefaults && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            description={newGameSummary
+              ? `New games currently start with: ${newGameSummary}`
+              : "New games currently start with the standard defaults."}
+            onClick={() => void onUseAsNewGameDefaults()}
+          >
+            Use these settings for new games
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+      {selectedTarget?.configured && !simple && onResetSettings && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            description="Puts this game's multiplier, Flow Scale and quirks back to the new-game defaults. The profile and workarounds stay."
+            onClick={() => showModal(
+              <ConfirmModal
+                strTitle="Reset this game's settings?"
+                strDescription="Multiplier, Flow Scale, Performance Mode and quirks go back to the new-game defaults. You can undo it from Settings > Restore previous config."
+                strOKButtonText="Reset settings"
+                onOK={() => void onResetSettings()}
+              />,
+            )}
+          >
+            Reset settings to defaults
+          </ButtonItem>
+        </PanelSectionRow>
+      )}
+      {selectedTarget?.configured && !simple && onApplyToAll && (
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            description="Copies this game's multiplier, Flow Scale, Performance Mode and quirks to every other game profile. Their workarounds are left alone."
+            onClick={() => showModal(
+              <ConfirmModal
+                strTitle="Apply to all games?"
+                strDescription="Every other game profile will use this game's multiplier, Flow Scale, Performance Mode and quirk settings. You can undo it from Settings > Restore previous config."
+                strOKButtonText="Apply to all"
+                onOK={() => void onApplyToAll()}
+              />,
+            )}
+          >
+            Apply these settings to all games
+          </ButtonItem>
+        </PanelSectionRow>
       )}
       {selectedTarget?.configured && (
         <PanelSectionRow>
